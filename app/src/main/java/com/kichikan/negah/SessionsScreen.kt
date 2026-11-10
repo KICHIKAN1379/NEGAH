@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kichikan.negah.domain.attendance.AttendanceDraft
 import com.kichikan.negah.domain.attendance.AttendanceStatus
+import com.kichikan.negah.domain.attendance.summarizeAttendancePeriod
 import com.kichikan.negah.domain.session.Session
 import com.kichikan.negah.domain.settings.ClassDay
 import java.time.DayOfWeek
@@ -97,6 +98,9 @@ private fun SessionListScreen(
 ) {
     var showCreateDialog by rememberSaveable { mutableStateOf(false) }
     var editingSession by remember { mutableStateOf<Session?>(null) }
+    var reportMonthEpochDay by rememberSaveable {
+        mutableStateOf(LocalDate.now().withDayOfMonth(1).toEpochDay())
+    }
     var visibleWeekStartEpochDay by rememberSaveable {
         val today = LocalDate.now()
         mutableStateOf(today.minusDays(today.daysSinceSaturday().toLong()).toEpochDay())
@@ -188,6 +192,50 @@ private fun SessionListScreen(
                 onDateSelected = onDateSelected,
                 onOpenClassDays = onOpenClassDays,
             )
+
+            val reportMonth = LocalDate.ofEpochDay(reportMonthEpochDay).withDayOfMonth(1)
+            val reportEnd = reportMonth.withDayOfMonth(reportMonth.lengthOfMonth())
+            val monthlySummary = remember(state.attendanceRecords, state.sessions, reportMonthEpochDay) {
+                summarizeAttendancePeriod(
+                    records = state.attendanceRecords,
+                    sessionDatesById = state.sessions.associate { it.id to it.sessionDateEpochDay },
+                    startEpochDay = reportMonth.toEpochDay(),
+                    endEpochDay = reportEnd.toEpochDay(),
+                )
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    TextButton(onClick = {
+                        reportMonthEpochDay = reportMonth.minusMonths(1).toEpochDay()
+                    }) { Text("ماه قبل") }
+                    Text(
+                        reportMonth.format(DateTimeFormatter.ofPattern("yyyy/MM")),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    TextButton(onClick = {
+                        reportMonthEpochDay = reportMonth.plusMonths(1).toEpochDay()
+                    }) { Text("ماه بعد") }
+                }
+                val sessionsInMonth = state.sessions.count {
+                    it.sessionDateEpochDay in reportMonth.toEpochDay()..reportEnd.toEpochDay()
+                }
+                Text("گزارش ماهانه • جلسات: $sessionsInMonth • رکوردها: ${monthlySummary.recordCount}")
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    AttendanceStatus.entries.forEach { status ->
+                        Text(
+                            "${statusLabel(status)}: ${monthlySummary.statusCounts[status] ?: 0}",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+            }
 
             OutlinedTextField(
                 value = state.searchQuery,
