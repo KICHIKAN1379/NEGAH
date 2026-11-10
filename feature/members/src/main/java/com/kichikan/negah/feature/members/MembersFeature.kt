@@ -34,6 +34,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -49,6 +50,12 @@ import com.kichikan.negah.domain.member.Member
 import com.kichikan.negah.domain.member.MemberRepository
 import com.kichikan.negah.domain.member.RegisterMember
 import com.kichikan.negah.domain.member.RegisterMemberResult
+import com.kichikan.negah.domain.growth.GrowthItem
+import com.kichikan.negah.domain.growth.GrowthMapRepository
+import com.kichikan.negah.domain.growth.GrowthTrack
+import com.kichikan.negah.domain.growth.MemberGrowthProgress
+import com.kichikan.negah.domain.growth.UpdateGrowthProgress
+import com.kichikan.negah.domain.growth.UpdateGrowthProgressResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -69,6 +76,9 @@ data class MembersUiState(
     val sortOption: MemberSortOption = MemberSortOption.NAME,
     val selectedMemberId: String? = null,
     val economyTransactions: List<EconomyTransaction> = emptyList(),
+    val growthItems: List<GrowthItem> = emptyList(),
+    val growthProgress: List<MemberGrowthProgress> = emptyList(),
+    val growthSaveMessage: String? = null,
     val isSaving: Boolean = false,
     val validationMessage: String? = null,
     val savedMessage: String? = null,
@@ -101,10 +111,14 @@ class MembersViewModel @Inject constructor(
     private val repository: MemberRepository,
     private val registerMember: RegisterMember,
     private val economyRepository: EconomyRepository,
+    private val growthMapRepository: GrowthMapRepository,
+    private val updateGrowthProgress: UpdateGrowthProgress,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(MembersUiState())
     val state = mutableState.asStateFlow()
     private var economyHistoryJob: Job? = null
+    private var growthItemsJob: Job? = null
+    private var growthProgressJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -122,7 +136,9 @@ class MembersViewModel @Inject constructor(
     fun onSortChanged(value: MemberSortOption) = mutableState.update { it.copy(sortOption = value) }
     fun onMemberSelected(memberId: String) {
         economyHistoryJob?.cancel()
-        mutableState.update { it.copy(selectedMemberId = memberId, economyTransactions = emptyList()) }
+        growthItemsJob?.cancel()
+        growthProgressJob?.cancel()
+        mutableState.update { it.copy(selectedMemberId = memberId, economyTransactions = emptyList(), growthItems = emptyList(), growthProgress = emptyList(), growthSaveMessage = null) }
         economyHistoryJob = viewModelScope.launch {
             economyRepository.observeForMember(memberId).collect { transactions ->
                 mutableState.update { current ->
@@ -131,12 +147,52 @@ class MembersViewModel @Inject constructor(
                 }
             }
         }
+        growthItemsJob = viewModelScope.launch {
+            kotlinx.coroutines.flow.combine(
+                growthMapRepository.observeItems(GrowthTrack.CAPABILITY),
+                growthMapRepository.observeItems(GrowthTrack.SELF_IMPROVEMENT),
+            ) { capabilities, selfImprovement -> capabilities + selfImprovement }
+                .collect { items -> mutableState.update { current ->
+                    if (current.selectedMemberId == memberId) current.copy(growthItems = items) else current
+                } }
+        }
+        growthProgressJob = viewModelScope.launch {
+            growthMapRepository.observeProgress(memberId).collect { progress ->
+                mutableState.update { current ->
+                    if (current.selectedMemberId == memberId) current.copy(growthProgress = progress) else current
+                }
+            }
+        }
     }
 
     fun onProfileClosed() {
         economyHistoryJob?.cancel()
+        growthItemsJob?.cancel()
+        growthProgressJob?.cancel()
         economyHistoryJob = null
-        mutableState.update { it.copy(selectedMemberId = null, economyTransactions = emptyList()) }
+        growthItemsJob = null
+        growthProgressJob = null
+        mutableState.update { it.copy(selectedMemberId = null, economyTransactions = emptyList(), growthItems = emptyList(), growthProgress = emptyList(), growthSaveMessage = null) }
+    }
+
+    fun saveGrowthProgress(item: GrowthItem, progressPercent: Int, note: String?) {
+        val memberId = mutableState.value.selectedMemberId ?: return
+        viewModelScope.launch {
+            try {
+                when (updateGrowthProgress(MemberGrowthProgress(
+                    memberId = memberId,
+                    growthItemId = item.id,
+                    progressPercent = progressPercent,
+                    note = note?.trim()?.takeIf(String::isNotEmpty),
+                    updatedAtEpochMillis = System.currentTimeMillis(),
+                ))) {
+                    UpdateGrowthProgressResult.Saved -> mutableState.update { it.copy(growthSaveMessage = "پیشرفت ذخیره شد") }
+                    UpdateGrowthProgressResult.Invalid -> mutableState.update { it.copy(growthSaveMessage = "مقدار پیشرفت معتبر نیست") }
+                }
+            } catch (_: Exception) {
+                mutableState.update { it.copy(growthSaveMessage = "ذخیره پیشرفت انجام نشد؛ دوباره تلاش کنید") }
+            }
+        }
     }
 
     fun addMember() {
@@ -167,7 +223,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val selectedMember = state.members.firstOrNull { it.id == state.selectedMemberId }
     if (selectedMember != null) {
-        MemberProfileScreen(selectedMember, state.economyTransactions, viewModel::onProfileClosed, modifier)
+        MemberProfileScreen(selectedMember, state.economyTransactions, state.growthItems, state.growthProgress, state.growthSaveMessage, viewModel::saveGrowthProgress, viewModel::onProfileClosed, modifier)
         return
     }
 
@@ -304,7 +360,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, onBack: () -> Unit, modifier: Modifier = Modifier) {
+private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, growthItems: List<GrowthItem>, growthProgress: List<MemberGrowthProgress>, growthSaveMessage: String?, onSaveGrowthProgress: (GrowthItem, Int, String?) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
     var inventoryTab by rememberSaveable { mutableStateOf("آواتار") }
     val level = LevelProgression.levelFor(member.totalXp)
     val currentLevelXp = LevelProgression.minimumXpForLevel(level)
@@ -343,10 +399,9 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
             ProfileWalletCard("الماس", member.diamonds.toString(), "شخصی‌سازی", Modifier.weight(1f))
         }
         ProfileSection("نقشه کمال", "دو مسیر مستقل رشد عضو") {
-            Text("توانمندی", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-            Text("هنوز آیتمی برای این عضو ثبت نشده است", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("خودسازی", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.secondary)
-            Text("هنوز آیتمی برای این عضو ثبت نشده است", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            GrowthTrackSection("توانمندی", growthItems.filter { it.track == GrowthTrack.CAPABILITY }, growthProgress, onSaveGrowthProgress)
+            GrowthTrackSection("خودسازی", growthItems.filter { it.track == GrowthTrack.SELF_IMPROVEMENT }, growthProgress, onSaveGrowthProgress)
+            growthSaveMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
         }
         ProfileSection("گنجینه", "موجودی و آیتم‌های عضو") {
             Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -364,6 +419,46 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
         ProfileSection("سوابق دریافتی", "تراکنش‌های ثبت‌شده در دفتر اقتصادی") {
             if (transactions.isEmpty()) Text("هنوز تراکنش اقتصادی برای این عضو ثبت نشده است", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             else transactions.forEach { EconomyTransactionRow(it) }
+        }
+    }
+}
+
+@Composable
+private fun GrowthTrackSection(
+    title: String,
+    items: List<GrowthItem>,
+    progress: List<MemberGrowthProgress>,
+    onSave: (GrowthItem, Int, String?) -> Unit,
+) {
+    Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+    if (items.isEmpty()) {
+        Text("هنوز آیتمی در این مسیر تعریف نشده است", style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+    } else {
+        items.forEach { item ->
+            val saved = progress.firstOrNull { it.growthItemId == item.id }
+            var percent by rememberSaveable(item.id, saved?.progressPercent) {
+                mutableStateOf(saved?.progressPercent ?: 0)
+            }
+            var note by rememberSaveable(item.id, saved?.note) {
+                mutableStateOf(saved?.note.orEmpty())
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(item.title, style = MaterialTheme.typography.titleSmall)
+                item.description?.takeIf { it.isNotBlank() }?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("پیشرفت", style = MaterialTheme.typography.labelMedium)
+                    Text("$percent٪", style = MaterialTheme.typography.labelMedium)
+                }
+                Slider(value = percent.toFloat(), onValueChange = { percent = it.toInt() }, valueRange = 0f..100f, steps = 99)
+                OutlinedTextField(value = note, onValueChange = { note = it },
+                    label = { Text("یادداشت مربی (اختیاری)") }, modifier = Modifier.fillMaxWidth(), minLines = 1)
+                Button(onClick = { onSave(item, percent, note) }, modifier = Modifier.fillMaxWidth()) {
+                    Text("ذخیره پیشرفت")
+                }
+            }
         }
     }
 }
