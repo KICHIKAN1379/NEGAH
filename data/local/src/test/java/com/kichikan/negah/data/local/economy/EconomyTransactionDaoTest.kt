@@ -4,12 +4,12 @@ import android.database.sqlite.SQLiteConstraintException
 import androidx.room.Room
 import com.kichikan.negah.data.local.NegahDatabase
 import com.kichikan.negah.data.local.member.MemberEntity
+import com.kichikan.negah.domain.economy.LedgerAppendResult
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
