@@ -27,6 +27,7 @@ dependencies {
     implementation(project(":core:designsystem"))
     implementation(project(":feature:home"))
     implementation(project(":feature:members"))
+    implementation(project(":feature:refinery"))
     implementation(project(":data:local"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
