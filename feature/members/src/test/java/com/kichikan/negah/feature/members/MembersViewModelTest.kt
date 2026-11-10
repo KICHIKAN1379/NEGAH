@@ -5,7 +5,6 @@ import com.kichikan.negah.domain.economy.EconomyRepository
 import com.kichikan.negah.domain.economy.EconomyTransaction
 import com.kichikan.negah.domain.economy.EconomyTransactionKind
 import com.kichikan.negah.domain.member.Member
-import com.kichikan.negah.domain.economy.EconomyCurrency
 import com.kichikan.negah.domain.member.MemberRepository
 import com.kichikan.negah.domain.member.RegisterMember
 import com.kichikan.negah.domain.growth.GrowthItem
