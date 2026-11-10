@@ -6,7 +6,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
 
 class AttendanceDomainTest {
     private class FakeAttendanceRepository : AttendanceRepository {
@@ -18,7 +18,7 @@ class AttendanceDomainTest {
     }
 
     @Test
-    fun reasonlessAbsentExcusedAndUnrecordedEntriesAreRejected() = runTest {
+    fun reasonlessAbsentExcusedAndUnrecordedEntriesAreRejected() = runBlocking {
         listOf(
             AttendanceStatus.ABSENT,
             AttendanceStatus.EXCUSED_ABSENCE,
@@ -36,7 +36,7 @@ class AttendanceDomainTest {
     }
 
     @Test
-    fun duplicateMemberEntriesAreRejected() = runTest {
+    fun duplicateMemberEntriesAreRejected() = runBlocking {
         val repository = FakeAttendanceRepository()
         val result = SaveAttendance(repository)(
             sessionId = "session-1",
@@ -51,7 +51,7 @@ class AttendanceDomainTest {
     }
 
     @Test
-    fun validEntriesAreConfirmedAndUseStableIds() = runTest {
+    fun validEntriesAreConfirmedAndUseStableIds() = runBlocking {
         val repository = FakeAttendanceRepository()
         val useCase = SaveAttendance(repository)
         val draft = listOf(AttendanceDraft("member-1", AttendanceStatus.ABSENT, "بیماری"))
