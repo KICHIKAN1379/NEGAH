@@ -76,7 +76,6 @@ fun SessionsScreen(
             onDateSelected = viewModel::selectCalendarDate,
             onOpenSession = viewModel::openSession,
             onSetCompleted = viewModel::setCompleted,
-            onDeleteSession = viewModel::deleteSession,
             onCreateSession = viewModel::createSession,
             modifier = modifier,
         )
@@ -93,12 +92,10 @@ private fun SessionListScreen(
     onDateSelected: (Long?) -> Unit,
     onOpenSession: (String) -> Unit,
     onSetCompleted: (String, Boolean) -> Unit,
-    onDeleteSession: (String) -> Unit,
     onCreateSession: (String, String?, String?, String?, Long) -> Unit,
     modifier: Modifier,
 ) {
     var showCreateDialog by rememberSaveable { mutableStateOf(false) }
-    var pendingDeleteId by rememberSaveable { mutableStateOf<String?>(null) }
 
     val memberNamesBySession = remember(state.attendanceRecords, state.members) {
         val namesById = state.members.associate { it.id to it.fullName }
@@ -229,7 +226,6 @@ private fun SessionListScreen(
                                 (counts[AttendanceStatus.EXCUSED_ABSENCE] ?: 0),
                             onOpen = { onOpenSession(session.id) },
                             onSetCompleted = { onSetCompleted(session.id, !session.isCompleted) },
-                            onDelete = { pendingDeleteId = session.id },
                         )
                     }
                 }
@@ -247,23 +243,7 @@ private fun SessionListScreen(
         )
     }
 
-    val deleteId = pendingDeleteId
-    if (deleteId != null) {
-        AlertDialog(
-            onDismissRequest = { pendingDeleteId = null },
-            title = { Text("حذف جلسه") },
-            text = { Text("جلسه فقط در صورتی حذف می‌شود که سابقه حضور و غیاب وابسته نداشته باشد.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    onDeleteSession(deleteId)
-                    pendingDeleteId = null
-                }) { Text("حذف") }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingDeleteId = null }) { Text("انصراف") }
-            },
-        )
-    }
+
 }
 
 @Composable
@@ -273,7 +253,6 @@ private fun SessionCard(
     absentCount: Int,
     onOpen: () -> Unit,
     onSetCompleted: () -> Unit,
-    onDelete: () -> Unit,
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -295,7 +274,6 @@ private fun SessionCard(
                 TextButton(onClick = onSetCompleted) {
                     Text(if (session.isCompleted) "بازگشایی" else "تکمیل جلسه")
                 }
-                TextButton(onClick = onDelete) { Text("حذف") }
             }
         }
     }
