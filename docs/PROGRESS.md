@@ -175,3 +175,10 @@ The available host has GitHub repository read/write integration but no local And
 - Added confirmation before archiving. Archive changes only the member archived flag and timestamp; it does not delete the member or history.
 - Added restore from the archived list, preserving the original member ID and stored balances/history.
 - CI verification is pending for this commit.
+
+
+## Latest continuation — received-history filters
+- Added independent history filters for all transactions, XP, spendable points and diamonds in the member profile.
+- Filters operate on the existing ledger stream only; no balance or ledger data is modified.
+- Added ViewModel coverage for currency filtering and returning to the full history.
+- CI verification is pending for this commit.

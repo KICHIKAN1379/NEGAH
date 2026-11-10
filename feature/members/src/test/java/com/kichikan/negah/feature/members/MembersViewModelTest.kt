@@ -5,6 +5,7 @@ import com.kichikan.negah.domain.economy.EconomyRepository
 import com.kichikan.negah.domain.economy.EconomyTransaction
 import com.kichikan.negah.domain.economy.EconomyTransactionKind
 import com.kichikan.negah.domain.member.Member
+import com.kichikan.negah.domain.economy.EconomyCurrency
 import com.kichikan.negah.domain.member.MemberRepository
 import com.kichikan.negah.domain.member.RegisterMember
 import com.kichikan.negah.domain.growth.GrowthItem
@@ -77,6 +78,21 @@ class MembersViewModelTest {
         members.emit(listOf(member("active", "عضو فعال")))
         viewModel.showArchivedMembers(true)
         assertEquals(emptyList<String>(), viewModel.state.value.visibleMembers.map(Member::id))
+    }
+
+    @Test
+    fun receivedHistoryFilterShowsOnlySelectedCurrency() = runTest {
+        val xp = transaction("xp", "member-1", 10).copy(currency = EconomyCurrency.XP)
+        val points = transaction("points", "member-1", 20).copy(currency = EconomyCurrency.POINTS)
+        val diamonds = transaction("diamonds", "member-1", 2).copy(currency = EconomyCurrency.DIAMONDS)
+        economy.emit("member-1", listOf(xp, points, diamonds))
+        viewModel.onMemberSelected("member-1")
+
+        viewModel.onHistoryFilterChanged(MemberHistoryFilter.POINTS)
+
+        assertEquals(listOf(points), viewModel.state.value.visibleEconomyTransactions)
+        viewModel.onHistoryFilterChanged(MemberHistoryFilter.ALL)
+        assertEquals(listOf(xp, points, diamonds), viewModel.state.value.visibleEconomyTransactions)
     }
 
     @Test

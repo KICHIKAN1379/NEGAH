@@ -72,6 +72,7 @@ import java.util.Date
 import kotlinx.coroutines.launch
 
 enum class MemberSortOption { NAME, LEVEL, POINTS }
+enum class MemberHistoryFilter { ALL, XP, POINTS, DIAMONDS }
 
 data class MembersUiState(
     val members: List<Member> = emptyList(),
@@ -83,6 +84,16 @@ data class MembersUiState(
     val sortOption: MemberSortOption = MemberSortOption.NAME,
     val selectedMemberId: String? = null,
     val economyTransactions: List<EconomyTransaction> = emptyList(),
+    val historyFilter: MemberHistoryFilter = MemberHistoryFilter.ALL,
+    val visibleEconomyTransactions: List<EconomyTransaction>
+        get() = economyTransactions.filter { transaction ->
+            when (historyFilter) {
+                MemberHistoryFilter.ALL -> true
+                MemberHistoryFilter.XP -> transaction.currency == EconomyCurrency.XP
+                MemberHistoryFilter.POINTS -> transaction.currency == EconomyCurrency.POINTS
+                MemberHistoryFilter.DIAMONDS -> transaction.currency == EconomyCurrency.DIAMONDS
+            }
+        },
     val growthItems: List<GrowthItem> = emptyList(),
     val growthProgress: List<MemberGrowthProgress> = emptyList(),
     val growthSaveMessage: String? = null,
@@ -154,6 +165,7 @@ class MembersViewModel @Inject constructor(
     fun onNicknameChanged(value: String) = mutableState.update { it.copy(nickname = value, savedMessage = null) }
     fun onSearchChanged(value: String) = mutableState.update { it.copy(searchQuery = value) }
     fun onSortChanged(value: MemberSortOption) = mutableState.update { it.copy(sortOption = value) }
+    fun onHistoryFilterChanged(value: MemberHistoryFilter) = mutableState.update { it.copy(historyFilter = value) }
     fun showArchivedMembers(show: Boolean) = mutableState.update { it.copy(showingArchived = show, searchQuery = "") }
     fun archiveMember(memberId: String) {
         viewModelScope.launch {
@@ -334,7 +346,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val selectedMember = state.members.firstOrNull { it.id == state.selectedMemberId }
     if (selectedMember != null) {
-        MemberProfileScreen(selectedMember, state.economyTransactions, state.growthItems, state.growthProgress, state.growthSaveMessage, state.inventoryEntries, state.availableCatalogItems, state.activeInventoryItems, state.inventoryMessage, viewModel::saveGrowthProgress, viewModel::activateInventoryItem, viewModel::grantCatalogItem, viewModel::onProfileClosed, modifier)
+        MemberProfileScreen(selectedMember, state.visibleEconomyTransactions, state.historyFilter, viewModel::onHistoryFilterChanged, state.growthItems, state.growthProgress, state.growthSaveMessage, state.inventoryEntries, state.availableCatalogItems, state.activeInventoryItems, state.inventoryMessage, viewModel::saveGrowthProgress, viewModel::activateInventoryItem, viewModel::grantCatalogItem, viewModel::onProfileClosed, modifier)
         return
     }
 
@@ -490,7 +502,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, growthItems: List<GrowthItem>, growthProgress: List<MemberGrowthProgress>, growthSaveMessage: String?, inventoryEntries: List<MemberInventoryEntry>, availableCatalogItems: List<CatalogItem>, activeInventoryItems: List<ActiveInventoryItem>, inventoryMessage: String?, onSaveGrowthProgress: (GrowthItem, Int, String?) -> Unit, onActivateInventoryItem: (MemberInventoryEntry) -> Unit, onGrantCatalogItem: (CatalogItem) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
+private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, historyFilter: MemberHistoryFilter, onHistoryFilterChanged: (MemberHistoryFilter) -> Unit, growthItems: List<GrowthItem>, growthProgress: List<MemberGrowthProgress>, growthSaveMessage: String?, inventoryEntries: List<MemberInventoryEntry>, availableCatalogItems: List<CatalogItem>, activeInventoryItems: List<ActiveInventoryItem>, inventoryMessage: String?, onSaveGrowthProgress: (GrowthItem, Int, String?) -> Unit, onActivateInventoryItem: (MemberInventoryEntry) -> Unit, onGrantCatalogItem: (CatalogItem) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
     var inventoryTab by rememberSaveable { mutableStateOf("آواتار") }
     val level = LevelProgression.levelFor(member.totalXp)
     val currentLevelXp = LevelProgression.minimumXpForLevel(level)
@@ -592,7 +604,21 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
             ProfileValue("سطح فعلی", level.toString())
         }
         ProfileSection("سوابق دریافتی", "تراکنش‌های ثبت‌شده در دفتر اقتصادی") {
-            if (transactions.isEmpty()) Text("هنوز تراکنش اقتصادی برای این عضو ثبت نشده است", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                MemberHistoryFilter.entries.forEach { filter ->
+                    FilterChip(
+                        selected = historyFilter == filter,
+                        onClick = { onHistoryFilterChanged(filter) },
+                        label = { Text(when (filter) {
+                            MemberHistoryFilter.ALL -> "همه"
+                            MemberHistoryFilter.XP -> "XP"
+                            MemberHistoryFilter.POINTS -> "امتیاز"
+                            MemberHistoryFilter.DIAMONDS -> "الماس"
+                        }) },
+                    )
+                }
+            }
+            if (transactions.isEmpty()) Text("برای این فیلتر تراکنشی ثبت نشده است", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             else transactions.forEach { EconomyTransactionRow(it) }
         }
     }
