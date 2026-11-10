@@ -18,7 +18,7 @@ Last updated: 2026-11-10
 - Phase 1 — Repository audit: completed (read-only).
 - Phase 2 — Product specification reconciliation: working baseline drafted and reconciled against the approved product guide, UX and UX2; owner final acceptance remains pending.
 - Phase 3 — UX reference baseline: source map exists in docs/UX_REFERENCE_MAP.md; primary visual reference is ux.pdf and navigation/mapping index is ux 2.pdf.
-- Phase 4 — Technical implementation: class-days settings and the first sessions/attendance workflow are implemented and CI-verified; remaining product requirements continue below.
+- Phase 4 — Technical implementation: class-days settings, session creation/editing and the first attendance workflow are implemented and CI-verified; remaining product requirements continue below.
 - Architecture baseline: docs/ARCHITECTURE.md.
 - Prior implementation snapshot: docs/IMPLEMENTATION_STATUS.md.
 - Current delivery plan: docs/IMPLEMENTATION_PLAN.md.
@@ -42,7 +42,7 @@ Last updated: 2026-11-10
 - Shop currently exposes a basic member/catalog purchase flow.
 - Refinery currently manages growth-map items and catalog items.
 - Domain rules include five attendance states and required-reason validation for absent, excused absence and unrecorded.
-- Session creation, completion state, weekly class-day calendar, session filtering/search and attendance entry are now connected to Room.
+- Session creation and editing, completion state, weekly class-day calendar, session filtering/search and attendance entry are now connected to Room. Session edits preserve the session ID, creation timestamp, completion state and attendance references; a separate audit log for session-field edits is still absent.
 - Attendance revisions are stored transactionally when a previously saved status/reason/confirmation changes.
 - Session deletion is intentionally not exposed in the UI pending an explicit retention policy; the DAO-level foreign-key constraint prevents deletion when attendance exists.
 
@@ -51,7 +51,7 @@ Last updated: 2026-11-10
 - Home is still a placeholder and does not implement the approved Home reference (UX pages 35–36).
 - Progress is not yet the full six-entry experience; missions, reading, wheel and competition are not implemented as complete flows.
 - Settings is currently a minimal entry point to Refinery and class-day settings; most of the nine approved settings options are missing.
-- Sessions/attendance still need session editing, previous/next week and month navigation, date-range reports, group filter when group membership is defined, CSV export and a UI for inspecting attendance revisions.
+- Sessions/attendance still need previous/next week and month navigation, date-range reports, group filter when group membership is defined, CSV export and a UI for inspecting attendance revisions.
 - The current weekly strip shows the current Saturday–Friday week and only configured class days; it does not yet provide week navigation.
 - Member profile has partial growth/economy/inventory sections; four-tab Ganjine, received-history filtering and six-axis report card are incomplete.
 - Encrypted backup/restore, MRT retention of at most two versions, and first-run file-access flow are not implemented.
@@ -108,9 +108,19 @@ Last updated: 2026-11-10
 - Dedicated 5→6 migration test: not run.
 - Release signing / Play Store readiness: not checked.
 
+### Session editing slice
+- CI run #90: success — https://github.com/KICHIKAN1379/NEGAH/actions/runs/42867008992
+- Verified source commit: ee0d4906e7ecab62ace832b822822dee798203d6.
+- Added session editing for title, topic, location, notes and date while preserving session ID, created timestamp, completion state and attendance references.
+- Added domain tests for preserving identity/state during edits and rejecting blank edit titles.
+- :app:assembleDebug, :domain:core:test, :data:local:testDebugUnitTest, :feature:members:testDebugUnitTest and :feature:refinery:testDebugUnitTest all completed successfully; Refinery remains NO-SOURCE.
+- Debug APK artifact ID: 13786474856; extracted APK size: 12,162,358 bytes; SHA-256: 96b4cc7a0ff6454edbb810c8ada0a0d3c2c59e2cd3ac3651638ba691385a4bb8.
+- This is a debug build, not a release build. UI/instrumentation tests and manual device verification remain unperformed.
+- TDD RED was not observed before implementation because this host has no local Gradle/Android SDK; the added tests were run in the post-change CI verification. Do not represent this as a full red-green cycle.
+
 ## Verification record
 
-- Latest source commit verified by CI: 5cbb3421570adfceb693cf743c675d4dda4479ae.
+- Latest source commit verified by CI: ee0d4906e7ecab62ace832b822822dee798203d6.
 - Build and configured unit/DAO test tasks: successful.
 - Refinery tests: NO-SOURCE.
 - UI/integration tests: not run.
@@ -120,7 +130,7 @@ Last updated: 2026-11-10
 
 ## Next permitted work
 
-1. Complete Sessions: edit sessions, week navigation, month/date-range view, CSV export and visible attendance-revision history.
+1. Complete Sessions: week navigation, month/date-range view, CSV export and visible attendance-revision history.
 2. Add group filter when the group data model and UX rules are implemented.
 3. Complete member profile, Ganjine, received history and archive/restore.
 4. Implement Home pages 35–36.
@@ -131,4 +141,4 @@ Last updated: 2026-11-10
 
 ## Current blocker
 
-The available host has GitHub repository read/write integration but no local Android SDK/Gradle execution environment. GitHub Actions has verified the current source commit. The repository still lacks the Gradle Wrapper scripts/JAR. UI tests, manual device verification, dedicated migration testing, release signing and Play Store readiness remain outstanding; do not claim these are complete.
+The available host has GitHub repository read/write integration but no local Android SDK/Gradle execution environment. GitHub Actions has verified the current source commit ee0d4906e7ecab62ace832b822822dee798203d6. The repository still lacks the Gradle Wrapper scripts/JAR. UI tests, manual device verification, dedicated migration testing, release signing and Play Store readiness remain outstanding; do not claim these are complete.

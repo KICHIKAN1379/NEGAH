@@ -44,6 +44,8 @@ Acceptance:
 
 ## Phase B — Complete the core data and session workflows
 
+Implementation checkpoint (2026-11-10): session creation and editing are implemented in the mission branch. Editing updates the existing session row and preserves its ID, creation timestamp, completion state and attendance references. Domain tests cover update preservation and blank-title rejection; CI run #90 passed. Session deletion remains intentionally unavailable pending the approved retention policy. The remaining Phase B work is week/month navigation, date-range reporting, attendance history UI and CSV export.
+
 Existing evidence:
 - Member, session and attendance entities/DAOs exist.
 - Attendance domain enum and reason validation exist.
@@ -227,7 +229,7 @@ This is a delivery order, not a permanent scope reduction. Any unfinished item m
 
 1. Use the successful baseline CI and debug APK as the starting point.
 2. Correct product/UX documentation against the approved guide and UX/UX2.
-3. Implement Settings class weekdays and session/attendance vertical slice.
+3. Complete Sessions/attendance: session creation and editing are implemented; continue with week/month navigation, date-range reporting, CSV export and visible attendance-revision history.
 4. Complete member profile, Ganjine and archive/restore behavior.
 5. Implement Home pages 35–36.
 6. Complete remaining Progress domains, Shop and Refinery.
