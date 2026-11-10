@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface EconomyTransactionDao {
-    @Query("SELECT * FROM economy_transactions WHERE memberId = :memberId ORDER BY createdAtEpochMillis DESC")
+    @Query("SELECT * FROM economy_transactions WHERE memberId = :memberId ORDER BY createdAtEpochMillis DESC, id DESC")
     fun observeForMember(memberId: String): Flow<List<EconomyTransactionEntity>>
 
     @Query("SELECT COALESCE(SUM(amount), 0) FROM economy_transactions WHERE memberId = :memberId AND currency = :currency")

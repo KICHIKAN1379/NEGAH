@@ -8,6 +8,7 @@ android {
     namespace = "com.kichikan.negah.data.local"
     compileSdk = 36
     defaultConfig { minSdk = 26 }
+    testOptions { unitTests.isIncludeAndroidResources = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -31,4 +32,6 @@ dependencies {
     kapt("androidx.room:room-compiler:2.8.5")
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.16.1")
 }
