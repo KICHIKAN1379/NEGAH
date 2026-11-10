@@ -18,6 +18,8 @@ data class ShopUiState(val members: List<Member> = emptyList(), val selectedMemb
 class ShopViewModel @Inject constructor(private val members: MemberRepository, private val inventory: InventoryRepository) : ViewModel() {
  private val mutableState = MutableStateFlow(ShopUiState())
  val state = mutableState.asStateFlow()
+ private var memberJob: Job? = null
+ private var observedMemberId: String? = null
  init {
   viewModelScope.launch { members.observeActiveMembers().collect { list ->
    val previous = mutableState.value.selectedMemberId

@@ -45,7 +45,7 @@ fun ShopScreen(viewModel: ShopViewModel, modifier: Modifier = Modifier) {
        Text(if (owned) "دریافت‌شده" else "قابل تهیه")
       }
       if (owned) Text("این آیتم در گنجینه عضو موجود است.")
-      else Button(onClick = { viewModel.purchase(item.id) }, enabled = item.priceAmount != null && item.priceAmount > 0L) { Text("خرید") }
+      else Button(onClick = { viewModel.purchase(item.id) }, enabled = item.priceAmount?.let { it > 0L } == true) { Text("خرید") }
      } }
     }
    }

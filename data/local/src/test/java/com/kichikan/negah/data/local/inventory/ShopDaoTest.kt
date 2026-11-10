@@ -45,6 +45,9 @@ class ShopDaoTest {
         database.inventoryDao().upsertCatalogItem(
             CatalogItemEntity("avatar-1", "AVATAR", "آواتار", null, true, 1, 15L),
         )
+        database.inventoryDao().upsertCatalogItem(
+            CatalogItemEntity("reward-no-price", "REWARD", "جایزه بدون قیمت", null, true, 2, null),
+        )
     }
 
     @After
@@ -91,6 +94,14 @@ class ShopDaoTest {
         assertEquals(ShopPurchaseResult.INSUFFICIENT_BALANCE, result)
         assertEquals(10L, database.memberDao().findById(MEMBER_ID)?.spendablePoints)
         assertTrue(database.economyTransactionDao().observeForMember(MEMBER_ID).first().none { it.id == "purchase-fail" })
+        assertTrue(database.inventoryDao().observeMemberInventory(MEMBER_ID, "REWARD").first().isEmpty())
+    }
+
+    @Test
+    fun missingPrice_isReportedAndDoesNotWriteAnything() = runBlocking {
+        val result = shop.purchase(MEMBER_ID, InventoryCategory.REWARD, "reward-no-price", "purchase-no-price", 15L)
+        assertEquals(ShopPurchaseResult.PRICE_NOT_SET, result)
+        assertTrue(database.economyTransactionDao().observeForMember(MEMBER_ID).first().isEmpty())
         assertTrue(database.inventoryDao().observeMemberInventory(MEMBER_ID, "REWARD").first().isEmpty())
     }
 

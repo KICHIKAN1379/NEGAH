@@ -10,6 +10,8 @@ import com.kichikan.negah.domain.inventory.ShopPurchaseResult
 abstract class ShopDao {
  @Query("SELECT priceAmount FROM catalog_items WHERE id = :itemId AND category = :category AND isAvailable = 1")
  protected abstract suspend fun availableItemPrice(itemId: String, category: String): Long?
+ @Query("SELECT COUNT(*) FROM catalog_items WHERE id = :itemId AND category = :category AND isAvailable = 1")
+ protected abstract suspend fun availableItemCount(itemId: String, category: String): Int
  @Query("SELECT COUNT(*) FROM member_inventory WHERE memberId = :memberId AND catalogItemId = :itemId")
  protected abstract suspend fun ownedCount(memberId: String, itemId: String): Int
  @Query("SELECT COALESCE(SUM(amount), 0) FROM economy_transactions WHERE memberId = :memberId AND currency = :currency")
@@ -20,7 +22,8 @@ abstract class ShopDao {
  protected abstract suspend fun refreshBalances(memberId: String, now: Long)
  @Transaction
  open suspend fun purchase(memberId: String, category: InventoryCategory, itemId: String, transactionId: String, now: Long): ShopPurchaseResult {
-  val price = availableItemPrice(itemId, category.name) ?: return ShopPurchaseResult.ITEM_UNAVAILABLE
+  if (availableItemCount(itemId, category.name) == 0) return ShopPurchaseResult.ITEM_UNAVAILABLE
+  val price = availableItemPrice(itemId, category.name) ?: return ShopPurchaseResult.PRICE_NOT_SET
   if (price <= 0L) return ShopPurchaseResult.PRICE_NOT_SET
   if (ownedCount(memberId, itemId) > 0) return ShopPurchaseResult.ALREADY_OWNED
   val currency = if (category == InventoryCategory.REWARD) "POINTS" else "DIAMONDS"
