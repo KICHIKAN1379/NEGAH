@@ -97,6 +97,11 @@ private fun SessionListScreen(
 ) {
     var showCreateDialog by rememberSaveable { mutableStateOf(false) }
     var editingSession by remember { mutableStateOf<Session?>(null) }
+    var visibleWeekStartEpochDay by rememberSaveable {
+        val today = LocalDate.now()
+        mutableStateOf(today.minusDays(today.daysSinceSaturday().toLong()).toEpochDay())
+    }
+    val visibleWeekStart = LocalDate.ofEpochDay(visibleWeekStartEpochDay)
 
     val memberNamesBySession = remember(state.attendanceRecords, state.members) {
         val namesById = state.members.associate { it.id to it.fullName }
@@ -155,7 +160,29 @@ private fun SessionListScreen(
                 Text("تکمیل‌شده: " + state.sessions.count { it.isCompleted })
             }
 
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                TextButton(onClick = {
+                    visibleWeekStartEpochDay -= 7L
+                    onDateSelected(null)
+                }) { Text("هفته قبل") }
+                val weekEnd = visibleWeekStart.plusDays(6)
+                Text(
+                    visibleWeekStart.format(DateTimeFormatter.ofPattern("yyyy/MM/dd")) +
+                        " تا " + weekEnd.format(DateTimeFormatter.ofPattern("yyyy/MM/dd")),
+                    style = MaterialTheme.typography.labelLarge,
+                )
+                TextButton(onClick = {
+                    visibleWeekStartEpochDay += 7L
+                    onDateSelected(null)
+                }) { Text("هفته بعد") }
+            }
+
             WeeklySessionCalendar(
+                weekStart = visibleWeekStart,
                 classDays = state.classDays,
                 selectedDateEpochDay = state.selectedDateEpochDay,
                 onDateSelected = onDateSelected,
@@ -290,6 +317,7 @@ private fun SessionCard(
 
 @Composable
 private fun WeeklySessionCalendar(
+    weekStart: LocalDate,
     classDays: Set<ClassDay>,
     selectedDateEpochDay: Long?,
     onDateSelected: (Long?) -> Unit,
@@ -303,9 +331,7 @@ private fun WeeklySessionCalendar(
         return
     }
 
-    val today = LocalDate.now()
-    val start = today.minusDays(today.daysSinceSaturday().toLong())
-    val dates = (0..6).map { start.plusDays(it.toLong()) }
+    val dates = (0..6).map { weekStart.plusDays(it.toLong()) }
         .filter { it.toClassDay() in classDays }
 
     Row(

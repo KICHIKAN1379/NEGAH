@@ -42,7 +42,7 @@ Last updated: 2026-11-10
 - Shop currently exposes a basic member/catalog purchase flow.
 - Refinery currently manages growth-map items and catalog items.
 - Domain rules include five attendance states and required-reason validation for absent, excused absence and unrecorded.
-- Session creation and editing, completion state, weekly class-day calendar, session filtering/search and attendance entry are now connected to Room. Session edits preserve the session ID, creation timestamp, completion state and attendance references; a separate audit log for session-field edits is still absent.
+- Session creation and editing, completion state, previous/next week navigation, configured-class-day calendar, session filtering/search and attendance entry are now connected to Room. Session edits preserve the session ID, creation timestamp, completion state and attendance references; a separate audit log for session-field edits is still absent.
 - Attendance revisions are stored transactionally when a previously saved status/reason/confirmation changes.
 - Session deletion is intentionally not exposed in the UI pending an explicit retention policy; the DAO-level foreign-key constraint prevents deletion when attendance exists.
 
@@ -51,7 +51,7 @@ Last updated: 2026-11-10
 - Home is still a placeholder and does not implement the approved Home reference (UX pages 35–36).
 - Progress is not yet the full six-entry experience; missions, reading, wheel and competition are not implemented as complete flows.
 - Settings is currently a minimal entry point to Refinery and class-day settings; most of the nine approved settings options are missing.
-- Sessions/attendance still need previous/next week and month navigation, date-range reports, group filter when group membership is defined, CSV export and a UI for inspecting attendance revisions.
+- Sessions/attendance still need month/date-range reports, group filter when group membership is defined, CSV export and a UI for inspecting attendance revisions.
 - The current weekly strip shows the current Saturday–Friday week and only configured class days; it does not yet provide week navigation.
 - Member profile has partial growth/economy/inventory sections; four-tab Ganjine, received-history filtering and six-axis report card are incomplete.
 - Encrypted backup/restore, MRT retention of at most two versions, and first-run file-access flow are not implemented.
@@ -118,6 +118,12 @@ Last updated: 2026-11-10
 - This is a debug build, not a release build. UI/instrumentation tests and manual device verification remain unperformed.
 - TDD RED was not observed before implementation because this host has no local Gradle/Android SDK; the added tests were run in the post-change CI verification. Do not represent this as a full red-green cycle.
 
+## In-progress session navigation slice
+- Added previous/next week controls to the session list.
+- The seven-day window starts on Saturday and day chips remain limited to configured class days.
+- Moving between weeks clears a stale single-day selection so the list does not appear empty due to a date from another week.
+- CI verification is pending for this change.
+
 ## Verification record
 
 - Latest source commit verified by CI: ee0d4906e7ecab62ace832b822822dee798203d6.
@@ -130,7 +136,7 @@ Last updated: 2026-11-10
 
 ## Next permitted work
 
-1. Complete Sessions: week navigation, month/date-range view, CSV export and visible attendance-revision history.
+1. Complete Sessions: month/date-range view, CSV export and visible attendance-revision history.
 2. Add group filter when the group data model and UX rules are implemented.
 3. Complete member profile, Ganjine, received history and archive/restore.
 4. Implement Home pages 35–36.
