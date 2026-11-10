@@ -44,6 +44,7 @@ Last updated: 2026-11-10
 - Domain rules include five attendance states and required-reason validation for absent, excused absence and unrecorded.
 - Session creation, completion state, weekly class-day calendar, session filtering/search and attendance entry are now connected to Room.
 - Attendance revisions are stored transactionally when a previously saved status/reason/confirmation changes.
+- Session deletion is intentionally not exposed in the UI pending an explicit retention policy; the DAO-level foreign-key constraint prevents deletion when attendance exists.
 
 ## Confirmed gaps / risks
 
