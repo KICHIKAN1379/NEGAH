@@ -5,7 +5,6 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
-
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
@@ -13,10 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-
 rootProject.name = "NegahCoach"
-
-include(":app")
-include(":core:common")
-include(":domain:core")
-include(":feature:home")
+include(":app", ":core:common", ":domain:core", ":data:local", ":feature:home")
