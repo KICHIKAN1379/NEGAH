@@ -9,6 +9,7 @@ class UpdateGrowthProgressTest {
     private class FakeRepository : GrowthMapRepository {
         var saved: MemberGrowthProgress? = null
         override fun observeItems(track: GrowthTrack): Flow<List<GrowthItem>> = error("unused")
+        override fun observeAllItems(track: GrowthTrack): Flow<List<GrowthItem>> = error("unused")
         override fun observeProgress(memberId: String): Flow<List<MemberGrowthProgress>> = error("unused")
         override suspend fun saveItem(item: GrowthItem) = Unit
         override suspend fun updateProgress(progress: MemberGrowthProgress) { saved = progress }
