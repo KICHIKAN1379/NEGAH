@@ -8,16 +8,16 @@ import kotlin.test.assertIs
 
 class RegisterMemberTest {
     private class FakeRepository : MemberRepository {
-        val saved = mutableListOf<Member>()
-        override fun observeActiveMembers() = flowOf(saved.toList())
-        override suspend fun save(member: Member) { saved += member }
+        val created = mutableListOf<Member>()
+        override fun observeActiveMembers() = flowOf(created.toList())
+        override suspend fun create(member: Member) { created += member }
         override suspend fun archive(memberId: String) = Unit
     }
 
     @Test fun blankNameIsRejected() = runBlocking {
         val repository = FakeRepository()
         assertEquals(RegisterMemberResult.InvalidName, RegisterMember(repository)("  ", null, 100L))
-        assertEquals(0, repository.saved.size)
+        assertEquals(0, repository.created.size)
     }
 
     @Test fun normalizedMemberStartsWithZeroBalances() = runBlocking {
@@ -30,5 +30,6 @@ class RegisterMemberTest {
         assertEquals(0L, member.spendablePoints)
         assertEquals(0L, member.diamonds)
         assertEquals(100L, member.createdAtEpochMillis)
+        assertEquals(1, repository.created.size)
     }
 }

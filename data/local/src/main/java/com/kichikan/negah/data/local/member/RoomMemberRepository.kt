@@ -9,6 +9,6 @@ import javax.inject.Inject
 class RoomMemberRepository @Inject constructor(private val memberDao: MemberDao) : MemberRepository {
     override fun observeActiveMembers(): Flow<List<Member>> =
         memberDao.observeActiveMembers().map { list -> list.map(MemberEntity::toDomain) }
-    override suspend fun save(member: Member) = memberDao.upsert(MemberEntity.fromDomain(member))
+    override suspend fun create(member: Member) = memberDao.insert(MemberEntity.fromDomain(member))
     override suspend fun archive(memberId: String) = memberDao.archive(memberId, System.currentTimeMillis())
 }

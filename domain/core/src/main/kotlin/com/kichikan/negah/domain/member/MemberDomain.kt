@@ -12,7 +12,8 @@ data class Member(
 
 interface MemberRepository {
     fun observeActiveMembers(): Flow<List<Member>>
-    suspend fun save(member: Member)
+    /** Creates a new member; existing wallet balances must never be overwritten here. */
+    suspend fun create(member: Member)
     suspend fun archive(memberId: String)
 }
 
@@ -32,7 +33,7 @@ class RegisterMember @Inject constructor(private val repository: MemberRepositor
             createdAtEpochMillis = nowEpochMillis, updatedAtEpochMillis = nowEpochMillis,
             isArchived = false,
         )
-        repository.save(member)
+        repository.create(member)
         return RegisterMemberResult.Saved(member)
     }
 }
