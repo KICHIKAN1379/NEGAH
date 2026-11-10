@@ -38,4 +38,4 @@ jobs:
           gradle-version: "8.13"
 
       - name: Build and test
-        run: gradle :app:assembleDebug :domain:core:test --stacktrace
+        run: gradle :app:assembleDebug :domain:core:test :data:local:testDebugUnitTest --stacktrace
