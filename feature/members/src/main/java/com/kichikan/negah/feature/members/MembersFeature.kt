@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.kichikan.negah.domain.economy.LevelProgression
 import com.kichikan.negah.domain.member.Member
 import com.kichikan.negah.domain.member.MemberRepository
 import com.kichikan.negah.domain.member.RegisterMember
@@ -34,7 +35,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-enum class MemberSortOption { NAME, XP }
+enum class MemberSortOption { NAME, LEVEL, POINTS }
 
 data class MembersUiState(
     val members: List<Member> = emptyList(),
@@ -53,8 +54,18 @@ data class MembersUiState(
                     it.nickname.orEmpty().contains(searchQuery.trim(), true)
             }
             return when (sortOption) {
-                MemberSortOption.NAME -> filtered.sortedBy { it.fullName.lowercase() }
-                MemberSortOption.XP -> filtered.sortedByDescending { it.totalXp }
+                MemberSortOption.NAME -> filtered.sortedWith(
+                    compareBy<Member> { it.fullName.lowercase() }.thenBy { it.id },
+                )
+                MemberSortOption.LEVEL -> filtered.sortedWith(
+                    compareByDescending<Member> { LevelProgression.levelFor(it.totalXp) }
+                        .thenByDescending { it.totalXp }
+                        .thenBy { it.fullName.lowercase() },
+                )
+                MemberSortOption.POINTS -> filtered.sortedWith(
+                    compareByDescending<Member> { it.spendablePoints }
+                        .thenBy { it.fullName.lowercase() },
+                )
             }
         }
 }
@@ -129,7 +140,11 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
                 SegmentedButton(selected = state.sortOption == option,
                     onClick = { viewModel.onSortChanged(option) },
                     shape = SegmentedButtonDefaults.itemShape(index, MemberSortOption.entries.size)) {
-                    Text(if (option == MemberSortOption.NAME) "نام" else "XP")
+                    Text(when (option) {
+                        MemberSortOption.NAME -> "نام"
+                        MemberSortOption.LEVEL -> "سطح"
+                        MemberSortOption.POINTS -> "امتیاز"
+                    })
                 }
             }
         }
@@ -143,9 +158,12 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
                             Text(member.fullName, style = MaterialTheme.typography.titleMedium)
                             member.nickname?.let { Text(it, style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                            Text("${member.spendablePoints} امتیاز قابل خرج",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Column {
-                            Text("سطح ${com.kichikan.negah.domain.economy.LevelProgression.levelFor(member.totalXp)}")
+                            Text("سطح ${LevelProgression.levelFor(member.totalXp)}")
                             Text("${member.totalXp} XP", style = MaterialTheme.typography.bodySmall)
                         }
                     }
