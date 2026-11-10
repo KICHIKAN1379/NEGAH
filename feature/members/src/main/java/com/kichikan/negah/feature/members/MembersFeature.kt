@@ -85,15 +85,6 @@ data class MembersUiState(
     val selectedMemberId: String? = null,
     val economyTransactions: List<EconomyTransaction> = emptyList(),
     val historyFilter: MemberHistoryFilter = MemberHistoryFilter.ALL,
-    val visibleEconomyTransactions: List<EconomyTransaction>
-        get() = economyTransactions.filter { transaction ->
-            when (historyFilter) {
-                MemberHistoryFilter.ALL -> true
-                MemberHistoryFilter.XP -> transaction.currency == EconomyCurrency.XP
-                MemberHistoryFilter.POINTS -> transaction.currency == EconomyCurrency.POINTS
-                MemberHistoryFilter.DIAMONDS -> transaction.currency == EconomyCurrency.DIAMONDS
-            }
-        },
     val growthItems: List<GrowthItem> = emptyList(),
     val growthProgress: List<MemberGrowthProgress> = emptyList(),
     val growthSaveMessage: String? = null,
@@ -105,6 +96,16 @@ data class MembersUiState(
     val validationMessage: String? = null,
     val savedMessage: String? = null,
 ) {
+    val visibleEconomyTransactions: List<EconomyTransaction>
+        get() = economyTransactions.filter { transaction ->
+            when (historyFilter) {
+                MemberHistoryFilter.ALL -> true
+                MemberHistoryFilter.XP -> transaction.currency == EconomyCurrency.XP
+                MemberHistoryFilter.POINTS -> transaction.currency == EconomyCurrency.POINTS
+                MemberHistoryFilter.DIAMONDS -> transaction.currency == EconomyCurrency.DIAMONDS
+            }
+        }
+
     val visibleMembers: List<Member>
         get() {
             val source = if (showingArchived) archivedMembers else members
