@@ -1,0 +1,159 @@
+package com.kichikan.negah.feature.members
+
+import com.kichikan.negah.domain.economy.EconomyCurrency
+import com.kichikan.negah.domain.economy.EconomyRepository
+import com.kichikan.negah.domain.economy.EconomyTransaction
+import com.kichikan.negah.domain.economy.EconomyTransactionKind
+import com.kichikan.negah.domain.member.Member
+import com.kichikan.negah.domain.member.MemberRepository
+import com.kichikan.negah.domain.member.RegisterMember
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Before
+import org.junit.Test
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class MembersViewModelTest {
+    private val mainDispatcher = UnconfinedTestDispatcher()
+    private lateinit var members: FakeMemberRepository
+    private lateinit var economy: FakeEconomyRepository
+    private lateinit var viewModel: MembersViewModel
+
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(mainDispatcher)
+        members = FakeMemberRepository()
+        economy = FakeEconomyRepository()
+        viewModel = MembersViewModel(members, RegisterMember(members), economy)
+    }
+
+    @After
+    fun tearDown() {
+        viewModel.onProfileClosed()
+        Dispatchers.resetMain()
+    }
+
+    @Test
+    fun visibleMembers_filtersByFullNameAndNickname_caseInsensitively() = runTest {
+        members.emit(listOf(member("1", "آرمان رضایی", "آرمانک"), member("2", "سارا احمدی", null)))
+        viewModel.onSearchChanged("  آرمانک  ")
+
+        assertEquals(listOf("1"), viewModel.state.value.visibleMembers.map(Member::id))
+    }
+
+    @Test
+    fun visibleMembers_sortsByLevelThenXp() = runTest {
+        members.emit(
+            listOf(
+                member("low", "الف", xp = 19),
+                member("levelOneLowXp", "ب", xp = 20),
+                member("levelOneHighXp", "پ", xp = 49),
+            ),
+        )
+        viewModel.onSortChanged(MemberSortOption.LEVEL)
+
+        assertEquals(
+            listOf("levelOneHighXp", "levelOneLowXp", "low"),
+            viewModel.state.value.visibleMembers.map(Member::id),
+        )
+    }
+
+    @Test
+    fun visibleMembers_sortsBySpendablePoints() = runTest {
+        members.emit(
+            listOf(
+                member("a", "الف", points = 3),
+                member("b", "ب", points = 12),
+                member("c", "پ", points = 7),
+            ),
+        )
+        viewModel.onSortChanged(MemberSortOption.POINTS)
+
+        assertEquals(listOf("b", "c", "a"), viewModel.state.value.visibleMembers.map(Member::id))
+    }
+
+    @Test
+    fun selectingMemberObservesOnlyThatMembersEconomyHistory() = runTest {
+        val first = transaction("tx-1", "member-1", 10)
+        val second = transaction("tx-2", "member-2", 20)
+        economy.emit("member-1", listOf(first))
+        economy.emit("member-2", listOf(second))
+
+        viewModel.onMemberSelected("member-1")
+        assertEquals(listOf(first), viewModel.state.value.economyTransactions)
+
+        viewModel.onMemberSelected("member-2")
+        assertEquals("member-2", viewModel.state.value.selectedMemberId)
+        assertEquals(listOf(second), viewModel.state.value.economyTransactions)
+    }
+
+    @Test
+    fun closingProfileClearsSelectionAndHistory() = runTest {
+        val entry = transaction("tx-1", "member-1", 10)
+        economy.emit("member-1", listOf(entry))
+        viewModel.onMemberSelected("member-1")
+
+        viewModel.onProfileClosed()
+
+        assertNull(viewModel.state.value.selectedMemberId)
+        assertEquals(emptyList<EconomyTransaction>(), viewModel.state.value.economyTransactions)
+    }
+
+    private fun member(
+        id: String,
+        name: String,
+        nickname: String? = null,
+        xp: Long = 0,
+        points: Long = 0,
+    ) = Member(
+        id = id,
+        fullName = name,
+        nickname = nickname,
+        totalXp = xp,
+        spendablePoints = points,
+        diamonds = 0,
+        createdAtEpochMillis = 1,
+        updatedAtEpochMillis = 1,
+        isArchived = false,
+    )
+
+    private fun transaction(id: String, memberId: String, amount: Long) = EconomyTransaction(
+        id = id,
+        memberId = memberId,
+        currency = EconomyCurrency.POINTS,
+        amountDelta = amount,
+        kind = EconomyTransactionKind.EARN,
+        sourceType = "test",
+        sourceId = null,
+        createdAtEpochMillis = 1,
+    )
+}
+
+private class FakeMemberRepository : MemberRepository {
+    private val data = MutableStateFlow<List<Member>>(emptyList())
+    fun emit(value: List<Member>) { data.value = value }
+    override fun observeActiveMembers(): Flow<List<Member>> = data.asStateFlow()
+    override suspend fun create(member: Member) = Unit
+    override suspend fun archive(memberId: String) = Unit
+}
+
+private class FakeEconomyRepository : EconomyRepository {
+    private val histories = mutableMapOf<String, MutableStateFlow<List<EconomyTransaction>>>()
+    fun emit(memberId: String, value: List<EconomyTransaction>) {
+        histories.getOrPut(memberId) { MutableStateFlow(emptyList()) }.value = value
+    }
+    override fun observeForMember(memberId: String): Flow<List<EconomyTransaction>> =
+        histories.getOrPut(memberId) { MutableStateFlow(emptyList()) }.asStateFlow()
+    override suspend fun appendAtomically(transaction: EconomyTransaction) =
+        com.kichikan.negah.domain.economy.LedgerAppendResult.APPENDED
+}
