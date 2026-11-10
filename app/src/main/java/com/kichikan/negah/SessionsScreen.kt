@@ -131,8 +131,8 @@ private fun SessionListScreen(
                 }.sortedWith(compareBy({ sessionsById[it.sessionId]?.sessionDateEpochDay ?: Long.MAX_VALUE }, { membersById[it.memberId]?.fullName.orEmpty() }))
                 context.contentResolver.openOutputStream(uri)?.use { stream ->
                     OutputStreamWriter(stream, StandardCharsets.UTF_8).use { writer ->
-                        writer.write("\\uFEFF")
-                        writer.write("تاریخ,جلسه,عضو,وضعیت,دلیل\\r\\n")
+                        writer.write("\uFEFF")
+                        writer.write("تاریخ,جلسه,عضو,وضعیت,دلیل\r\n")
                         rows.forEach { record ->
                             val session = sessionsById[record.sessionId]
                             val member = membersById[record.memberId]
@@ -144,7 +144,7 @@ private fun SessionListScreen(
                                 record.reason.orEmpty(),
                             )
                             writer.write(fields.joinToString(",") { csvEscape(it) })
-                            writer.write("\\r\\n")
+                            writer.write("\r\n")
                         }
                     }
                 } ?: error("Unable to open destination")
