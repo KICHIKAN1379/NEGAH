@@ -1,5 +1,12 @@
 package com.kichikan.negah
 
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import java.io.OutputStreamWriter
+import java.nio.charset.StandardCharsets
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -108,6 +115,46 @@ private fun SessionListScreen(
         mutableStateOf(today.minusDays(today.daysSinceSaturday().toLong()).toEpochDay())
     }
     val visibleWeekStart = LocalDate.ofEpochDay(visibleWeekStartEpochDay)
+    val context = LocalContext.current
+    val reportMonthForExport = LocalDate.ofEpochDay(reportMonthEpochDay).withDayOfMonth(1)
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/csv"),
+    ) { uri: Uri? ->
+        if (uri != null) {
+            runCatching {
+                val monthEnd = reportMonthForExport.withDayOfMonth(reportMonthForExport.lengthOfMonth())
+                val sessionsById = state.sessions.associateBy { it.id }
+                val membersById = state.members.associateBy { it.id }
+                val rows = state.attendanceRecords.filter { record ->
+                    val day = sessionsById[record.sessionId]?.sessionDateEpochDay
+                    day != null && day in reportMonthForExport.toEpochDay()..monthEnd.toEpochDay()
+                }.sortedWith(compareBy({ sessionsById[it.sessionId]?.sessionDateEpochDay ?: Long.MAX_VALUE }, { membersById[it.memberId]?.fullName.orEmpty() }))
+                context.contentResolver.openOutputStream(uri)?.use { stream ->
+                    OutputStreamWriter(stream, StandardCharsets.UTF_8).use { writer ->
+                        writer.write("\\uFEFF")
+                        writer.write("تاریخ,جلسه,عضو,وضعیت,دلیل\\r\\n")
+                        rows.forEach { record ->
+                            val session = sessionsById[record.sessionId]
+                            val member = membersById[record.memberId]
+                            val fields = listOf(
+                                session?.let { formatSessionDate(it.sessionDateEpochDay) }.orEmpty(),
+                                session?.title.orEmpty(),
+                                member?.nickname?.takeIf(String::isNotBlank) ?: member?.fullName.orEmpty(),
+                                statusLabel(record.status),
+                                record.reason.orEmpty(),
+                            )
+                            writer.write(fields.joinToString(",") { csvEscape(it) })
+                            writer.write("\\r\\n")
+                        }
+                    }
+                } ?: error("Unable to open destination")
+            }.onSuccess {
+                Toast.makeText(context, "خروجی ماهانه ذخیره شد.", Toast.LENGTH_SHORT).show()
+            }.onFailure {
+                Toast.makeText(context, "ذخیره خروجی انجام نشد.", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     val memberNamesBySession = remember(state.attendanceRecords, state.members) {
         val namesById = state.members.associate { it.id to it.fullName }
@@ -226,6 +273,9 @@ private fun SessionListScreen(
                     it.sessionDateEpochDay in reportMonth.toEpochDay()..reportEnd.toEpochDay()
                 }
                 Text("گزارش ماهانه • جلسات: $sessionsInMonth • رکوردها: ${monthlySummary.recordCount}")
+                TextButton(onClick = {
+                    exportLauncher.launch("attendance-${reportMonthForExport.format(DateTimeFormatter.ofPattern("yyyy-MM"))}.csv")
+                }) { Text("خروجی CSV همین ماه") }
                 Row(
                     modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -626,3 +676,5 @@ private fun statusLabel(status: AttendanceStatus): String = when (status) {
 
 private fun formatSessionDate(epochDay: Long): String =
     LocalDate.ofEpochDay(epochDay).format(DateTimeFormatter.ofPattern("yyyy/MM/dd"))
+
+private fun csvEscape(value: String): String = "\"" + value.replace("\"", "\"\"") + "\""

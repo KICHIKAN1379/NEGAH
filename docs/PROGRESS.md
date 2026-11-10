@@ -51,7 +51,7 @@ Last updated: 2026-11-10
 - Home is still a placeholder and does not implement the approved Home reference (UX pages 35–36).
 - Progress is not yet the full six-entry experience; missions, reading, wheel and competition are not implemented as complete flows.
 - Settings is currently a minimal entry point to Refinery and class-day settings; most of the nine approved settings options are missing.
-- Sessions/attendance now include a month-navigable report with separate counts for all five attendance states. CSV export and a UI for inspecting attendance revisions remain; a group filter waits for the group data model.
+- Sessions/attendance now include a month-navigable report with separate counts for all five attendance states, selected-month CSV export, and a live revision-history view; a group filter waits for the group data model.
 - The current weekly strip shows the current Saturday–Friday week and only configured class days; it does not yet provide week navigation.
 - Member profile has partial growth/economy/inventory sections; four-tab Ganjine, received-history filtering and six-axis report card are incomplete.
 - Encrypted backup/restore, MRT retention of at most two versions, and first-run file-access flow are not implemented.
@@ -161,3 +161,10 @@ The available host has GitHub repository read/write integration but no local And
 - Added a live revision-history section to the attendance screen, showing the member, previous status, previous reason (when present), and change timestamp.
 - Revision history is observed from the existing Room-backed repository; no schema change or data migration was needed.
 - CSV export remains the next Sessions task.
+
+
+## Latest continuation — monthly attendance CSV export
+- Added an Android system document picker action to export the selected month's persisted attendance records as CSV.
+- Export columns: date, session, member, status and reason. Values are escaped according to CSV quoting rules, and a UTF-8 BOM is written for spreadsheet compatibility.
+- The export is user-initiated and writes only to the destination selected in the Android document picker; no storage permission or backend is required.
+- CI verification is pending for this commit.

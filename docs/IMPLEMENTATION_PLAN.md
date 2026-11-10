@@ -229,7 +229,7 @@ This is a delivery order, not a permanent scope reduction. Any unfinished item m
 
 1. Use the successful baseline CI and debug APK as the starting point.
 2. Correct product/UX documentation against the approved guide and UX/UX2.
-3. Complete Sessions/attendance: creation, editing and previous/next week navigation are implemented; continue with CSV export; monthly reporting and visible attendance-revision history are now implemented.
+3. Complete Sessions/attendance: creation, editing and previous/next week navigation are implemented; CSV export for the selected month is now implemented; monthly reporting and visible attendance-revision history are also implemented.
 4. Complete member profile, Ganjine and archive/restore behavior.
 5. Implement Home pages 35–36.
 6. Complete remaining Progress domains, Shop and Refinery.
