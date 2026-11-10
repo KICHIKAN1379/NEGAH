@@ -4,4 +4,4 @@ dependencyResolutionManagement {
     repositories { google(); mavenCentral() }
 }
 rootProject.name = "NegahCoach"
-include(":app", ":core:common", ":domain:core", ":data:local", ":feature:home", ":feature:members")
+include(":app", ":core:common", ":core:designsystem", ":domain:core", ":data:local", ":feature:home", ":feature:members")

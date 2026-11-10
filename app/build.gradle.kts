@@ -24,6 +24,7 @@ android {
 }
 kapt { correctErrorTypes = true }
 dependencies {
+    implementation(project(":core:designsystem"))
     implementation(project(":feature:home"))
     implementation(project(":feature:members"))
     implementation(project(":data:local"))
