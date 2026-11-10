@@ -7,7 +7,7 @@ plugins {
 }
 android {
     namespace = "com.kichikan.negah"
-    compileSdk = 37
+    compileSdk = 36
     defaultConfig {
         applicationId = "com.kichikan.negah"
         minSdk = 26
