@@ -10,8 +10,10 @@ class RegisterMemberTest {
     private class FakeRepository : MemberRepository {
         val created = mutableListOf<Member>()
         override fun observeActiveMembers() = flowOf(created.toList())
+        override fun observeArchivedMembers() = flowOf(emptyList<Member>())
         override suspend fun create(member: Member) { created += member }
         override suspend fun archive(memberId: String) = Unit
+        override suspend fun restore(memberId: String) = Unit
     }
 
     @Test fun blankNameIsRejected() = runBlocking {
