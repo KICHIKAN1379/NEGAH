@@ -16,8 +16,6 @@ class RoomSessionRepository @Inject constructor(
         dao.upsert(SessionEntity.fromDomain(session))
     }
 
-    override suspend fun delete(sessionId: String): Boolean =
-        dao.deleteById(sessionId) > 0
 
     override suspend fun setCompleted(sessionId: String, isCompleted: Boolean) {
         dao.setCompleted(sessionId, isCompleted)
