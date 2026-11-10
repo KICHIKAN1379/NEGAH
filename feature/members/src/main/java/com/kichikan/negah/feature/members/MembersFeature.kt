@@ -56,6 +56,10 @@ import com.kichikan.negah.domain.growth.GrowthTrack
 import com.kichikan.negah.domain.growth.MemberGrowthProgress
 import com.kichikan.negah.domain.growth.UpdateGrowthProgress
 import com.kichikan.negah.domain.growth.UpdateGrowthProgressResult
+import com.kichikan.negah.domain.inventory.ActiveInventoryItem
+import com.kichikan.negah.domain.inventory.InventoryCategory
+import com.kichikan.negah.domain.inventory.InventoryRepository
+import com.kichikan.negah.domain.inventory.MemberInventoryEntry
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -79,6 +83,9 @@ data class MembersUiState(
     val growthItems: List<GrowthItem> = emptyList(),
     val growthProgress: List<MemberGrowthProgress> = emptyList(),
     val growthSaveMessage: String? = null,
+    val inventoryEntries: List<MemberInventoryEntry> = emptyList(),
+    val activeInventoryItems: List<ActiveInventoryItem> = emptyList(),
+    val inventoryMessage: String? = null,
     val isSaving: Boolean = false,
     val validationMessage: String? = null,
     val savedMessage: String? = null,
@@ -113,12 +120,14 @@ class MembersViewModel @Inject constructor(
     private val economyRepository: EconomyRepository,
     private val growthMapRepository: GrowthMapRepository,
     private val updateGrowthProgress: UpdateGrowthProgress,
+    private val inventoryRepository: InventoryRepository,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(MembersUiState())
     val state = mutableState.asStateFlow()
     private var economyHistoryJob: Job? = null
     private var growthItemsJob: Job? = null
     private var growthProgressJob: Job? = null
+    private var inventoryJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -138,7 +147,8 @@ class MembersViewModel @Inject constructor(
         economyHistoryJob?.cancel()
         growthItemsJob?.cancel()
         growthProgressJob?.cancel()
-        mutableState.update { it.copy(selectedMemberId = memberId, economyTransactions = emptyList(), growthItems = emptyList(), growthProgress = emptyList(), growthSaveMessage = null) }
+        inventoryJob?.cancel()
+        mutableState.update { it.copy(selectedMemberId = memberId, economyTransactions = emptyList(), growthItems = emptyList(), growthProgress = emptyList(), growthSaveMessage = null, inventoryEntries = emptyList(), activeInventoryItems = emptyList(), inventoryMessage = null) }
         economyHistoryJob = viewModelScope.launch {
             economyRepository.observeForMember(memberId).collect { transactions ->
                 mutableState.update { current ->
@@ -163,16 +173,35 @@ class MembersViewModel @Inject constructor(
                 }
             }
         }
+        inventoryJob = viewModelScope.launch {
+            kotlinx.coroutines.flow.combine(
+                inventoryRepository.observeMemberInventory(memberId, InventoryCategory.AVATAR),
+                inventoryRepository.observeMemberInventory(memberId, InventoryCategory.FRAME),
+                inventoryRepository.observeMemberInventory(memberId, InventoryCategory.REWARD),
+                inventoryRepository.observeActiveItems(memberId),
+            ) { avatars, frames, rewards, active ->
+                (avatars + frames + rewards) to active
+            }.collect { (entries, active) ->
+                mutableState.update { current ->
+                    if (current.selectedMemberId == memberId) current.copy(
+                        inventoryEntries = entries,
+                        activeInventoryItems = active,
+                    ) else current
+                }
+            }
+        }
     }
 
     fun onProfileClosed() {
         economyHistoryJob?.cancel()
         growthItemsJob?.cancel()
         growthProgressJob?.cancel()
+        inventoryJob?.cancel()
         economyHistoryJob = null
         growthItemsJob = null
         growthProgressJob = null
-        mutableState.update { it.copy(selectedMemberId = null, economyTransactions = emptyList(), growthItems = emptyList(), growthProgress = emptyList(), growthSaveMessage = null) }
+        inventoryJob = null
+        mutableState.update { it.copy(selectedMemberId = null, economyTransactions = emptyList(), growthItems = emptyList(), growthProgress = emptyList(), growthSaveMessage = null, inventoryEntries = emptyList(), activeInventoryItems = emptyList(), inventoryMessage = null) }
     }
 
     fun saveGrowthProgress(item: GrowthItem, progressPercent: Int, note: String?) {
@@ -191,6 +220,22 @@ class MembersViewModel @Inject constructor(
                 }
             } catch (_: Exception) {
                 mutableState.update { it.copy(growthSaveMessage = "ذخیره پیشرفت انجام نشد؛ دوباره تلاش کنید") }
+            }
+        }
+    }
+
+    fun activateInventoryItem(entry: MemberInventoryEntry) {
+        viewModelScope.launch {
+            try {
+                val activated = inventoryRepository.activateItem(
+                    memberId = entry.memberId,
+                    category = entry.category,
+                    catalogItemId = entry.catalogItemId,
+                    nowEpochMillis = System.currentTimeMillis(),
+                )
+                mutableState.update { it.copy(inventoryMessage = if (activated) "آیتم فعال شد" else "این آیتم در گنجینه عضو نیست") }
+            } catch (_: Exception) {
+                mutableState.update { it.copy(inventoryMessage = "فعال‌سازی انجام نشد؛ دوباره تلاش کنید") }
             }
         }
     }
@@ -223,7 +268,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val selectedMember = state.members.firstOrNull { it.id == state.selectedMemberId }
     if (selectedMember != null) {
-        MemberProfileScreen(selectedMember, state.economyTransactions, state.growthItems, state.growthProgress, state.growthSaveMessage, viewModel::saveGrowthProgress, viewModel::onProfileClosed, modifier)
+        MemberProfileScreen(selectedMember, state.economyTransactions, state.growthItems, state.growthProgress, state.growthSaveMessage, state.inventoryEntries, state.activeInventoryItems, state.inventoryMessage, viewModel::saveGrowthProgress, viewModel::activateInventoryItem, viewModel::onProfileClosed, modifier)
         return
     }
 
@@ -360,7 +405,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, growthItems: List<GrowthItem>, growthProgress: List<MemberGrowthProgress>, growthSaveMessage: String?, onSaveGrowthProgress: (GrowthItem, Int, String?) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
+private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, growthItems: List<GrowthItem>, growthProgress: List<MemberGrowthProgress>, growthSaveMessage: String?, inventoryEntries: List<MemberInventoryEntry>, activeInventoryItems: List<ActiveInventoryItem>, inventoryMessage: String?, onSaveGrowthProgress: (GrowthItem, Int, String?) -> Unit, onActivateInventoryItem: (MemberInventoryEntry) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
     var inventoryTab by rememberSaveable { mutableStateOf("آواتار") }
     val level = LevelProgression.levelFor(member.totalXp)
     val currentLevelXp = LevelProgression.minimumXpForLevel(level)
@@ -409,7 +454,37 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                     FilterChip(selected = inventoryTab == tab, onClick = { inventoryTab = tab }, label = { Text(tab) })
                 }
             }
-            Text("هنوز آیتمی در بخش " + inventoryTab + " ثبت نشده است", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (inventoryTab == "نشان") {
+                Text("نشان‌ها با رسیدن عضو به سطح‌های تعیین‌شده به‌صورت خودکار دریافت می‌شوند و قابل خرید نیستند.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                val category = when (inventoryTab) {
+                    "آواتار" -> InventoryCategory.AVATAR
+                    "قاب" -> InventoryCategory.FRAME
+                    else -> InventoryCategory.REWARD
+                }
+                val visibleEntries = inventoryEntries.filter { it.category == category }
+                if (visibleEntries.isEmpty()) {
+                    Text("هنوز آیتمی در این بخش برای عضو ثبت نشده است", style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    visibleEntries.forEach { entry ->
+                        val isActive = activeInventoryItems.any { it.category == category && it.catalogItemId == entry.catalogItemId }
+                        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Text(entry.title, style = MaterialTheme.typography.titleSmall)
+                            entry.description?.takeIf { it.isNotBlank() }?.let {
+                                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            if (isActive) {
+                                Text("فعال", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                            } else {
+                                TextButton(onClick = { onActivateInventoryItem(entry) }) { Text("انتخاب به‌عنوان فعال") }
+                            }
+                        }
+                    }
+                }
+            }
+            inventoryMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
         }
         ProfileSection("کارنامه", "گزارش رشد در بازه زمانی") {
             Text("برای رسم نمودار، ابتدا باید داده‌های مأموریت، خوانی کتاب و نقشه کمال ثبت شوند.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
