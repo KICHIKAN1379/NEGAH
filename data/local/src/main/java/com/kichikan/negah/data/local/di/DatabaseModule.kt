@@ -8,6 +8,7 @@ import com.kichikan.negah.data.local.commitment.CommitmentDao
 import com.kichikan.negah.data.local.economy.EconomyTransactionDao
 import com.kichikan.negah.data.local.growth.GrowthMapDao
 import com.kichikan.negah.data.local.member.MemberDao
+import com.kichikan.negah.data.local.inventory.InventoryDao
 import com.kichikan.negah.data.local.session.SessionDao
 import dagger.Module
 import dagger.Provides
@@ -27,7 +28,7 @@ object DatabaseModule {
         context,
         NegahDatabase::class.java,
         "negah_coach.db",
-    ).addMigrations(com.kichikan.negah.data.local.MIGRATION_1_2).build()
+    ).addMigrations(com.kichikan.negah.data.local.MIGRATION_1_2, com.kichikan.negah.data.local.MIGRATION_2_3).build()
 
     @Provides fun provideMemberDao(database: NegahDatabase): MemberDao = database.memberDao()
     @Provides fun provideSessionDao(database: NegahDatabase): SessionDao = database.sessionDao()
@@ -36,4 +37,5 @@ object DatabaseModule {
     @Provides fun provideEconomyTransactionDao(database: NegahDatabase): EconomyTransactionDao =
         database.economyTransactionDao()
     @Provides fun provideGrowthMapDao(database: NegahDatabase): GrowthMapDao = database.growthMapDao()
+    @Provides fun provideInventoryDao(database: NegahDatabase): InventoryDao = database.inventoryDao()
 }

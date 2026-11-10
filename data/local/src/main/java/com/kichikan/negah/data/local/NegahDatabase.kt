@@ -15,6 +15,10 @@ import com.kichikan.negah.data.local.growth.GrowthItemEntity
 import com.kichikan.negah.data.local.growth.MemberGrowthProgressEntity
 import com.kichikan.negah.data.local.member.MemberDao
 import com.kichikan.negah.data.local.member.MemberEntity
+import com.kichikan.negah.data.local.inventory.CatalogItemEntity
+import com.kichikan.negah.data.local.inventory.MemberInventoryEntity
+import com.kichikan.negah.data.local.inventory.MemberActiveItemEntity
+import com.kichikan.negah.data.local.inventory.InventoryDao
 import com.kichikan.negah.data.local.session.SessionDao
 import com.kichikan.negah.data.local.session.SessionEntity
 
@@ -28,8 +32,11 @@ import com.kichikan.negah.data.local.session.SessionEntity
         EconomyTransactionEntity::class,
         GrowthItemEntity::class,
         MemberGrowthProgressEntity::class,
+        CatalogItemEntity::class,
+        MemberInventoryEntity::class,
+        MemberActiveItemEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 @TypeConverters(AttendanceStatusConverter::class)
@@ -40,4 +47,5 @@ abstract class NegahDatabase : RoomDatabase() {
     abstract fun commitmentDao(): CommitmentDao
     abstract fun economyTransactionDao(): EconomyTransactionDao
     abstract fun growthMapDao(): com.kichikan.negah.data.local.growth.GrowthMapDao
+    abstract fun inventoryDao(): InventoryDao
 }
