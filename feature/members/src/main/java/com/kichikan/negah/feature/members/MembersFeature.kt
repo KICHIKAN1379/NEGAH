@@ -24,6 +24,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.kichikan.negah.domain.economy.EconomyCurrency
+import com.kichikan.negah.domain.economy.EconomyRepository
+import com.kichikan.negah.domain.economy.EconomyTransaction
+import com.kichikan.negah.domain.economy.EconomyTransactionKind
 import com.kichikan.negah.domain.economy.LevelProgression
 import com.kichikan.negah.domain.member.Member
 import com.kichikan.negah.domain.member.MemberRepository
@@ -34,6 +38,9 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
+import java.text.DateFormat
+import java.util.Date
 import kotlinx.coroutines.launch
 
 enum class MemberSortOption { NAME, LEVEL, POINTS }
@@ -45,6 +52,7 @@ data class MembersUiState(
     val searchQuery: String = "",
     val sortOption: MemberSortOption = MemberSortOption.NAME,
     val selectedMemberId: String? = null,
+    val economyTransactions: List<EconomyTransaction> = emptyList(),
     val isSaving: Boolean = false,
     val validationMessage: String? = null,
     val savedMessage: String? = null,
@@ -76,9 +84,11 @@ data class MembersUiState(
 class MembersViewModel @Inject constructor(
     private val repository: MemberRepository,
     private val registerMember: RegisterMember,
+    private val economyRepository: EconomyRepository,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(MembersUiState())
     val state = mutableState.asStateFlow()
+    private var economyHistoryJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -94,8 +104,24 @@ class MembersViewModel @Inject constructor(
     fun onNicknameChanged(value: String) = mutableState.update { it.copy(nickname = value, savedMessage = null) }
     fun onSearchChanged(value: String) = mutableState.update { it.copy(searchQuery = value) }
     fun onSortChanged(value: MemberSortOption) = mutableState.update { it.copy(sortOption = value) }
-    fun onMemberSelected(memberId: String) = mutableState.update { it.copy(selectedMemberId = memberId) }
-    fun onProfileClosed() = mutableState.update { it.copy(selectedMemberId = null) }
+    fun onMemberSelected(memberId: String) {
+        economyHistoryJob?.cancel()
+        mutableState.update { it.copy(selectedMemberId = memberId, economyTransactions = emptyList()) }
+        economyHistoryJob = viewModelScope.launch {
+            economyRepository.observeForMember(memberId).collect { transactions ->
+                mutableState.update { current ->
+                    if (current.selectedMemberId == memberId) current.copy(economyTransactions = transactions)
+                    else current
+                }
+            }
+        }
+    }
+
+    fun onProfileClosed() {
+        economyHistoryJob?.cancel()
+        economyHistoryJob = null
+        mutableState.update { it.copy(selectedMemberId = null, economyTransactions = emptyList()) }
+    }
 
     fun addMember() {
         val snapshot = mutableState.value
@@ -127,6 +153,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
     if (selectedMember != null) {
         MemberProfileScreen(
             member = selectedMember,
+            transactions = state.economyTransactions,
             onBack = viewModel::onProfileClosed,
             modifier = modifier,
         )
@@ -192,6 +219,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
 @Composable
 private fun MemberProfileScreen(
     member: Member,
+    transactions: List<EconomyTransaction>,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -216,6 +244,62 @@ private fun MemberProfileScreen(
                 ProfileValue("امتیاز قابل خرج", member.spendablePoints.toString())
                 ProfileValue("الماس", member.diamonds.toString())
             }
+        }
+        Text("تاریخچه اقتصادی", style = MaterialTheme.typography.titleLarge)
+        if (transactions.isEmpty()) {
+            Text(
+                "هنوز تراکنش اقتصادی برای این عضو ثبت نشده است",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(transactions, key = { it.id }) { transaction ->
+                    EconomyTransactionRow(transaction)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EconomyTransactionRow(transaction: EconomyTransaction) {
+    val currencyLabel = when (transaction.currency) {
+        EconomyCurrency.XP -> "XP"
+        EconomyCurrency.POINTS -> "امتیاز"
+        EconomyCurrency.DIAMONDS -> "الماس"
+    }
+    val kindLabel = when (transaction.kind) {
+        EconomyTransactionKind.EARN -> "دریافت"
+        EconomyTransactionKind.SPEND -> "خرج"
+        EconomyTransactionKind.CORRECTION -> "اصلاح"
+        EconomyTransactionKind.REFUND -> "بازگشت"
+    }
+    val signedAmount = if (transaction.amountDelta > 0) {
+        "+${transaction.amountDelta}"
+    } else transaction.amountDelta.toString()
+    val timestamp = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
+        .format(Date(transaction.createdAtEpochMillis))
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("$kindLabel $currencyLabel", style = MaterialTheme.typography.titleSmall)
+                Text(timestamp, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Text(
+                signedAmount,
+                style = MaterialTheme.typography.titleMedium,
+                color = if (transaction.amountDelta < 0) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.primary,
+            )
         }
     }
 }
