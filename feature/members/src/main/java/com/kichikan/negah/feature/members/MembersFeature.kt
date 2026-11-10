@@ -2,6 +2,18 @@ package com.kichikan.negah.feature.members
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -151,68 +163,139 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val selectedMember = state.members.firstOrNull { it.id == state.selectedMemberId }
     if (selectedMember != null) {
-        MemberProfileScreen(
-            member = selectedMember,
-            transactions = state.economyTransactions,
-            onBack = viewModel::onProfileClosed,
-            modifier = modifier,
-        )
+        MemberProfileScreen(selectedMember, state.economyTransactions, viewModel::onProfileClosed, modifier)
         return
     }
 
+    var showAddDialog by rememberSaveable { mutableStateOf(false) }
+    val totalXp = state.members.sumOf { it.totalXp }
+
     Column(
-        modifier = modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp),
+        modifier = modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("اعضا", style = MaterialTheme.typography.headlineMedium)
-        OutlinedTextField(value = state.fullName, onValueChange = viewModel::onFullNameChanged,
-            label = { Text("نام و نام خانوادگی") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(value = state.nickname, onValueChange = viewModel::onNicknameChanged,
-            label = { Text("نام نمایشی (اختیاری)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        Button(onClick = viewModel::addMember, enabled = !state.isSaving, modifier = Modifier.fillMaxWidth()) {
-            Text(if (state.isSaving) "در حال ثبت..." else "ثبت عضو")
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text("اعضا", style = MaterialTheme.typography.headlineMedium)
+                Text("پرونده و مسیر رشد اعضای حلقه", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Text("${state.members.size} عضو", style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary)
         }
-        state.validationMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        state.savedMessage?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
-        OutlinedTextField(value = state.searchQuery, onValueChange = viewModel::onSearchChanged,
-            label = { Text("جست‌وجوی نام عضو") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            MemberSortOption.entries.forEachIndexed { index, option ->
-                SegmentedButton(selected = state.sortOption == option,
-                    onClick = { viewModel.onSortChanged(option) },
-                    shape = SegmentedButtonDefaults.itemShape(index, MemberSortOption.entries.size)) {
-                    Text(when (option) {
-                        MemberSortOption.NAME -> "نام"
-                        MemberSortOption.LEVEL -> "سطح"
-                        MemberSortOption.POINTS -> "امتیاز"
-                    })
+
+        Card(modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+            Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(state.members.size.toString(), style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.primary)
+                    Text("عضو", style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(totalXp.toString(), style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.secondary)
+                    Text("مجموع XP", style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
-        Text("${state.visibleMembers.size} عضو", style = MaterialTheme.typography.labelLarge)
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(state.visibleMembers, key = { it.id }) { member ->
-                Card(
-                    modifier = Modifier.fillMaxWidth().clickable { viewModel.onMemberSelected(member.id) },
-                ) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(14.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween) {
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(member.fullName, style = MaterialTheme.typography.titleMedium)
-                            member.nickname?.let { Text(it, style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                            Text("${member.spendablePoints} امتیاز قابل خرج",
-                                style = MaterialTheme.typography.bodySmall,
+
+        OutlinedTextField(value = state.searchQuery, onValueChange = viewModel::onSearchChanged,
+            label = { Text("جست‌وجوی نام عضو") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            MemberSortOption.entries.forEach { option ->
+                FilterChip(selected = state.sortOption == option,
+                    onClick = { viewModel.onSortChanged(option) },
+                    label = { Text(when (option) {
+                        MemberSortOption.LEVEL -> "رتبه و سطح"
+                        MemberSortOption.POINTS -> "امتیاز قابل خرج"
+                        MemberSortOption.NAME -> "نام"
+                    }) })
+            }
+        }
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("فهرست اعضا", style = MaterialTheme.typography.titleMedium)
+            Text("${state.visibleMembers.size} نتیجه", style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+
+        if (state.visibleMembers.isEmpty()) {
+            Column(modifier = Modifier.weight(1f).fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                Text(if (state.members.isEmpty()) "هنوز عضوی ثبت نشده است" else "عضوی با این جست‌وجو پیدا نشد",
+                    style = MaterialTheme.typography.titleMedium)
+                Text("برای شروع، عضو جدیدی به حلقه اضافه کن", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        } else {
+            LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                items(state.visibleMembers, key = { it.id }) { member ->
+                    Card(modifier = Modifier.fillMaxWidth().clickable { viewModel.onMemberSelected(member.id) }) {
+                        Row(modifier = Modifier.fillMaxWidth().padding(14.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(modifier = Modifier.size(48.dp)
+                                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                                contentAlignment = Alignment.Center) {
+                                Text(member.fullName.trim().firstOrNull()?.toString() ?: "؟",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer)
+                            }
+                            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                Text(member.fullName, style = MaterialTheme.typography.titleMedium)
+                                member.nickname?.takeIf { it.isNotBlank() }?.let {
+                                    Text(it, style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Text("سطح ${LevelProgression.levelFor(member.totalXp)}  •  ${member.totalXp} XP",
+                                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    Text("${member.spendablePoints} امتیاز", style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.secondary)
+                                    Text("${member.diamonds} الماس", style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.tertiary)
+                                }
+                            }
+                            Text("‹", style = MaterialTheme.typography.headlineMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Column {
-                            Text("سطح ${LevelProgression.levelFor(member.totalXp)}")
-                            Text("${member.totalXp} XP", style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
             }
         }
+
+        Button(onClick = { showAddDialog = true }, modifier = Modifier.fillMaxWidth()) {
+            Text("افزودن عضو  +")
+        }
+        state.savedMessage?.let { Text(it, color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.bodySmall) }
+        state.validationMessage?.let { Text(it, color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodySmall) }
+    }
+
+    if (showAddDialog) {
+        AlertDialog(
+            onDismissRequest = { showAddDialog = false },
+            title = { Text("افزودن عضو") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(value = state.fullName, onValueChange = viewModel::onFullNameChanged,
+                        label = { Text("نام و نام خانوادگی") }, singleLine = true)
+                    OutlinedTextField(value = state.nickname, onValueChange = viewModel::onNicknameChanged,
+                        label = { Text("نام نمایشی (اختیاری)") }, singleLine = true)
+                    state.validationMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                }
+            },
+            confirmButton = {
+                Button(onClick = { viewModel.addMember(); showAddDialog = false }, enabled = !state.isSaving) {
+                    Text(if (state.isSaving) "در حال ثبت..." else "ثبت عضو")
+                }
+            },
+            dismissButton = { TextButton(onClick = { showAddDialog = false }) { Text("انصراف") } },
+        )
     }
 }
 
