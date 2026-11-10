@@ -2,6 +2,7 @@ package com.kichikan.negah.data.local.commitment
 
 import androidx.room.Dao
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
@@ -18,4 +19,13 @@ interface CommitmentDao {
 
     @Upsert
     suspend fun addRevision(revision: CommitmentRevisionEntity)
+
+    @Transaction
+    suspend fun updateWithRevision(
+        updated: CommitmentEntity,
+        revision: CommitmentRevisionEntity,
+    ) {
+        addRevision(revision)
+        upsert(updated)
+    }
 }
