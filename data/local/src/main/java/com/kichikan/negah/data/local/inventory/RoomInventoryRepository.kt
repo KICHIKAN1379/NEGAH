@@ -30,9 +30,13 @@ class RoomInventoryRepository @Inject constructor(
         dao.upsertCatalogItem(CatalogItemEntity.fromDomain(item))
 
     override suspend fun grantItem(entry: MemberInventoryEntry) {
-        dao.insertInventoryEntry(MemberInventoryEntity(
-            entry.memberId, entry.catalogItemId, entry.acquiredAtEpochMillis, entry.sourceType, entry.sourceId,
-        ))
+        val granted = dao.grantAvailableItem(
+            MemberInventoryEntity(
+                entry.memberId, entry.catalogItemId, entry.acquiredAtEpochMillis, entry.sourceType, entry.sourceId,
+            ),
+            entry.category,
+        )
+        check(granted) { "Catalog item is unavailable or its category does not match" }
     }
 
     override suspend fun activateItem(
