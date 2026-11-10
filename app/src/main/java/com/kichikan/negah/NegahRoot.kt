@@ -16,40 +16,31 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import com.kichikan.negah.feature.home.HomeScreen
+import com.kichikan.negah.feature.members.MembersScreen
+import com.kichikan.negah.feature.members.MembersViewModel
 
 private enum class MainDestination(val title: String) {
-    HOME("خانه"),
-    MEMBERS("اعضا"),
-    PROGRESS("پیشرفت"),
-    SHOP("فروشگاه"),
-    SETTINGS("تنظیمات"),
+    HOME("خانه"), MEMBERS("اعضا"), PROGRESS("پیشرفت"), SHOP("فروشگاه"), SETTINGS("تنظیمات"),
 }
 
 @Composable
-fun NegahRoot() {
+fun NegahRoot(membersViewModel: MembersViewModel) {
     var selected by rememberSaveable { mutableStateOf(MainDestination.HOME.name) }
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            bottomBar = {
-                NavigationBar {
-                    MainDestination.entries.forEach { destination ->
-                        NavigationBarItem(
-                            selected = selected == destination.name,
-                            onClick = { selected = destination.name },
-                            icon = { Text(destination.title.take(1)) },
-                            label = { Text(destination.title) },
-                        )
-                    }
+        Scaffold(modifier = Modifier.fillMaxSize(), bottomBar = {
+            NavigationBar {
+                MainDestination.entries.forEach { destination ->
+                    NavigationBarItem(selected = selected == destination.name,
+                        onClick = { selected = destination.name },
+                        icon = { Text(destination.title.take(1)) }, label = { Text(destination.title) })
                 }
-            },
-        ) { innerPadding ->
+            }
+        }) { padding ->
             when (MainDestination.valueOf(selected)) {
-                MainDestination.HOME -> HomeScreen(Modifier.padding(innerPadding))
-                else -> Text(
-                    text = "بخش " + MainDestination.valueOf(selected).title + " در حال ساخت است",
-                    modifier = Modifier.padding(innerPadding),
-                )
+                MainDestination.HOME -> HomeScreen(Modifier.padding(padding))
+                MainDestination.MEMBERS -> MembersScreen(membersViewModel, Modifier.padding(padding))
+                else -> Text("بخش ${MainDestination.valueOf(selected).title} در حال ساخت است",
+                    modifier = Modifier.padding(padding))
             }
         }
     }

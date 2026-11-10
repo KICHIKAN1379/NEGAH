@@ -9,10 +9,9 @@ import kotlinx.coroutines.flow.Flow
 interface MemberDao {
     @Query("SELECT * FROM members WHERE isArchived = 0 ORDER BY fullName COLLATE NOCASE")
     fun observeActiveMembers(): Flow<List<MemberEntity>>
-
     @Query("SELECT * FROM members WHERE id = :memberId LIMIT 1")
     suspend fun findById(memberId: String): MemberEntity?
-
-    @Upsert
-    suspend fun upsert(member: MemberEntity)
+    @Upsert suspend fun upsert(member: MemberEntity)
+    @Query("UPDATE members SET isArchived = 1, updatedAtEpochMillis = :updatedAt WHERE id = :memberId")
+    suspend fun archive(memberId: String, updatedAt: Long)
 }
