@@ -22,7 +22,7 @@ private enum class MainDestination(val title: String) {
     MEMBERS("اعضا"),
     PROGRESS("پیشرفت"),
     SHOP("فروشگاه"),
-    SETTINGS("تنظیمات),
+    SETTINGS("تنظیمات"),
 }
 
 @Composable
