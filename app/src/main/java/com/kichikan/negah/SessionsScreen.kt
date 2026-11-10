@@ -36,11 +36,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kichikan.negah.domain.attendance.AttendanceDraft
 import com.kichikan.negah.domain.attendance.AttendanceStatus
+import com.kichikan.negah.domain.attendance.AttendanceRevision
 import com.kichikan.negah.domain.attendance.summarizeAttendancePeriod
 import com.kichikan.negah.domain.session.Session
 import com.kichikan.negah.domain.settings.ClassDay
 import java.time.DayOfWeek
 import java.time.Instant
+import java.time.ZoneId
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -531,6 +533,25 @@ private fun AttendanceSessionScreen(
                         enabled = !state.isSaving,
                         onStatusChange = { onStatusChange(member.id, it) },
                         onReasonChange = { onReasonChange(member.id, it) },
+                    )
+                }
+            }
+        }
+
+        if (state.attendanceRevisions.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("سوابق تغییر حضور و غیاب", style = MaterialTheme.typography.titleMedium)
+                val names = state.members.associate { it.id to (it.nickname?.takeIf(String::isNotBlank) ?: it.fullName) }
+                state.attendanceRevisions.forEach { revision ->
+                    val changedAt = Instant.ofEpochMilli(revision.changedAtEpochMillis)
+                        .atZone(ZoneId.systemDefault())
+                        .format(DateTimeFormatter.ofPattern("yyyy/MM/dd  HH:mm"))
+                    Text(
+                        (names[revision.memberId] ?: "عضو حذف‌شده") + " • " +
+                            statusLabel(revision.previousStatus) +
+                            (revision.previousReason?.let { " • دلیل قبلی: $it" } ?: "") +
+                            " • تغییر در $changedAt",
+                        style = MaterialTheme.typography.bodySmall,
                     )
                 }
             }

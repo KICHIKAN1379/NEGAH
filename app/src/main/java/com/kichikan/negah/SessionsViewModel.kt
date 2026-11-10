@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kichikan.negah.domain.attendance.AttendanceDraft
 import com.kichikan.negah.domain.attendance.AttendanceRecord
+import com.kichikan.negah.domain.attendance.AttendanceRevision
 import com.kichikan.negah.domain.attendance.AttendanceRepository
 import com.kichikan.negah.domain.attendance.AttendanceStatus
 import com.kichikan.negah.domain.attendance.SaveAttendance
@@ -33,6 +34,7 @@ data class SessionsUiState(
     val sessions: List<Session> = emptyList(),
     val members: List<Member> = emptyList(),
     val attendanceRecords: List<AttendanceRecord> = emptyList(),
+    val attendanceRevisions: List<AttendanceRevision> = emptyList(),
     val classDays: Set<ClassDay> = emptySet(),
     val searchQuery: String = "",
     val filter: SessionFilter = SessionFilter.ALL,
@@ -58,6 +60,7 @@ class SessionsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(SessionsUiState())
     val uiState = _uiState.asStateFlow()
     private var attendanceJob: Job? = null
+    private var revisionsJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -142,6 +145,7 @@ class SessionsViewModel @Inject constructor(
         val current = _uiState.value
         if (current.sessions.none { it.id == sessionId }) return
         attendanceJob?.cancel()
+        revisionsJob?.cancel()
         val defaults = current.members.associate { member ->
             member.id to AttendanceDraft(member.id, AttendanceStatus.UNRECORDED, null)
         }
@@ -154,6 +158,13 @@ class SessionsViewModel @Inject constructor(
                 message = null,
                 messageIsError = false,
             )
+        }
+        revisionsJob = viewModelScope.launch {
+            attendanceRepository.observeRevisionsForSession(sessionId).collect { revisions ->
+                _uiState.update { state ->
+                    if (state.selectedSessionId == sessionId) state.copy(attendanceRevisions = revisions) else state
+                }
+            }
         }
         attendanceJob = viewModelScope.launch {
             attendanceRepository.observeForSession(sessionId).collect { records ->
@@ -182,10 +193,13 @@ class SessionsViewModel @Inject constructor(
     fun closeSession() {
         attendanceJob?.cancel()
         attendanceJob = null
+        revisionsJob?.cancel()
+        revisionsJob = null
         _uiState.update {
             it.copy(
                 selectedSessionId = null,
                 attendanceDrafts = emptyMap(),
+                attendanceRevisions = emptyList(),
                 isAttendanceLoading = false,
                 isSaving = false,
                 message = null,

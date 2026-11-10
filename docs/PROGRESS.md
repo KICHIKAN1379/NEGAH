@@ -155,3 +155,9 @@ Last updated: 2026-11-10
 ## Current blocker
 
 The available host has GitHub repository read/write integration but no local Android SDK/Gradle execution environment. GitHub Actions has verified the current source commit ee0d4906e7ecab62ace832b822822dee798203d6. The repository still lacks the Gradle Wrapper scripts/JAR. UI tests, manual device verification, dedicated migration testing, release signing and Play Store readiness remain outstanding; do not claim these are complete.
+
+
+## Latest continuation — attendance revision history
+- Added a live revision-history section to the attendance screen, showing the member, previous status, previous reason (when present), and change timestamp.
+- Revision history is observed from the existing Room-backed repository; no schema change or data migration was needed.
+- CSV export remains the next Sessions task.
