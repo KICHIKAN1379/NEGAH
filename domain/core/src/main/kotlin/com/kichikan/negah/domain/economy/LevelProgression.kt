@@ -3,8 +3,12 @@ package com.kichikan.negah.domain.economy
 object LevelProgression {
     fun levelFor(totalXp: Long): Int {
         val xp = totalXp.coerceAtLeast(0L)
-        return if (xp < FIRST_LEVEL_XP) 0
-        else 1 + ((xp - FIRST_LEVEL_XP) / XP_PER_LEVEL).toInt()
+        val calculatedLevel = if (xp < FIRST_LEVEL_XP) {
+            0L
+        } else {
+            1L + ((xp - FIRST_LEVEL_XP) / XP_PER_LEVEL)
+        }
+        return calculatedLevel.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
     }
 
     fun minimumXpForLevel(level: Int): Long {
