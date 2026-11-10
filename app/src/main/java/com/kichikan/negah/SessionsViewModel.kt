@@ -52,7 +52,7 @@ class SessionsViewModel @Inject constructor(
     private val memberRepository: MemberRepository,
     private val attendanceRepository: AttendanceRepository,
     private val classDaysRepository: ClassDaysRepository,
-    private val saveSession: SaveSession,
+    private val saveSessionUseCase: SaveSession,
     private val saveAttendanceUseCase: SaveAttendance,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SessionsUiState())
@@ -103,7 +103,8 @@ class SessionsViewModel @Inject constructor(
         _uiState.update { it.copy(selectedDateEpochDay = epochDay) }
     }
 
-    fun createSession(
+    fun saveSession(
+        existingSession: Session?,
         title: String,
         topic: String?,
         location: String?,
@@ -113,22 +114,26 @@ class SessionsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 when (
-                    saveSession(
+                    saveSessionUseCase(
                         title = title,
                         topic = topic,
                         location = location,
                         notes = notes,
                         sessionDateEpochDay = sessionDateEpochDay,
                         nowEpochMillis = System.currentTimeMillis(),
+                        existingSession = existingSession,
                     )
                 ) {
-                    is SaveSessionResult.Saved -> setMessage("جلسه ثبت شد.", isError = false)
+                    is SaveSessionResult.Saved -> setMessage(
+                        if (existingSession == null) "جلسه ثبت شد." else "ویرایش جلسه ذخیره شد.",
+                        isError = false,
+                    )
                     SaveSessionResult.InvalidTitle -> setMessage("عنوان جلسه را وارد کنید.", isError = true)
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
-                setMessage("ثبت جلسه انجام نشد. دوباره تلاش کنید.", isError = true)
+                setMessage("ذخیره جلسه انجام نشد. دوباره تلاش کنید.", isError = true)
             }
         }
     }

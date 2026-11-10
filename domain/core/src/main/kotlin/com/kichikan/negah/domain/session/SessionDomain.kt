@@ -36,11 +36,18 @@ class SaveSession @Inject constructor(
         notes: String?,
         sessionDateEpochDay: Long,
         nowEpochMillis: Long,
+        existingSession: Session? = null,
     ): SaveSessionResult {
         val cleanTitle = title.trim()
         if (cleanTitle.isBlank()) return SaveSessionResult.InvalidTitle
 
-        val session = Session(
+        val session = existingSession?.copy(
+            title = cleanTitle,
+            sessionDateEpochDay = sessionDateEpochDay,
+            notes = notes?.trim()?.takeIf(String::isNotBlank),
+            topic = topic?.trim()?.takeIf(String::isNotBlank),
+            location = location?.trim()?.takeIf(String::isNotBlank),
+        ) ?: Session(
             id = UUID.randomUUID().toString(),
             title = cleanTitle,
             sessionDateEpochDay = sessionDateEpochDay,

@@ -31,6 +31,60 @@ class SessionDomainTest {
     }
 
     @Test
+    fun updatingSessionKeepsIdentityCreationTimeAndCompletionState() = runBlocking {
+        val repository = FakeSessionRepository()
+        val existing = Session(
+            id = "session-existing",
+            title = "عنوان قبلی",
+            sessionDateEpochDay = 12L,
+            notes = "یادداشت قبلی",
+            createdAtEpochMillis = 123L,
+            topic = "موضوع قبلی",
+            location = "مکان قبلی",
+            isCompleted = true,
+        )
+
+        val result = SaveSession(repository)(
+            title = "  عنوان جدید  ",
+            topic = "  موضوع جدید  ",
+            location = " مکان جدید ",
+            notes = " یادداشت جدید ",
+            sessionDateEpochDay = 20L,
+            nowEpochMillis = 999L,
+            existingSession = existing,
+        )
+
+        val saved = assertIs<SaveSessionResult.Saved>(result).session
+        assertEquals(existing.id, saved.id)
+        assertEquals(existing.createdAtEpochMillis, saved.createdAtEpochMillis)
+        assertEquals(existing.isCompleted, saved.isCompleted)
+        assertEquals("عنوان جدید", saved.title)
+        assertEquals("موضوع جدید", saved.topic)
+        assertEquals("مکان جدید", saved.location)
+        assertEquals("یادداشت جدید", saved.notes)
+        assertEquals(20L, saved.sessionDateEpochDay)
+        assertEquals(saved, repository.saved.single())
+    }
+
+    @Test
+    fun blankTitleDoesNotOverwriteAnExistingSession() = runBlocking {
+        val repository = FakeSessionRepository()
+        val existing = Session(
+            id = "session-existing", title = "عنوان قبلی", sessionDateEpochDay = 12L,
+            notes = null, createdAtEpochMillis = 123L, topic = null, location = null,
+            isCompleted = false,
+        )
+
+        val result = SaveSession(repository)(
+            title = "  ", topic = null, location = null, notes = null,
+            sessionDateEpochDay = 20L, nowEpochMillis = 999L, existingSession = existing,
+        )
+
+        assertIs<SaveSessionResult.InvalidTitle>(result)
+        assertEquals(0, repository.saved.size)
+    }
+
+    @Test
     fun titleAndOptionalFieldsAreNormalizedBeforeSaving() = runBlocking {
         val repository = FakeSessionRepository()
         val result = SaveSession(repository)(

@@ -76,7 +76,7 @@ fun SessionsScreen(
             onDateSelected = viewModel::selectCalendarDate,
             onOpenSession = viewModel::openSession,
             onSetCompleted = viewModel::setCompleted,
-            onCreateSession = viewModel::createSession,
+            onSaveSession = viewModel::saveSession,
             modifier = modifier,
         )
     }
@@ -92,10 +92,11 @@ private fun SessionListScreen(
     onDateSelected: (Long?) -> Unit,
     onOpenSession: (String) -> Unit,
     onSetCompleted: (String, Boolean) -> Unit,
-    onCreateSession: (String, String?, String?, String?, Long) -> Unit,
+    onSaveSession: (Session?, String, String?, String?, String?, Long) -> Unit,
     modifier: Modifier,
 ) {
     var showCreateDialog by rememberSaveable { mutableStateOf(false) }
+    var editingSession by remember { mutableStateOf<Session?>(null) }
 
     val memberNamesBySession = remember(state.attendanceRecords, state.members) {
         val namesById = state.members.associate { it.id to it.fullName }
@@ -225,6 +226,7 @@ private fun SessionListScreen(
                             absentCount = (counts[AttendanceStatus.ABSENT] ?: 0) +
                                 (counts[AttendanceStatus.EXCUSED_ABSENCE] ?: 0),
                             onOpen = { onOpenSession(session.id) },
+                            onEdit = { editingSession = session },
                             onSetCompleted = { onSetCompleted(session.id, !session.isCompleted) },
                         )
                     }
@@ -233,12 +235,17 @@ private fun SessionListScreen(
         }
     }
 
-    if (showCreateDialog) {
+    if (showCreateDialog || editingSession != null) {
         SessionFormDialog(
-            onDismiss = { showCreateDialog = false },
-            onSave = { title, topic, location, notes, dateEpochDay ->
-                onCreateSession(title, topic, location, notes, dateEpochDay)
+            initialSession = editingSession,
+            onDismiss = {
                 showCreateDialog = false
+                editingSession = null
+            },
+            onSave = { existingSession, title, topic, location, notes, dateEpochDay ->
+                onSaveSession(existingSession, title, topic, location, notes, dateEpochDay)
+                showCreateDialog = false
+                editingSession = null
             },
         )
     }
@@ -252,6 +259,7 @@ private fun SessionCard(
     presentCount: Int,
     absentCount: Int,
     onOpen: () -> Unit,
+    onEdit: () -> Unit,
     onSetCompleted: () -> Unit,
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -271,6 +279,7 @@ private fun SessionCard(
             Text(if (session.isCompleted) "وضعیت: تکمیل‌شده" else "وضعیت: در پیش")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = onOpen) { Text("حضور و غیاب") }
+                TextButton(onClick = onEdit) { Text("ویرایش") }
                 TextButton(onClick = onSetCompleted) {
                     Text(if (session.isCompleted) "بازگشایی" else "تکمیل جلسه")
                 }
@@ -341,17 +350,20 @@ private fun LocalDate.toClassDay(): ClassDay = when (dayOfWeek) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SessionFormDialog(
+    initialSession: Session?,
     onDismiss: () -> Unit,
-    onSave: (String, String?, String?, String?, Long) -> Unit,
+    onSave: (Session?, String, String?, String?, String?, Long) -> Unit,
 ) {
-    var title by rememberSaveable { mutableStateOf("") }
-    var topic by rememberSaveable { mutableStateOf("") }
-    var location by rememberSaveable { mutableStateOf("") }
-    var notes by rememberSaveable { mutableStateOf("") }
+    var title by rememberSaveable { mutableStateOf(initialSession?.title.orEmpty()) }
+    var topic by rememberSaveable { mutableStateOf(initialSession?.topic.orEmpty()) }
+    var location by rememberSaveable { mutableStateOf(initialSession?.location.orEmpty()) }
+    var notes by rememberSaveable { mutableStateOf(initialSession?.notes.orEmpty()) }
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
     var validationError by rememberSaveable { mutableStateOf<String?>(null) }
-    val initialDateMillis = remember {
-        LocalDate.now().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+    val initialDateMillis = remember(initialSession?.sessionDateEpochDay) {
+        val initialDate = initialSession?.sessionDateEpochDay?.let { LocalDate.ofEpochDay(it) }
+            ?: LocalDate.now()
+        initialDate.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
     }
     val dateState = rememberDatePickerState(initialSelectedDateMillis = initialDateMillis)
     val selectedDate = dateState.selectedDateMillis?.let {
@@ -360,7 +372,7 @@ private fun SessionFormDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("جلسه جدید") },
+        title = { Text(if (initialSession == null) "جلسه جدید" else "ویرایش جلسه") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = title, onValueChange = { title = it; validationError = null }, label = { Text("عنوان جلسه") }, singleLine = true)
@@ -377,6 +389,7 @@ private fun SessionFormDialog(
             TextButton(onClick = {
                 if (title.isBlank()) validationError = "عنوان جلسه را وارد کنید."
                 else onSave(
+                    initialSession,
                     title,
                     topic.takeIf(String::isNotBlank),
                     location.takeIf(String::isNotBlank),
