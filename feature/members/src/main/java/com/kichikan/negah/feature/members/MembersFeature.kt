@@ -2,6 +2,7 @@ package com.kichikan.negah.feature.members
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -43,6 +44,7 @@ data class MembersUiState(
     val nickname: String = "",
     val searchQuery: String = "",
     val sortOption: MemberSortOption = MemberSortOption.NAME,
+    val selectedMemberId: String? = null,
     val isSaving: Boolean = false,
     val validationMessage: String? = null,
     val savedMessage: String? = null,
@@ -92,6 +94,8 @@ class MembersViewModel @Inject constructor(
     fun onNicknameChanged(value: String) = mutableState.update { it.copy(nickname = value, savedMessage = null) }
     fun onSearchChanged(value: String) = mutableState.update { it.copy(searchQuery = value) }
     fun onSortChanged(value: MemberSortOption) = mutableState.update { it.copy(sortOption = value) }
+    fun onMemberSelected(memberId: String) = mutableState.update { it.copy(selectedMemberId = memberId) }
+    fun onProfileClosed() = mutableState.update { it.copy(selectedMemberId = null) }
 
     fun addMember() {
         val snapshot = mutableState.value
@@ -119,6 +123,16 @@ class MembersViewModel @Inject constructor(
 @Composable
 fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val selectedMember = state.members.firstOrNull { it.id == state.selectedMemberId }
+    if (selectedMember != null) {
+        MemberProfileScreen(
+            member = selectedMember,
+            onBack = viewModel::onProfileClosed,
+            modifier = modifier,
+        )
+        return
+    }
+
     Column(
         modifier = modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -151,7 +165,9 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
         Text("${state.visibleMembers.size} عضو", style = MaterialTheme.typography.labelLarge)
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(state.visibleMembers, key = { it.id }) { member ->
-                Card(modifier = Modifier.fillMaxWidth()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth().clickable { viewModel.onMemberSelected(member.id) },
+                ) {
                     Row(modifier = Modifier.fillMaxWidth().padding(14.dp),
                         horizontalArrangement = Arrangement.SpaceBetween) {
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -170,5 +186,47 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun MemberProfileScreen(
+    member: Member,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Button(onClick = onBack) { Text("بازگشت به اعضا") }
+        Text(member.fullName, style = MaterialTheme.typography.headlineMedium)
+        member.nickname?.let {
+            Text(it, style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text("وضعیت پیشرفت", style = MaterialTheme.typography.titleMedium)
+                ProfileValue("سطح", LevelProgression.levelFor(member.totalXp).toString())
+                ProfileValue("تجربه", "${member.totalXp} XP")
+                ProfileValue("امتیاز قابل خرج", member.spendablePoints.toString())
+                ProfileValue("الماس", member.diamonds.toString())
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileValue(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.titleSmall)
     }
 }
