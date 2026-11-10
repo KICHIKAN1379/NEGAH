@@ -238,4 +238,12 @@ private class FakeInventoryRepository : InventoryRepository {
         catalogItemId: String,
         nowEpochMillis: Long,
     ): Boolean = false
+
+    override suspend fun purchaseItem(
+        memberId: String,
+        category: InventoryCategory,
+        catalogItemId: String,
+        transactionId: String,
+        nowEpochMillis: Long,
+    ) = com.kichikan.negah.domain.inventory.ShopPurchaseResult.ITEM_UNAVAILABLE
 }

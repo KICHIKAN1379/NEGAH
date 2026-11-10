@@ -7,6 +7,7 @@ import com.kichikan.negah.domain.member.MemberRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.UUID
 import javax.inject.Inject
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
@@ -19,15 +20,20 @@ class ShopViewModel @Inject constructor(private val members: MemberRepository, p
  val state = mutableState.asStateFlow()
  init {
   viewModelScope.launch { members.observeActiveMembers().collect { list ->
-   val selected = mutableState.value.selectedMemberId?.takeIf { id -> list.any { it.id == id } } ?: list.firstOrNull()?.id
+   val previous = mutableState.value.selectedMemberId
+   val selected = previous?.takeIf { id -> list.any { it.id == id } } ?: list.firstOrNull()?.id
    mutableState.update { it.copy(members = list, selectedMemberId = selected) }
-   if (selected != null) observeMember(selected)
+   if (selected != observedMemberId) {
+    if (selected != null) observeMember(selected) else { memberJob?.cancel(); memberJob = null; observedMemberId = null; mutableState.update { it.copy(ownedItemIds = emptySet()) } }
+   }
   } }
   viewModelScope.launch { combine(inventory.observeCatalog(InventoryCategory.AVATAR), inventory.observeCatalog(InventoryCategory.FRAME), inventory.observeCatalog(InventoryCategory.REWARD)) { a, f, r -> a + f + r }.collect { all -> mutableState.update { it.copy(items = all) } } }
  }
- fun selectMember(id: String) { if (state.value.members.none { it.id == id }) return; mutableState.update { it.copy(selectedMemberId = id, message = null) }; observeMember(id) }
+ fun selectMember(id: String) { if (state.value.members.none { it.id == id }) return; mutableState.update { it.copy(selectedMemberId = id, message = null) }; if (observedMemberId != id) observeMember(id) }
  private fun observeMember(id: String) {
-  viewModelScope.launch {
+  memberJob?.cancel()
+  observedMemberId = id
+  memberJob = viewModelScope.launch {
    combine(inventory.observeMemberInventory(id, InventoryCategory.AVATAR), inventory.observeMemberInventory(id, InventoryCategory.FRAME), inventory.observeMemberInventory(id, InventoryCategory.REWARD)) { a, f, r -> (a + f + r).map { it.catalogItemId }.toSet() }
     .collect { owned -> mutableState.update { if (it.selectedMemberId == id) it.copy(ownedItemIds = owned) else it } }
   }

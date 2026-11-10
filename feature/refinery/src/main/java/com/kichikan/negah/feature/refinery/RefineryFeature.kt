@@ -135,7 +135,7 @@ fun RefineryScreen(viewModel: RefineryViewModel, modifier: Modifier = Modifier) 
                             item.description?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                             Text(if (item.isActive) "فعال" else "غیرفعال")
                             Row {
-                                TextButton(onClick = { editingId = item.id; title = item.title; description = item.description.orEmpty(); priceText = item.priceAmount?.toString().orEmpty(); editorOpen = true }) { Text("ویرایش") }
+                                TextButton(onClick = { editingId = item.id; title = item.title; description = item.description.orEmpty(); editorOpen = true }) { Text("ویرایش") }
                                 TextButton(onClick = { viewModel.toggleGrowth(item) }) { Text(if (item.isActive) "غیرفعال‌سازی" else "فعال‌سازی") }
                             }
                         }
@@ -148,7 +148,7 @@ fun RefineryScreen(viewModel: RefineryViewModel, modifier: Modifier = Modifier) 
                     FilterChip(selected = selectedCategory == value, onClick = { category = value.name }, label = { Text(label) })
                 }
             }
-            Button(onClick = { editingId = null; title = ""; description = ""; editorOpen = true }) { Text("افزودن آیتم") }
+            Button(onClick = { editingId = null; title = ""; description = ""; priceText = ""; editorOpen = true }) { Text("افزودن آیتم") }
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(catalogItems, key = { it.id }) { item ->
                     Card(Modifier.fillMaxWidth()) {
@@ -157,7 +157,7 @@ fun RefineryScreen(viewModel: RefineryViewModel, modifier: Modifier = Modifier) 
                             item.description?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                             Text(if (item.isAvailable) "در دسترس" else "غیرفعال")
                             Row {
-                                TextButton(onClick = { editingId = item.id; title = item.title; description = item.description.orEmpty(); editorOpen = true }) { Text("ویرایش") }
+                                TextButton(onClick = { editingId = item.id; title = item.title; description = item.description.orEmpty(); priceText = item.priceAmount?.toString().orEmpty(); editorOpen = true }) { Text("ویرایش") }
                                 TextButton(onClick = { viewModel.toggleCatalog(item) }) { Text(if (item.isAvailable) "غیرفعال‌سازی" else "فعال‌سازی") }
                             }
                         }
