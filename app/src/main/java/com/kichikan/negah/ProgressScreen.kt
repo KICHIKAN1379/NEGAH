@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LinearProgressIndicator
@@ -27,7 +28,11 @@ import com.kichikan.negah.domain.growth.GrowthTrack
 import com.kichikan.negah.domain.economy.LevelProgression
 
 @Composable
-fun ProgressScreen(viewModel: ProgressViewModel, modifier: Modifier = Modifier) {
+fun ProgressScreen(
+    viewModel: ProgressViewModel,
+    onOpenSessions: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var selectedTrack by rememberSaveable { mutableStateOf(GrowthTrack.CAPABILITY.name) }
     val track = GrowthTrack.valueOf(selectedTrack)
@@ -41,6 +46,9 @@ fun ProgressScreen(viewModel: ProgressViewModel, modifier: Modifier = Modifier) 
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text("پیشرفت اعضا", style = MaterialTheme.typography.headlineSmall)
+        Button(onClick = onOpenSessions, modifier = Modifier.fillMaxWidth()) {
+            Text("جلسات و حضور و غیاب")
+        }
         if (state.members.isEmpty()) {
             Text("برای مشاهده مسیر رشد، ابتدا یک عضو ثبت کنید.")
         } else {
@@ -79,7 +87,7 @@ fun ProgressScreen(viewModel: ProgressViewModel, modifier: Modifier = Modifier) 
                         progress = { average / 100f },
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    Text("${items.size} شاخص فعال", style = MaterialTheme.typography.bodySmall)
+                    Text(items.size.toString() + " شاخص فعال", style = MaterialTheme.typography.bodySmall)
                 }
             }
             if (items.isEmpty()) {
@@ -116,7 +124,6 @@ private fun GrowthProgressCard(item: GrowthItem, progress: Int, note: String?) {
     }
 }
 
-
 @Composable
 private fun MemberProgressSummary(member: com.kichikan.negah.domain.member.Member) {
     val level = LevelProgression.levelFor(member.totalXp)
@@ -143,8 +150,8 @@ private fun MemberProgressSummary(member: com.kichikan.negah.domain.member.Membe
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text("تجربه (XP): ${member.totalXp}")
-                Text("${(nextLevelStart - member.totalXp).coerceAtLeast(0)} تا سطح بعد")
+                Text("تجربه (XP): " + member.totalXp)
+                Text((nextLevelStart - member.totalXp).coerceAtLeast(0).toString() + " تا سطح بعد")
             }
             LinearProgressIndicator(
                 progress = { levelProgress },

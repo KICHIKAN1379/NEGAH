@@ -38,10 +38,12 @@ fun NegahRoot(
     progressViewModel: ProgressViewModel,
     shopViewModel: ShopViewModel,
     classDaysViewModel: ClassDaysViewModel,
+    sessionsViewModel: SessionsViewModel,
 ) {
     var selected by rememberSaveable { mutableStateOf(MainDestination.HOME.name) }
     var openRefinery by rememberSaveable { mutableStateOf(false) }
     var openClassDays by rememberSaveable { mutableStateOf(false) }
+    var openSessions by rememberSaveable { mutableStateOf(false) }
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Scaffold(modifier = Modifier.fillMaxSize(), bottomBar = {
             NavigationBar {
@@ -52,6 +54,7 @@ fun NegahRoot(
                             selected = destination.name
                             openRefinery = false
                             openClassDays = false
+                            openSessions = false
                         },
                         icon = { Text(destination.title.take(1)) },
                         label = { Text(destination.title) },
@@ -62,7 +65,27 @@ fun NegahRoot(
             when (MainDestination.valueOf(selected)) {
                 MainDestination.HOME -> HomeScreen(Modifier.padding(padding))
                 MainDestination.MEMBERS -> MembersScreen(membersViewModel, Modifier.padding(padding))
-                MainDestination.PROGRESS -> ProgressScreen(progressViewModel, Modifier.padding(padding))
+                MainDestination.PROGRESS -> {
+                    if (openSessions) {
+                        SessionsScreen(
+                            viewModel = sessionsViewModel,
+                            onBack = { openSessions = false },
+                            onOpenClassDays = {
+                                selected = MainDestination.SETTINGS.name
+                                openSessions = false
+                                openRefinery = false
+                                openClassDays = true
+                            },
+                            modifier = Modifier.padding(padding),
+                        )
+                    } else {
+                        ProgressScreen(
+                            viewModel = progressViewModel,
+                            onOpenSessions = { openSessions = true },
+                            modifier = Modifier.padding(padding),
+                        )
+                    }
+                }
                 MainDestination.SETTINGS -> {
                     when {
                         openRefinery -> RefineryScreen(refineryViewModel, Modifier.padding(padding))

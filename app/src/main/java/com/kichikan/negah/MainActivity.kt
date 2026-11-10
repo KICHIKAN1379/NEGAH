@@ -17,6 +17,7 @@ class MainActivity : ComponentActivity() {
     private val progressViewModel: ProgressViewModel by viewModels()
     private val shopViewModel: ShopViewModel by viewModels()
     private val classDaysViewModel: ClassDaysViewModel by viewModels()
+    private val sessionsViewModel: SessionsViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,6 +30,7 @@ class MainActivity : ComponentActivity() {
                         progressViewModel,
                         shopViewModel,
                         classDaysViewModel,
+                        sessionsViewModel,
                     )
                 }
             }

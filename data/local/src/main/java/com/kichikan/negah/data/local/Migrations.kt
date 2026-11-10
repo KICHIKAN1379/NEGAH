@@ -25,3 +25,13 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
   database.execSQL("CREATE TABLE IF NOT EXISTS class_days (weekdayIndex INTEGER NOT NULL, PRIMARY KEY(weekdayIndex))")
  }
 }
+val MIGRATION_5_6 = object : Migration(5, 6) {
+ override fun migrate(database: SupportSQLiteDatabase) {
+  database.execSQL("ALTER TABLE sessions ADD COLUMN topic TEXT")
+  database.execSQL("ALTER TABLE sessions ADD COLUMN location TEXT")
+  database.execSQL("ALTER TABLE sessions ADD COLUMN isCompleted INTEGER NOT NULL DEFAULT 0")
+  database.execSQL("""CREATE TABLE IF NOT EXISTS attendance_revisions (id TEXT NOT NULL, attendanceRecordId TEXT NOT NULL, sessionId TEXT NOT NULL, memberId TEXT NOT NULL, previousStatus TEXT NOT NULL, previousReason TEXT, previousIsConfirmed INTEGER NOT NULL, previousUpdatedAtEpochMillis INTEGER NOT NULL, changedAtEpochMillis INTEGER NOT NULL, PRIMARY KEY(id), FOREIGN KEY(attendanceRecordId) REFERENCES attendance_records(id) ON UPDATE NO ACTION ON DELETE RESTRICT)""")
+  database.execSQL("CREATE INDEX IF NOT EXISTS index_attendance_revisions_attendanceRecordId ON attendance_revisions(attendanceRecordId)")
+  database.execSQL("CREATE INDEX IF NOT EXISTS index_attendance_revisions_sessionId ON attendance_revisions(sessionId)")
+ }
+}
