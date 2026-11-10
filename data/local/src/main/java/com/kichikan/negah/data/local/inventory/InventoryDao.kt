@@ -39,6 +39,19 @@ interface InventoryDao {
     suspend fun insertInventoryEntry(entry: MemberInventoryEntity)
 
     @Query("""
+        SELECT COUNT(*) FROM catalog_items
+        WHERE id = :catalogItemId AND category = :category AND isAvailable = 1
+    """)
+    suspend fun availableCatalogItemCount(catalogItemId: String, category: String): Int
+
+    @Transaction
+    suspend fun grantAvailableItem(entry: MemberInventoryEntity, category: InventoryCategory): Boolean {
+        if (availableCatalogItemCount(entry.catalogItemId, category.name) == 0) return false
+        insertInventoryEntry(entry)
+        return true
+    }
+
+    @Query("""
         SELECT COUNT(*) FROM member_inventory mi
         INNER JOIN catalog_items ci ON ci.id = mi.catalogItemId
         WHERE mi.memberId = :memberId AND mi.catalogItemId = :catalogItemId
