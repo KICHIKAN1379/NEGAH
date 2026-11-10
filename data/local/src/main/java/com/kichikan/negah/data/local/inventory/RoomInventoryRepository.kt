@@ -15,6 +15,9 @@ class RoomInventoryRepository @Inject constructor(
     override fun observeCatalog(category: InventoryCategory): Flow<List<CatalogItem>> =
         dao.observeCatalog(category.name).map { rows -> rows.map(CatalogItemEntity::toDomain) }
 
+    override fun observeAllCatalog(category: InventoryCategory): Flow<List<CatalogItem>> =
+        dao.observeAllCatalog(category.name).map { rows -> rows.map(CatalogItemEntity::toDomain) }
+
     override fun observeMemberInventory(memberId: String, category: InventoryCategory): Flow<List<MemberInventoryEntry>> =
         dao.observeMemberInventory(memberId, category.name).map { rows -> rows.map(InventoryCatalogRow::toDomain) }
 
