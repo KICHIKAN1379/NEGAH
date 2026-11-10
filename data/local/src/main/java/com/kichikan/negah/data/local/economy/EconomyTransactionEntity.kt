@@ -20,4 +20,6 @@ data class EconomyTransactionEntity(
     val sourceType: String,
     val sourceId: String?,
     val createdAtEpochMillis: Long,
-)
+) {
+    companion object
+}
