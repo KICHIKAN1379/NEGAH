@@ -7,6 +7,16 @@ import com.kichikan.negah.domain.economy.EconomyTransactionKind
 import com.kichikan.negah.domain.member.Member
 import com.kichikan.negah.domain.member.MemberRepository
 import com.kichikan.negah.domain.member.RegisterMember
+import com.kichikan.negah.domain.growth.GrowthItem
+import com.kichikan.negah.domain.growth.GrowthMapRepository
+import com.kichikan.negah.domain.growth.GrowthTrack
+import com.kichikan.negah.domain.growth.MemberGrowthProgress
+import com.kichikan.negah.domain.growth.UpdateGrowthProgress
+import com.kichikan.negah.domain.inventory.ActiveInventoryItem
+import com.kichikan.negah.domain.inventory.CatalogItem
+import com.kichikan.negah.domain.inventory.InventoryCategory
+import com.kichikan.negah.domain.inventory.InventoryRepository
+import com.kichikan.negah.domain.inventory.MemberInventoryEntry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -27,6 +37,8 @@ class MembersViewModelTest {
     private val mainDispatcher = UnconfinedTestDispatcher()
     private lateinit var members: FakeMemberRepository
     private lateinit var economy: FakeEconomyRepository
+    private lateinit var growth: FakeGrowthMapRepository
+    private lateinit var inventory: FakeInventoryRepository
     private lateinit var viewModel: MembersViewModel
 
     @Before
@@ -34,7 +46,16 @@ class MembersViewModelTest {
         Dispatchers.setMain(mainDispatcher)
         members = FakeMemberRepository()
         economy = FakeEconomyRepository()
-        viewModel = MembersViewModel(members, RegisterMember(members), economy)
+        growth = FakeGrowthMapRepository()
+        inventory = FakeInventoryRepository()
+        viewModel = MembersViewModel(
+            members,
+            RegisterMember(members),
+            economy,
+            growth,
+            UpdateGrowthProgress(growth),
+            inventory,
+        )
     }
 
     @After
@@ -156,4 +177,39 @@ private class FakeEconomyRepository : EconomyRepository {
         histories.getOrPut(memberId) { MutableStateFlow(emptyList()) }.asStateFlow()
     override suspend fun appendAtomically(transaction: EconomyTransaction) =
         com.kichikan.negah.domain.economy.LedgerAppendResult.APPENDED
+}
+
+
+private class FakeGrowthMapRepository : GrowthMapRepository {
+    override fun observeItems(track: GrowthTrack): Flow<List<GrowthItem>> =
+        MutableStateFlow(emptyList<GrowthItem>()).asStateFlow()
+
+    override fun observeProgress(memberId: String): Flow<List<MemberGrowthProgress>> =
+        MutableStateFlow(emptyList<MemberGrowthProgress>()).asStateFlow()
+
+    override suspend fun saveItem(item: GrowthItem) = Unit
+    override suspend fun updateProgress(progress: MemberGrowthProgress) = Unit
+}
+
+private class FakeInventoryRepository : InventoryRepository {
+    override fun observeCatalog(category: InventoryCategory): Flow<List<CatalogItem>> =
+        MutableStateFlow(emptyList<CatalogItem>()).asStateFlow()
+
+    override fun observeMemberInventory(
+        memberId: String,
+        category: InventoryCategory,
+    ): Flow<List<MemberInventoryEntry>> =
+        MutableStateFlow(emptyList<MemberInventoryEntry>()).asStateFlow()
+
+    override fun observeActiveItems(memberId: String): Flow<List<ActiveInventoryItem>> =
+        MutableStateFlow(emptyList<ActiveInventoryItem>()).asStateFlow()
+
+    override suspend fun saveCatalogItem(item: CatalogItem) = Unit
+    override suspend fun grantItem(entry: MemberInventoryEntry) = Unit
+    override suspend fun activateItem(
+        memberId: String,
+        category: InventoryCategory,
+        catalogItemId: String,
+        nowEpochMillis: Long,
+    ): Boolean = false
 }
