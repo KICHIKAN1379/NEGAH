@@ -12,7 +12,6 @@ class SessionDomainTest {
         val saved = mutableListOf<Session>()
         override fun observeAll(): Flow<List<Session>> = emptyFlow()
         override suspend fun save(session: Session) { saved += session }
-        override suspend fun delete(sessionId: String): Boolean = true
         override suspend fun setCompleted(sessionId: String, isCompleted: Boolean) = Unit
     }
 
