@@ -181,6 +181,8 @@ private class FakeEconomyRepository : EconomyRepository {
 
 
 private class FakeGrowthMapRepository : GrowthMapRepository {
+    override fun observeAllItems(track: GrowthTrack): Flow<List<GrowthItem>> = MutableStateFlow(emptyList<GrowthItem>()).asStateFlow()
+
     override fun observeItems(track: GrowthTrack): Flow<List<GrowthItem>> =
         MutableStateFlow(emptyList<GrowthItem>()).asStateFlow()
 
@@ -192,6 +194,8 @@ private class FakeGrowthMapRepository : GrowthMapRepository {
 }
 
 private class FakeInventoryRepository : InventoryRepository {
+    override fun observeAllCatalog(category: InventoryCategory): Flow<List<CatalogItem>> = MutableStateFlow(emptyList<CatalogItem>()).asStateFlow()
+
     override fun observeCatalog(category: InventoryCategory): Flow<List<CatalogItem>> =
         MutableStateFlow(emptyList<CatalogItem>()).asStateFlow()
 
