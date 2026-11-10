@@ -1,7 +1,12 @@
 package com.kichikan.negah
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -15,32 +20,53 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import com.kichikan.negah.feature.home.HomeScreen
 import com.kichikan.negah.feature.members.MembersScreen
 import com.kichikan.negah.feature.members.MembersViewModel
+import com.kichikan.negah.feature.refinery.RefineryScreen
+import com.kichikan.negah.feature.refinery.RefineryViewModel
 
 private enum class MainDestination(val title: String) {
     HOME("خانه"), MEMBERS("اعضا"), PROGRESS("پیشرفت"), SHOP("فروشگاه"), SETTINGS("تنظیمات"),
 }
 
 @Composable
-fun NegahRoot(membersViewModel: MembersViewModel) {
+fun NegahRoot(membersViewModel: MembersViewModel, refineryViewModel: RefineryViewModel) {
     var selected by rememberSaveable { mutableStateOf(MainDestination.HOME.name) }
+    var openRefinery by rememberSaveable { mutableStateOf(false) }
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Scaffold(modifier = Modifier.fillMaxSize(), bottomBar = {
             NavigationBar {
                 MainDestination.entries.forEach { destination ->
-                    NavigationBarItem(selected = selected == destination.name,
-                        onClick = { selected = destination.name },
-                        icon = { Text(destination.title.take(1)) }, label = { Text(destination.title) })
+                    NavigationBarItem(
+                        selected = selected == destination.name,
+                        onClick = { selected = destination.name; openRefinery = false },
+                        icon = { Text(destination.title.take(1)) },
+                        label = { Text(destination.title) },
+                    )
                 }
             }
         }) { padding ->
             when (MainDestination.valueOf(selected)) {
                 MainDestination.HOME -> HomeScreen(Modifier.padding(padding))
                 MainDestination.MEMBERS -> MembersScreen(membersViewModel, Modifier.padding(padding))
-                else -> Text("بخش ${MainDestination.valueOf(selected).title} در حال ساخت است",
-                    modifier = Modifier.padding(padding))
+                MainDestination.SETTINGS -> {
+                    if (openRefinery) {
+                        RefineryScreen(refineryViewModel, Modifier.padding(padding))
+                    } else {
+                        Column(
+                            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            Text("تنظیمات", style = MaterialTheme.typography.headlineSmall)
+                            Button(onClick = { openRefinery = true }, modifier = Modifier.fillMaxWidth()) {
+                                Text("پالایشگاه")
+                            }
+                        }
+                    }
+                }
+                else -> Text("بخش ${MainDestination.valueOf(selected).title} در حال ساخت است", modifier = Modifier.padding(padding))
             }
         }
     }
