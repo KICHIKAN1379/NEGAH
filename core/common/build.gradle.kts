@@ -1,8 +1,7 @@
 plugins {
-    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.jvm)
 }
 
-android {
-    namespace = "com.kichikan.negah.core.common"
-    compileSdk = 37
+kotlin {
+    jvmToolchain(17)
 }
