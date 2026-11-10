@@ -1,0 +1,18 @@
+package com.kichikan.negah.data.local.member
+
+import androidx.room.Dao
+import androidx.room.Query
+import androidx.room.Upsert
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface MemberDao {
+    @Query("SELECT * FROM members WHERE isArchived = 0 ORDER BY fullName COLLATE NOCASE")
+    fun observeActiveMembers(): Flow<List<MemberEntity>>
+
+    @Query("SELECT * FROM members WHERE id = :memberId LIMIT 1")
+    suspend fun findById(memberId: String): MemberEntity?
+
+    @Upsert
+    suspend fun upsert(member: MemberEntity)
+}
