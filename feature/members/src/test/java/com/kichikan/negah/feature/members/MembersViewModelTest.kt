@@ -104,6 +104,27 @@ class MembersViewModelTest {
     }
 
     @Test
+    fun coachGrantAddsCatalogItemToSelectedMembersInventory() = runTest {
+        val item = CatalogItem(
+            id = "avatar-1",
+            category = InventoryCategory.AVATAR,
+            title = "آواتار آزمایشی",
+            description = null,
+            isAvailable = true,
+            sortOrder = 0,
+        )
+        viewModel.onMemberSelected("member-1")
+
+        viewModel.grantCatalogItem(item)
+
+        val granted = inventory.grantedEntries.single()
+        assertEquals("member-1", granted.memberId)
+        assertEquals("avatar-1", granted.catalogItemId)
+        assertEquals("COACH_GRANT", granted.sourceType)
+        assertEquals("آیتم به گنجینه عضو افزوده شد", viewModel.state.value.inventoryMessage)
+    }
+
+    @Test
     fun selectingMemberObservesOnlyThatMembersEconomyHistory() = runTest {
         val first = transaction("tx-1", "member-1", 10)
         val second = transaction("tx-2", "member-2", 20)
@@ -194,6 +215,7 @@ private class FakeGrowthMapRepository : GrowthMapRepository {
 }
 
 private class FakeInventoryRepository : InventoryRepository {
+    val grantedEntries = mutableListOf<MemberInventoryEntry>()
     override fun observeAllCatalog(category: InventoryCategory): Flow<List<CatalogItem>> = MutableStateFlow(emptyList<CatalogItem>()).asStateFlow()
 
     override fun observeCatalog(category: InventoryCategory): Flow<List<CatalogItem>> =
@@ -209,7 +231,7 @@ private class FakeInventoryRepository : InventoryRepository {
         MutableStateFlow(emptyList<ActiveInventoryItem>()).asStateFlow()
 
     override suspend fun saveCatalogItem(item: CatalogItem) = Unit
-    override suspend fun grantItem(entry: MemberInventoryEntry) = Unit
+    override suspend fun grantItem(entry: MemberInventoryEntry) { grantedEntries += entry }
     override suspend fun activateItem(
         memberId: String,
         category: InventoryCategory,
