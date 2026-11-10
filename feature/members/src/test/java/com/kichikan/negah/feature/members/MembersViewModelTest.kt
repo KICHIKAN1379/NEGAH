@@ -87,9 +87,15 @@ class MembersViewModelTest {
         economy.emit("member-1", listOf(xp, points, diamonds))
         viewModel.onMemberSelected("member-1")
 
-        viewModel.onHistoryFilterChanged(MemberHistoryFilter.POINTS)
+        viewModel.onHistoryFilterChanged(MemberHistoryFilter.XP)
+        assertEquals(listOf(xp), viewModel.state.value.visibleEconomyTransactions)
 
+        viewModel.onHistoryFilterChanged(MemberHistoryFilter.POINTS)
         assertEquals(listOf(points), viewModel.state.value.visibleEconomyTransactions)
+
+        viewModel.onHistoryFilterChanged(MemberHistoryFilter.DIAMONDS)
+        assertEquals(listOf(diamonds), viewModel.state.value.visibleEconomyTransactions)
+
         viewModel.onHistoryFilterChanged(MemberHistoryFilter.ALL)
         assertEquals(listOf(xp, points, diamonds), viewModel.state.value.visibleEconomyTransactions)
     }
