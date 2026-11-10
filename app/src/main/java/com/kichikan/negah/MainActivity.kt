@@ -7,18 +7,20 @@ import androidx.activity.viewModels
 import androidx.compose.material3.Surface
 import com.kichikan.negah.core.designsystem.NegahTheme
 import com.kichikan.negah.feature.members.MembersViewModel
+import com.kichikan.negah.feature.refinery.RefineryViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val membersViewModel: MembersViewModel by viewModels()
+    private val refineryViewModel: RefineryViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             NegahTheme {
                 Surface {
-                    NegahRoot(membersViewModel)
+                    NegahRoot(membersViewModel, refineryViewModel)
                 }
             }
         }
