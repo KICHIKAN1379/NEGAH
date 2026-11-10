@@ -267,17 +267,6 @@ class SessionsViewModel @Inject constructor(
         }
     }
 
-    fun deleteSession(sessionId: String) {
-        viewModelScope.launch {
-            try {
-                val deleted = sessionRepository.delete(sessionId)
-                setMessage(if (deleted) "جلسه حذف شد." else "جلسه پیدا نشد.", isError = !deleted)
-            } catch (_: Exception) {
-                setMessage("به‌دلیل وجود سوابق حضور و غیاب، حذف این جلسه ممکن نیست.", isError = true)
-            }
-        }
-    }
-
     private fun setMessage(message: String, isError: Boolean) {
         _uiState.update { it.copy(message = message, messageIsError = isError) }
     }
