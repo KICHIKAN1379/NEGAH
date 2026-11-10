@@ -15,17 +15,27 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.kichikan.negah.domain.attendance.AttendanceStatus
+import com.kichikan.negah.domain.session.Session
+import com.kichikan.negah.feature.home.HomeAttendanceDay
+import com.kichikan.negah.feature.home.HomeDashboardState
+import com.kichikan.negah.feature.home.HomeRecentSession
 import com.kichikan.negah.feature.home.HomeScreen
 import com.kichikan.negah.feature.members.MembersScreen
 import com.kichikan.negah.feature.members.MembersViewModel
 import com.kichikan.negah.feature.refinery.RefineryScreen
 import com.kichikan.negah.feature.refinery.RefineryViewModel
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 private enum class MainDestination(val title: String) {
     HOME("خانه"), MEMBERS("اعضا"), PROGRESS("پیشرفت"), SHOP("فروشگاه"), SETTINGS("تنظیمات"),
@@ -44,6 +54,16 @@ fun NegahRoot(
     var openRefinery by rememberSaveable { mutableStateOf(false) }
     var openClassDays by rememberSaveable { mutableStateOf(false) }
     var openSessions by rememberSaveable { mutableStateOf(false) }
+    val membersState by membersViewModel.state.collectAsStateWithLifecycle()
+    val sessionsState by sessionsViewModel.uiState.collectAsStateWithLifecycle()
+    val dashboard = remember(membersState.members, sessionsState.sessions, sessionsState.attendanceRecords) {
+        buildHomeDashboard(
+            members = membersState.members,
+            sessions = sessionsState.sessions,
+            attendance = sessionsState.attendanceRecords,
+        )
+    }
+
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Scaffold(modifier = Modifier.fillMaxSize(), bottomBar = {
             NavigationBar {
@@ -63,7 +83,16 @@ fun NegahRoot(
             }
         }) { padding ->
             when (MainDestination.valueOf(selected)) {
-                MainDestination.HOME -> HomeScreen(Modifier.padding(padding))
+                MainDestination.HOME -> HomeScreen(
+                    dashboard = dashboard,
+                    onOpenMembers = { selected = MainDestination.MEMBERS.name },
+                    onOpenProgress = { selected = MainDestination.PROGRESS.name },
+                    onOpenSessions = {
+                        selected = MainDestination.PROGRESS.name
+                        openSessions = true
+                    },
+                    modifier = Modifier.padding(padding),
+                )
                 MainDestination.MEMBERS -> MembersScreen(membersViewModel, Modifier.padding(padding))
                 MainDestination.PROGRESS -> {
                     if (openSessions) {
@@ -114,4 +143,43 @@ fun NegahRoot(
             }
         }
     }
+}
+
+private fun buildHomeDashboard(
+    members: List<com.kichikan.negah.domain.member.Member>,
+    sessions: List<Session>,
+    attendance: List<com.kichikan.negah.domain.attendance.AttendanceRecord>,
+): HomeDashboardState {
+    val today = LocalDate.now()
+    val sessionsById = sessions.associateBy(Session::id)
+    val attendanceBySession = attendance.groupBy { it.sessionId }
+    val days = (6L downTo 0L).map { offset ->
+        val date = today.minusDays(offset)
+        val sessionIds = sessions.asSequence()
+            .filter { it.sessionDateEpochDay == date.toEpochDay() }
+            .map(Session::id)
+            .toSet()
+        val records = sessionIds.flatMap { attendanceBySession[it].orEmpty() }
+        HomeAttendanceDay(
+            label = date.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale("fa")),
+            presentCount = records.count { it.status == AttendanceStatus.PRESENT },
+            recordedCount = records.size,
+        )
+    }
+    val dateFormatter = DateTimeFormatter.ofPattern("yyyy/MM/dd", Locale("fa"))
+    val recent = sessions.sortedByDescending(Session::sessionDateEpochDay).take(3).map { session ->
+        HomeRecentSession(
+            title = session.title,
+            dateLabel = LocalDate.ofEpochDay(session.sessionDateEpochDay).format(dateFormatter),
+            completed = session.isCompleted,
+        )
+    }
+    return HomeDashboardState(
+        activeMemberCount = members.size,
+        totalXp = members.sumOf { it.totalXp },
+        totalPoints = members.sumOf { it.spendablePoints },
+        totalDiamonds = members.sumOf { it.diamonds },
+        attendanceDays = days,
+        recentSessions = recent,
+    )
 }
