@@ -16,13 +16,20 @@ class MainActivity : ComponentActivity() {
     private val refineryViewModel: RefineryViewModel by viewModels()
     private val progressViewModel: ProgressViewModel by viewModels()
     private val shopViewModel: ShopViewModel by viewModels()
+    private val classDaysViewModel: ClassDaysViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             NegahTheme {
                 Surface {
-                    NegahRoot(membersViewModel, refineryViewModel, progressViewModel, shopViewModel)
+                    NegahRoot(
+                        membersViewModel,
+                        refineryViewModel,
+                        progressViewModel,
+                        shopViewModel,
+                        classDaysViewModel,
+                    )
                 }
             }
         }

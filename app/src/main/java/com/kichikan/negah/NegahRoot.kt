@@ -17,9 +17,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.kichikan.negah.feature.home.HomeScreen
 import com.kichikan.negah.feature.members.MembersScreen
@@ -37,16 +37,22 @@ fun NegahRoot(
     refineryViewModel: RefineryViewModel,
     progressViewModel: ProgressViewModel,
     shopViewModel: ShopViewModel,
+    classDaysViewModel: ClassDaysViewModel,
 ) {
     var selected by rememberSaveable { mutableStateOf(MainDestination.HOME.name) }
     var openRefinery by rememberSaveable { mutableStateOf(false) }
+    var openClassDays by rememberSaveable { mutableStateOf(false) }
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Scaffold(modifier = Modifier.fillMaxSize(), bottomBar = {
             NavigationBar {
                 MainDestination.entries.forEach { destination ->
                     NavigationBarItem(
                         selected = selected == destination.name,
-                        onClick = { selected = destination.name; openRefinery = false },
+                        onClick = {
+                            selected = destination.name
+                            openRefinery = false
+                            openClassDays = false
+                        },
                         icon = { Text(destination.title.take(1)) },
                         label = { Text(destination.title) },
                     )
@@ -58,16 +64,25 @@ fun NegahRoot(
                 MainDestination.MEMBERS -> MembersScreen(membersViewModel, Modifier.padding(padding))
                 MainDestination.PROGRESS -> ProgressScreen(progressViewModel, Modifier.padding(padding))
                 MainDestination.SETTINGS -> {
-                    if (openRefinery) {
-                        RefineryScreen(refineryViewModel, Modifier.padding(padding))
-                    } else {
-                        Column(
-                            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            Text("تنظیمات", style = MaterialTheme.typography.headlineSmall)
-                            Button(onClick = { openRefinery = true }, modifier = Modifier.fillMaxWidth()) {
-                                Text("پالایشگاه")
+                    when {
+                        openRefinery -> RefineryScreen(refineryViewModel, Modifier.padding(padding))
+                        openClassDays -> ClassDaysScreen(
+                            viewModel = classDaysViewModel,
+                            onBack = { openClassDays = false },
+                            modifier = Modifier.padding(padding),
+                        )
+                        else -> {
+                            Column(
+                                modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                Text("تنظیمات", style = MaterialTheme.typography.headlineSmall)
+                                Button(onClick = { openRefinery = true }, modifier = Modifier.fillMaxWidth()) {
+                                    Text("پالایشگاه")
+                                }
+                                Button(onClick = { openClassDays = true }, modifier = Modifier.fillMaxWidth()) {
+                                    Text("روزهای کلاس")
+                                }
                             }
                         }
                     }

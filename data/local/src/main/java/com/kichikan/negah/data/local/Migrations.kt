@@ -20,3 +20,8 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
 val MIGRATION_3_4 = object : Migration(3, 4) {
  override fun migrate(database: SupportSQLiteDatabase) { database.execSQL("ALTER TABLE catalog_items ADD COLUMN priceAmount INTEGER") }
 }
+val MIGRATION_4_5 = object : Migration(4, 5) {
+ override fun migrate(database: SupportSQLiteDatabase) {
+  database.execSQL("CREATE TABLE IF NOT EXISTS class_days (weekdayIndex INTEGER NOT NULL, PRIMARY KEY(weekdayIndex))")
+ }
+}

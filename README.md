@@ -4,18 +4,17 @@
 
 ## وضعیت پروژه
 
-پروژه به‌صورت مستقل و از پایه توسعه داده می‌شود. مخزن قدیمی AK1 منبع وابستگی یا کد این پروژه نیست.
+پروژه به‌صورت مستقل و از پایه توسعه داده می‌شود. راهنمای جامع AK1 فقط مرجع قوانین و رفتار محصول است؛ کد یا مخزن قدیمی وابستگی این پروژه نیست.
 
-## معماری مصوب
+## معماری و فناوری
 
-- Kotlin + Jetpack Compose
+- Kotlin 2.2.21 + Jetpack Compose
 - Multi-module Gradle
 - Clean Architecture + UDF
 - Hilt برای Dependency Injection
 - Room / SQLite برای ذخیره‌سازی محلی
-- WorkManager برای کارهای پس‌زمینه
-- پشتیبان‌گیری رمزگذاری‌شده با حداکثر دو نسخه در پوشه MRT
-- توسعه مرحله‌ای و حفظ تاریخچه و یکپارچگی داده‌ها
+- WorkManager برای پشتیبان خودکار: نیاز فنی ثبت‌شده، اما هنوز پیاده‌سازی نشده است.
+- پشتیبان‌گیری رمزگذاری‌شده با حداکثر دو نسخه در پوشه MRT: الزام محصول، هنوز پیاده‌سازی نشده است.
 
 ## دامنه نسخه فعلی
 
@@ -28,12 +27,38 @@
 3. Migrationها باید داده‌های موجود را حفظ کنند.
 4. عملیات حساس باید اتمیک و قابل ردیابی باشند.
 5. هر تغییر معماری باید در مرز ماژول روشن انجام شود.
+6. موفقیت Build، تست واحد، اجرای دستی و تطبیق بصری چهار ادعای جداگانه‌اند.
 
+## مستندات پروژه
 
-## ساختار و وضعیت
-
-معماری مصوب و مرز ماژول‌ها در [مستند معماری](docs/ARCHITECTURE.md) ثبت شده است. وضعیت دقیق پیاده‌سازی و موارد اعتبارسنجی‌نشده در [گزارش پیشرفت](docs/IMPLEMENTATION_STATUS.md) نگهداری می‌شود.
+- معماری: docs/ARCHITECTURE.md
+- مشخصات محصول: docs/PRODUCT_SPEC.md
+- نقشه UX: docs/UX_REFERENCE_MAP.md
+- برنامه پیاده‌سازی: docs/IMPLEMENTATION_PLAN.md
+- وضعیت مأموریت و گزارش پیشرفت: docs/PROGRESS.md
+- وضعیت پیاده‌سازی قبلی: docs/IMPLEMENTATION_STATUS.md
 
 ## Build
 
-پروژه با JDK 17 و Gradle 9.3.1 پیکربندی شده است. SDKهای Android API 37 و Build Tools 36.0.0 لازم‌اند. گردش GitHub Actions برای build و تست در شاخه توسعه تعریف شده است.
+پیکربندی واقعی مخزن در حال حاضر:
+
+- JDK: 17
+- Gradle مورد استفاده CI: 8.13
+- Android Gradle Plugin: 8.13.2
+- Kotlin: 2.2.21
+- Compile SDK / Target SDK: Android 36
+- Build Tools: 36.0.0
+- Min SDK: 26
+
+محدودیت فعلی: فایل gradle/wrapper/gradle-wrapper.properties وجود دارد، اما اسکریپت‌های gradlew و gradlew.bat و فایل gradle-wrapper.jar در مخزن نیستند. تا زمان بازگرداندن Wrapper، برای ساخت محلی باید Gradle 8.13 نصب باشد.
+
+فرمان ساخت APK:
+    gradle :app:assembleDebug
+
+فرمان تست‌های فعلی CI:
+    gradle :app:assembleDebug :domain:core:test :data:local:testDebugUnitTest :feature:members:testDebugUnitTest :feature:refinery:testDebugUnitTest --stacktrace
+
+خروجی Debug APK:
+    app/build/outputs/apk/debug/app-debug.apk
+
+آخرین baseline تأییدشده در CI: run #77 روی commit a68a335ffab48d7d4d507a6a3ba7e15436d287ec. این نتیجه فقط Build و تست‌های مشخص‌شده در workflow را تأیید می‌کند؛ تست UI، اجرای دستگاه و تطبیق بصری هنوز جداگانه لازم‌اند.
