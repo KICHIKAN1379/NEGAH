@@ -169,6 +169,7 @@ A session is a scheduled event; attendance is a separate record of actual partic
 - Attendance has exactly five states: حاضر، غیبت، غیبت موجه، تأخیر، بدون ثبت.
 - A reason is mandatory for غیبت، غیبت موجه and بدون ثبت.
 - One member may have at most one attendance record per session.
+- Do not show a separate weekly calendar on Home; the session calendar belongs in Sessions.
 - The weekly session calendar must be generated from the class weekdays selected in Settings (Saturday through Friday). Never invent a fixed weekly calendar independent of those settings.
 - Support holidays/removed days in the calendar.
 - Provide CSV export compatible with Excel.
@@ -199,7 +200,7 @@ The current domain implementation has matching boundary tests. Changes to this f
 ## 8. Settings and Refinery
 
 Settings has exactly nine main options, in this order:
-1. پاالیشگاه
+1. پالایشگاه
 2. ویرایش پروفایل حلقه
 3. صدا، پس‌زمینه و تم
 4. جمله‌های روز
@@ -210,8 +211,8 @@ Settings has exactly nine main options, in this order:
 9. راهنما
 
 Rules:
-- Ring profile editing is independent and includes ring name, ring image and Home banner; never hard-code example values.
-- Sound, background and theme form one settings group.
+- Ring profile editing is independent and includes ring name, ring username where defined, ring image and Home banner; never hard-code example values.
+- Sound/music, background and theme form one settings group.
 - Class days are selected as weekdays from Saturday through Friday, not as a date range.
 - Home shortcuts have their own settings screen and allow at most four simultaneous shortcuts.
 - Import and export share one destination. The deleted-members flow (temporary archive, restore, permanent deletion) belongs within the data import/export area, not as a tenth main setting.
@@ -246,7 +247,8 @@ The Growth Map configuration screen has no direct image in the primary UX PDF; u
 - Primary reference: ux.pdf.
 - Navigation and page mapping: ux 2.pdf.
 - Approved art direction: Hybrid visual language with Bold intensity; modern, game-oriented, energetic and distinctive, not a generic/classic admin panel.
-- Use the midnight/navy base and neon mint (#00E5A3), purple (#6B5CF5) and pink (#EC4899) accents from the approved references.
+- Use the midnight/navy base and neon mint (#00E5A3), purple (#8B5CF6) and pink (#EC4899) accents specified by UX2.
+- The product guide also records purple as #6B5CF5; this conflicts with UX2 and the current theme token. Keep #8B5CF6 pending an explicit owner decision.
 - Effects must never reduce text/control readability; translucent surfaces need sufficient opacity.
 - Support Persian RTL layout and readable typography on small screens.
 - Provide empty, loading, validation, error and success states for every data-backed feature.
@@ -283,6 +285,7 @@ The Growth Map configuration screen has no direct image in the primary UX PDF; u
 - Wheel probability weights and reward distribution.
 - Group competition formulas and metrics.
 - Birthday reward amount and duplicate-prevention details.
+- Purple accent conflict: UX2/current theme uses #8B5CF6, while the product guide lists #6B5CF5.
 - Any behavior that conflicts between the product guide, UX/UX2 and the latest explicit owner instruction.
 
 Resolve material conflicts with the owner before implementation. Do not silently promote illustrative mockup values or inferred rules to product requirements.

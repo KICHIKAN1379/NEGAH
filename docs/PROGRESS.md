@@ -18,7 +18,7 @@ Last updated: 2026-11-10
 - Phase 1 — Repository audit: completed (read-only).
 - Phase 2 — Product specification reconciliation: working baseline drafted and reconciled against the approved product guide, UX and UX2; owner final acceptance remains pending.
 - Phase 3 — UX reference baseline: source map exists in docs/UX_REFERENCE_MAP.md; primary visual reference is ux.pdf and navigation/mapping index is ux 2.pdf.
-- Phase 4 — Technical implementation: not started on the mission branch.
+- Phase 4 — Technical implementation: first slice (class-days settings) implemented and CI-verified; session/attendance vertical slice is next.
 - Architecture baseline: docs/ARCHITECTURE.md.
 - Prior implementation snapshot: docs/IMPLEMENTATION_STATUS.md.
 - Current delivery plan: docs/IMPLEMENTATION_PLAN.md.
@@ -29,7 +29,7 @@ Last updated: 2026-11-10
 - develop is 119 commits ahead of main; main currently contains only README.md.
 - Audited base: develop at 8bf6828e1d8f574b60440b5930c6a64261748fb0.
 - The audited tree contains 80 files, including 60 Kotlin files, Gradle multi-module configuration, Room persistence, Compose UI, and unit/DAO tests.
-- The mission branch was created from develop; it currently contains documentation changes only. No application source code has been changed by this mission yet.
+- The mission branch contains product/plan/progress documentation plus the first source-code slice: class-day settings (domain contract, Room entity/DAO/repository, migration, settings UI and tests). Session/attendance repositories and UI are not yet implemented.
 - Draft PR #1 targets develop. It is not merged; main remains untouched.
 - No local build/test/emulator/device run was performed in this host.
 
@@ -74,46 +74,52 @@ Last updated: 2026-11-10
 - Preserve history and data integrity; no destructive migration or permanent deletion without an explicit, reviewable decision.
 - Do not add "command center", "signal", separate Home cards for today's operations, or inter-ring competition.
 
-## Baseline verification
+## Baseline and current verification
 
-- CI workflow run: #74
-- Run URL: https://github.com/KICHIKAN1379/NEGAH/actions/runs/42837366883
+### Baseline before code changes
+- CI run #77: success.
+- Verified commit: a68a335ffab48d7d4d507a6a3ba7e15436d287ec.
+- Debug APK was generated from the unchanged develop application plus documentation updates.
+
+### Current class-days implementation
+- CI workflow run: #78.
+- Run URL: https://github.com/KICHIKAN1379/NEGAH/actions/runs/42840105205
 - Run conclusion: success.
-- Verified commit SHA: 624aba036390b33be20cf281fc61eed2c8119e52.
-- Gradle/SDK setup: successful.
-- Build task: successful; BUILD SUCCESSFUL in 3m 19s.
-- Tasks executed by CI:
+- Verified commit SHA: 0529bb79e99e7675f63cb574fa4efa615eac8c62.
+- Build task: successful; BUILD SUCCESSFUL in 3m 26s.
+- Tasks executed:
   - :app:assembleDebug — passed.
-  - :domain:core:test — passed.
-  - :data:local:testDebugUnitTest — passed.
+  - :domain:core:test — passed, including ClassDayTest.
+  - :data:local:testDebugUnitTest — passed, including ClassDaysDaoTest.
   - :feature:members:testDebugUnitTest — passed.
   - :feature:refinery:testDebugUnitTest — NO-SOURCE (no tests exist in that module).
-- Debug APK artifact: negah-debug-apk, 12,014,666 bytes extracted.
-- APK SHA-256: 475c9b6516b79b1c105514ded792d2a686317562818a52b1b43b0bb35757c1f9.
-- The APK is a baseline build of the existing develop application plus documentation-only mission commits; it is not a completed product release.
+- Debug APK artifact: negah-debug-apk, artifact ID 13776600644.
+- Extracted APK size: 12,047,611 bytes.
+- APK SHA-256: 8571db4d0a636815bdba4b6b6f1610a11bfd4936483c3f61250fc5fe9f5f050e.
+- This APK includes the new class-days settings screen and is still a debug build, not a final release.
 - No UI tests were executed.
 - Manual emulator/device verification: not run.
-- The current mission branch has subsequent documentation-only commits after the verified SHA; a new CI run is required for the latest branch head.
+- Release signing / Play Store readiness: not checked.
 
 ## Verification record
 
-- Build result: verified successful for commit 624aba036390b33be20cf281fc61eed2c8119e52.
-- Unit/DAO tests: the configured CI tasks above completed successfully.
-- Refinery tests: no source tests.
+- Latest source commit verified by CI: 0529bb79e99e7675f63cb574fa4efa615eac8c62.
+- Build and configured unit/DAO test tasks: successful.
+- Refinery tests: NO-SOURCE.
 - UI/integration tests: not run.
 - Manual device verification: not run.
-- Release signing / Play Store readiness: not checked.
+- The host has no local Android SDK/Gradle execution environment; build verification was performed by GitHub Actions.
+- Draft PR #1 remains open and unmerged; main remains untouched.
 
 ## Next permitted work
 
-1. Confirm CI on the latest documentation commit after the product-spec and plan corrections.
-2. Reconcile README build prerequisites and restore the missing Gradle wrapper files using a compatible host.
-3. Implement Settings class weekdays and the session/attendance vertical slice, including the five statuses and mandatory reasons.
-4. Complete member profile, Ganjine, received history and archive/restore.
-5. Implement Home pages 35–36.
-6. Continue through remaining Progress domains, Shop, Refinery and backup/restore.
-7. Run CI after each meaningful code slice and record exact commit-linked results.
-8. Keep merge, release, destructive data operations and material unresolved product decisions behind owner approval.
+1. Implement the session and attendance vertical slice using the saved class weekdays.
+2. Add session/attendance repositories, domain validation, atomic save, five states and required reasons.
+3. Complete member profile, Ganjine, received history and archive/restore.
+4. Implement Home pages 35–36.
+5. Continue through remaining Progress domains, Shop, Refinery and backup/restore.
+6. Run CI after each meaningful code slice and record exact commit-linked results.
+7. Keep merge, release, destructive data operations and material unresolved product decisions behind owner approval.
 
 ## Current blocker
 

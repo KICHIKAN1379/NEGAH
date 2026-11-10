@@ -61,4 +61,4 @@
 خروجی Debug APK:
     app/build/outputs/apk/debug/app-debug.apk
 
-آخرین baseline تأییدشده در CI: run #77 روی commit a68a335ffab48d7d4d507a6a3ba7e15436d287ec. این نتیجه فقط Build و تست‌های مشخص‌شده در workflow را تأیید می‌کند؛ تست UI، اجرای دستگاه و تطبیق بصری هنوز جداگانه لازم‌اند.
+آخرین baseline تأییدشده در CI: run #78 روی commit 0529bb79e99e7675f63cb574fa4efa615eac8c62. این نسخه تنظیم روزهای کلاس را نیز دارد. نتیجه فقط Build و تست‌های مشخص‌شده در workflow را تأیید می‌کند؛ تست UI، اجرای دستگاه و تطبیق بصری هنوز جداگانه لازم‌اند.
