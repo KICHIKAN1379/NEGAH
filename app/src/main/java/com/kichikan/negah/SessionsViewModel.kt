@@ -53,7 +53,7 @@ class SessionsViewModel @Inject constructor(
     private val attendanceRepository: AttendanceRepository,
     private val classDaysRepository: ClassDaysRepository,
     private val saveSession: SaveSession,
-    private val saveAttendance: SaveAttendance,
+    private val saveAttendanceUseCase: SaveAttendance,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SessionsUiState())
     val uiState = _uiState.asStateFlow()
@@ -236,7 +236,7 @@ class SessionsViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                when (val result = saveAttendance(sessionId, drafts, System.currentTimeMillis())) {
+                when (val result = saveAttendanceUseCase(sessionId, drafts, System.currentTimeMillis())) {
                     SaveAttendanceResult.Saved -> setMessage("حضور و غیاب جلسه ذخیره شد.", isError = false)
                     is SaveAttendanceResult.ReasonRequired -> {
                         val name = current.members.firstOrNull { it.id == result.memberId }?.fullName ?: "عضو"
