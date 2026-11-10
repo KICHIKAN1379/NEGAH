@@ -33,6 +33,7 @@ data class ActiveInventoryItem(
 
 interface InventoryRepository {
     fun observeCatalog(category: InventoryCategory): Flow<List<CatalogItem>>
+    fun observeAllCatalog(category: InventoryCategory): Flow<List<CatalogItem>>
     fun observeMemberInventory(memberId: String, category: InventoryCategory): Flow<List<MemberInventoryEntry>>
     fun observeActiveItems(memberId: String): Flow<List<ActiveInventoryItem>>
     suspend fun saveCatalogItem(item: CatalogItem)
