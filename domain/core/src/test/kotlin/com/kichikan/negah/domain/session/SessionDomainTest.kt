@@ -5,7 +5,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
 
 class SessionDomainTest {
     private class FakeSessionRepository : SessionRepository {
@@ -17,7 +17,7 @@ class SessionDomainTest {
     }
 
     @Test
-    fun blankTitleIsRejected() = runTest {
+    fun blankTitleIsRejected() = runBlocking {
         val repository = FakeSessionRepository()
         val result = SaveSession(repository)(
             title = "   ",
@@ -32,7 +32,7 @@ class SessionDomainTest {
     }
 
     @Test
-    fun titleAndOptionalFieldsAreNormalizedBeforeSaving() = runTest {
+    fun titleAndOptionalFieldsAreNormalizedBeforeSaving() = runBlocking {
         val repository = FakeSessionRepository()
         val result = SaveSession(repository)(
             title = "  جلسه هفتگی  ",
