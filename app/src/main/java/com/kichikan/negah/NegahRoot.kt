@@ -32,7 +32,11 @@ private enum class MainDestination(val title: String) {
 }
 
 @Composable
-fun NegahRoot(membersViewModel: MembersViewModel, refineryViewModel: RefineryViewModel) {
+fun NegahRoot(
+    membersViewModel: MembersViewModel,
+    refineryViewModel: RefineryViewModel,
+    progressViewModel: ProgressViewModel,
+) {
     var selected by rememberSaveable { mutableStateOf(MainDestination.HOME.name) }
     var openRefinery by rememberSaveable { mutableStateOf(false) }
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -51,6 +55,7 @@ fun NegahRoot(membersViewModel: MembersViewModel, refineryViewModel: RefineryVie
             when (MainDestination.valueOf(selected)) {
                 MainDestination.HOME -> HomeScreen(Modifier.padding(padding))
                 MainDestination.MEMBERS -> MembersScreen(membersViewModel, Modifier.padding(padding))
+                MainDestination.PROGRESS -> ProgressScreen(progressViewModel, Modifier.padding(padding))
                 MainDestination.SETTINGS -> {
                     if (openRefinery) {
                         RefineryScreen(refineryViewModel, Modifier.padding(padding))
@@ -66,7 +71,10 @@ fun NegahRoot(membersViewModel: MembersViewModel, refineryViewModel: RefineryVie
                         }
                     }
                 }
-                else -> Text("بخش ${MainDestination.valueOf(selected).title} در حال ساخت است", modifier = Modifier.padding(padding))
+                MainDestination.SHOP -> Text(
+                    "فروشگاه در حال ساخت است",
+                    modifier = Modifier.padding(padding),
+                )
             }
         }
     }

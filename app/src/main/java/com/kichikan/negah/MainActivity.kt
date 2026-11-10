@@ -14,13 +14,14 @@ import dagger.hilt.android.AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val membersViewModel: MembersViewModel by viewModels()
     private val refineryViewModel: RefineryViewModel by viewModels()
+    private val progressViewModel: ProgressViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             NegahTheme {
                 Surface {
-                    NegahRoot(membersViewModel, refineryViewModel)
+                    NegahRoot(membersViewModel, refineryViewModel, progressViewModel)
                 }
             }
         }
