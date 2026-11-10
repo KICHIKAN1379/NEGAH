@@ -18,7 +18,6 @@ data class Session(
 interface SessionRepository {
     fun observeAll(): Flow<List<Session>>
     suspend fun save(session: Session)
-    suspend fun delete(sessionId: String): Boolean
     suspend fun setCompleted(sessionId: String, isCompleted: Boolean)
 }
 
