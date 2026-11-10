@@ -15,6 +15,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.clickable
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -300,54 +304,91 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun MemberProfileScreen(
-    member: Member,
-    transactions: List<EconomyTransaction>,
-    onBack: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Button(onClick = onBack) { Text("بازگشت به اعضا") }
-        Text(member.fullName, style = MaterialTheme.typography.headlineMedium)
-        member.nickname?.let {
-            Text(it, style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, onBack: () -> Unit, modifier: Modifier = Modifier) {
+    var inventoryTab by rememberSaveable { mutableStateOf("آواتار") }
+    val level = LevelProgression.levelFor(member.totalXp)
+    val currentLevelXp = LevelProgression.minimumXpForLevel(level)
+    val nextLevelXp = LevelProgression.minimumXpForLevel(level + 1)
+    val progress = ((member.totalXp - currentLevelXp).coerceAtLeast(0L).toFloat() /
+        (nextLevelXp - currentLevelXp).coerceAtLeast(1L).toFloat()).coerceIn(0f, 1f)
+    Column(modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Column {
+                Text(member.fullName, style = MaterialTheme.typography.titleLarge)
+                Text("پرونده عضو حلقه", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            TextButton(onClick = onBack) { Text("بازگشت") }
         }
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Text("وضعیت پیشرفت", style = MaterialTheme.typography.titleMedium)
-                ProfileValue("سطح", LevelProgression.levelFor(member.totalXp).toString())
-                ProfileValue("تجربه", "${member.totalXp} XP")
-                ProfileValue("امتیاز قابل خرج", member.spendablePoints.toString())
-                ProfileValue("الماس", member.diamonds.toString())
+        Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+            Column(modifier = Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Column {
+                        Text(member.fullName, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        member.nickname?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer) }
+                        Text("سطح " + level, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    }
+                    Box(modifier = Modifier.size(58.dp).background(MaterialTheme.colorScheme.primary, CircleShape), contentAlignment = Alignment.Center) {
+                        Text(level.toString(), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onPrimary)
+                    }
+                }
+                Text(member.totalXp.toString() + " XP", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
+                Text((nextLevelXp - member.totalXp).coerceAtLeast(0L).toString() + " XP تا سطح بعد", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
             }
         }
-        Text("تاریخچه اقتصادی", style = MaterialTheme.typography.titleLarge)
-        if (transactions.isEmpty()) {
-            Text(
-                "هنوز تراکنش اقتصادی برای این عضو ثبت نشده است",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(transactions, key = { it.id }) { transaction ->
-                    EconomyTransactionRow(transaction)
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ProfileWalletCard("XP", member.totalXp.toString(), "پیشرفت دائمی")
+            ProfileWalletCard("امتیاز", member.spendablePoints.toString(), "قابل خرج")
+            ProfileWalletCard("الماس", member.diamonds.toString(), "شخصی‌سازی")
+        }
+        ProfileSection("نقشه کمال", "دو مسیر مستقل رشد عضو") {
+            Text("توانمندی", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            Text("هنوز آیتمی برای این عضو ثبت نشده است", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("خودسازی", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.secondary)
+            Text("هنوز آیتمی برای این عضو ثبت نشده است", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        ProfileSection("گنجینه", "موجودی و آیتم‌های عضو") {
+            Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("آواتار", "قاب", "نشان", "جایزه").forEach { tab ->
+                    FilterChip(selected = inventoryTab == tab, onClick = { inventoryTab = tab }, label = { Text(tab) })
                 }
             }
+            Text("هنوز آیتمی در بخش " + inventoryTab + " ثبت نشده است", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        ProfileSection("کارنامه", "گزارش رشد در بازه زمانی") {
+            Text("برای رسم نمودار، ابتدا باید داده‌های مأموریت، خوانی کتاب و نقشه کمال ثبت شوند.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            ProfileValue("XP ثبت‌شده", member.totalXp.toString())
+            ProfileValue("سطح فعلی", level.toString())
+        }
+        ProfileSection("سوابق دریافتی", "تراکنش‌های ثبت‌شده در دفتر اقتصادی") {
+            if (transactions.isEmpty()) Text("هنوز تراکنش اقتصادی برای این عضو ثبت نشده است", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            else transactions.forEach { EconomyTransactionRow(it) }
         }
     }
 }
 
+@Composable
+private fun ProfileWalletCard(title: String, value: String, caption: String) {
+    Card(modifier = Modifier.weight(1f)) {
+        Column(modifier = Modifier.fillMaxWidth().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(value, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            Text(title, style = MaterialTheme.typography.labelMedium)
+            Text(caption, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun ProfileSection(title: String, subtitle: String, content: @Composable () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            content()
+        }
+    }
+}
 @Composable
 private fun EconomyTransactionRow(transaction: EconomyTransaction) {
     val currencyLabel = when (transaction.currency) {
