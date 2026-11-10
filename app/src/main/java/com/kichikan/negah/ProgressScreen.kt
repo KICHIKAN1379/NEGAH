@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kichikan.negah.domain.growth.GrowthItem
 import com.kichikan.negah.domain.growth.GrowthTrack
+import com.kichikan.negah.domain.economy.LevelProgression
 
 @Composable
 fun ProgressScreen(viewModel: ProgressViewModel, modifier: Modifier = Modifier) {
@@ -57,6 +58,7 @@ fun ProgressScreen(viewModel: ProgressViewModel, modifier: Modifier = Modifier) 
                 }
             }
             Text(selectedMember?.fullName.orEmpty(), style = MaterialTheme.typography.titleLarge)
+            selectedMember?.let { MemberProgressSummary(it) }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(
                     selected = track == GrowthTrack.CAPABILITY,
@@ -111,5 +113,51 @@ private fun GrowthProgressCard(item: GrowthItem, progress: Int, note: String?) {
                 Text("یادداشت مربی: $it", style = MaterialTheme.typography.bodySmall)
             }
         }
+    }
+}
+
+
+@Composable
+private fun MemberProgressSummary(member: com.kichikan.negah.domain.member.Member) {
+    val level = LevelProgression.levelFor(member.totalXp)
+    val currentLevelStart = LevelProgression.minimumXpForLevel(level)
+    val nextLevelStart = LevelProgression.minimumXpForLevel(level + 1)
+    val levelProgress = ((member.totalXp - currentLevelStart).toFloat() /
+        (nextLevelStart - currentLevelStart).toFloat()).coerceIn(0f, 1f)
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text("شناسنامه پیشرفت", style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                SummaryValue("سطح", level.toString())
+                SummaryValue("امتیاز", member.spendablePoints.toString())
+                SummaryValue("الماس", member.diamonds.toString())
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text("تجربه (XP): ${member.totalXp}")
+                Text("${(nextLevelStart - member.totalXp).coerceAtLeast(0)} تا سطح بعد")
+            }
+            LinearProgressIndicator(
+                progress = { levelProgress },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SummaryValue(label: String, value: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(label, style = MaterialTheme.typography.bodySmall)
+        Text(value, style = MaterialTheme.typography.titleLarge)
     }
 }
