@@ -338,9 +338,9 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
             }
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ProfileWalletCard("XP", member.totalXp.toString(), "پیشرفت دائمی")
-            ProfileWalletCard("امتیاز", member.spendablePoints.toString(), "قابل خرج")
-            ProfileWalletCard("الماس", member.diamonds.toString(), "شخصی‌سازی")
+            ProfileWalletCard("XP", member.totalXp.toString(), "پیشرفت دائمی", Modifier.weight(1f))
+            ProfileWalletCard("امتیاز", member.spendablePoints.toString(), "قابل خرج", Modifier.weight(1f))
+            ProfileWalletCard("الماس", member.diamonds.toString(), "شخصی‌سازی", Modifier.weight(1f))
         }
         ProfileSection("نقشه کمال", "دو مسیر مستقل رشد عضو") {
             Text("توانمندی", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
@@ -369,8 +369,8 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
 }
 
 @Composable
-private fun ProfileWalletCard(title: String, value: String, caption: String) {
-    Card(modifier = Modifier.weight(1f)) {
+private fun ProfileWalletCard(title: String, value: String, caption: String, modifier: Modifier = Modifier) {
+    Card(modifier = modifier) {
         Column(modifier = Modifier.fillMaxWidth().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(value, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
             Text(title, style = MaterialTheme.typography.labelMedium)
