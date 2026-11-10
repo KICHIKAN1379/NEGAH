@@ -26,6 +26,7 @@ data class MemberGrowthProgress(
 
 interface GrowthMapRepository {
     fun observeItems(track: GrowthTrack): Flow<List<GrowthItem>>
+    fun observeAllItems(track: GrowthTrack): Flow<List<GrowthItem>>
     fun observeProgress(memberId: String): Flow<List<MemberGrowthProgress>>
     suspend fun saveItem(item: GrowthItem)
     suspend fun updateProgress(progress: MemberGrowthProgress)
