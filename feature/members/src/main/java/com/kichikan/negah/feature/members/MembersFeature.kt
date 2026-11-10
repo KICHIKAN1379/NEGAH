@@ -75,6 +75,8 @@ enum class MemberSortOption { NAME, LEVEL, POINTS }
 
 data class MembersUiState(
     val members: List<Member> = emptyList(),
+    val archivedMembers: List<Member> = emptyList(),
+    val showingArchived: Boolean = false,
     val fullName: String = "",
     val nickname: String = "",
     val searchQuery: String = "",
@@ -94,7 +96,8 @@ data class MembersUiState(
 ) {
     val visibleMembers: List<Member>
         get() {
-            val filtered = members.filter {
+            val source = if (showingArchived) archivedMembers else members
+            val filtered = source.filter {
                 searchQuery.isBlank() || it.fullName.contains(searchQuery.trim(), true) ||
                     it.nickname.orEmpty().contains(searchQuery.trim(), true)
             }
@@ -138,6 +141,11 @@ class MembersViewModel @Inject constructor(
                 mutableState.update { it.copy(members = members) }
             }
         }
+        viewModelScope.launch {
+            repository.observeArchivedMembers().collect { members ->
+                mutableState.update { it.copy(archivedMembers = members) }
+            }
+        }
     }
 
     fun onFullNameChanged(value: String) = mutableState.update {
@@ -146,6 +154,21 @@ class MembersViewModel @Inject constructor(
     fun onNicknameChanged(value: String) = mutableState.update { it.copy(nickname = value, savedMessage = null) }
     fun onSearchChanged(value: String) = mutableState.update { it.copy(searchQuery = value) }
     fun onSortChanged(value: MemberSortOption) = mutableState.update { it.copy(sortOption = value) }
+    fun showArchivedMembers(show: Boolean) = mutableState.update { it.copy(showingArchived = show, searchQuery = "") }
+    fun archiveMember(memberId: String) {
+        viewModelScope.launch {
+            runCatching { repository.archive(memberId) }
+                .onSuccess { mutableState.update { it.copy(savedMessage = "عضو به بایگانی منتقل شد") } }
+                .onFailure { mutableState.update { it.copy(validationMessage = "بایگانی عضو انجام نشد") } }
+        }
+    }
+    fun restoreMember(memberId: String) {
+        viewModelScope.launch {
+            runCatching { repository.restore(memberId) }
+                .onSuccess { mutableState.update { it.copy(savedMessage = "عضو بازیابی شد") } }
+                .onFailure { mutableState.update { it.copy(validationMessage = "بازیابی عضو انجام نشد") } }
+        }
+    }
     fun onMemberSelected(memberId: String) {
         economyHistoryJob?.cancel()
         growthItemsJob?.cancel()
@@ -316,6 +339,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
     }
 
     var showAddDialog by rememberSaveable { mutableStateOf(false) }
+    var memberPendingArchive by rememberSaveable { mutableStateOf<Member?>(null) }
     val totalXp = state.members.sumOf { it.totalXp }
 
     Column(
@@ -328,7 +352,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
                 Text("پرونده و مسیر رشد اعضای حلقه", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Text("${state.members.size} عضو", style = MaterialTheme.typography.labelLarge,
+            Text("${if (state.showingArchived) state.archivedMembers.size else state.members.size} عضو", style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary)
         }
 
@@ -348,6 +372,11 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+        }
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(selected = !state.showingArchived, onClick = { viewModel.showArchivedMembers(false) }, label = { Text("اعضای فعال") })
+            FilterChip(selected = state.showingArchived, onClick = { viewModel.showArchivedMembers(true) }, label = { Text("بایگانی ${state.archivedMembers.size}") })
         }
 
         OutlinedTextField(value = state.searchQuery, onValueChange = viewModel::onSearchChanged,
@@ -374,15 +403,15 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
         if (state.visibleMembers.isEmpty()) {
             Column(modifier = Modifier.weight(1f).fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                Text(if (state.members.isEmpty()) "هنوز عضوی ثبت نشده است" else "عضوی با این جست‌وجو پیدا نشد",
+                Text(if (state.showingArchived) "عضو بایگانی‌شده‌ای وجود ندارد" else if (state.members.isEmpty()) "هنوز عضوی ثبت نشده است" else "عضوی با این جست‌وجو پیدا نشد",
                     style = MaterialTheme.typography.titleMedium)
-                Text("برای شروع، عضو جدیدی به حلقه اضافه کن", style = MaterialTheme.typography.bodySmall,
+                Text(if (state.showingArchived) "اعضای بایگانی‌شده از این بخش قابل بازیابی‌اند" else "برای شروع، عضو جدیدی به حلقه اضافه کن", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
             LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 items(state.visibleMembers, key = { it.id }) { member ->
-                    Card(modifier = Modifier.fillMaxWidth().clickable { viewModel.onMemberSelected(member.id) }) {
+                    Card(modifier = Modifier.fillMaxWidth()) {
                         Row(modifier = Modifier.fillMaxWidth().padding(14.dp),
                             horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Box(modifier = Modifier.size(48.dp)
@@ -392,7 +421,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
                                     style = MaterialTheme.typography.titleLarge,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer)
                             }
-                            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Column(modifier = Modifier.weight(1f).clickable { if (!state.showingArchived) viewModel.onMemberSelected(member.id) }, verticalArrangement = Arrangement.spacedBy(5.dp)) {
                                 Text(member.fullName, style = MaterialTheme.typography.titleMedium)
                                 member.nickname?.takeIf { it.isNotBlank() }?.let {
                                     Text(it, style = MaterialTheme.typography.bodySmall,
@@ -407,21 +436,34 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
                                         color = MaterialTheme.colorScheme.tertiary)
                                 }
                             }
-                            Text("‹", style = MaterialTheme.typography.headlineMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (state.showingArchived) {
+                                TextButton(onClick = { viewModel.restoreMember(member.id) }) { Text("بازیابی") }
+                            } else {
+                                TextButton(onClick = { memberPendingArchive = member }) { Text("بایگانی") }
+                            }
                         }
                     }
                 }
             }
         }
 
-        Button(onClick = { showAddDialog = true }, modifier = Modifier.fillMaxWidth()) {
+        if (!state.showingArchived) Button(onClick = { showAddDialog = true }, modifier = Modifier.fillMaxWidth()) {
             Text("افزودن عضو  +")
         }
         state.savedMessage?.let { Text(it, color = MaterialTheme.colorScheme.primary,
             style = MaterialTheme.typography.bodySmall) }
         state.validationMessage?.let { Text(it, color = MaterialTheme.colorScheme.error,
             style = MaterialTheme.typography.bodySmall) }
+    }
+
+    memberPendingArchive?.let { member ->
+        AlertDialog(
+            onDismissRequest = { memberPendingArchive = null },
+            title = { Text("بایگانی عضو") },
+            text = { Text("«${member.fullName}» از فهرست فعال خارج می‌شود؛ سوابق و اطلاعات او حذف نمی‌شوند و بعداً قابل بازیابی‌اند.") },
+            confirmButton = { Button(onClick = { viewModel.archiveMember(member.id); memberPendingArchive = null }) { Text("تأیید بایگانی") } },
+            dismissButton = { TextButton(onClick = { memberPendingArchive = null }) { Text("انصراف") } },
+        )
     }
 
     if (showAddDialog) {

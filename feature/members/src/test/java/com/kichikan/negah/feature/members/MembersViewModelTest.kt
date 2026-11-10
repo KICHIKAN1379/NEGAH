@@ -73,6 +73,13 @@ class MembersViewModelTest {
     }
 
     @Test
+    fun visibleMembers_canSwitchToArchivedCollection() = runTest {
+        members.emit(listOf(member("active", "عضو فعال")))
+        viewModel.showArchivedMembers(true)
+        assertEquals(emptyList<String>(), viewModel.state.value.visibleMembers.map(Member::id))
+    }
+
+    @Test
     fun visibleMembers_sortsByLevelThenXp() = runTest {
         members.emit(
             listOf(
@@ -185,8 +192,10 @@ private class FakeMemberRepository : MemberRepository {
     private val data = MutableStateFlow<List<Member>>(emptyList())
     fun emit(value: List<Member>) { data.value = value }
     override fun observeActiveMembers(): Flow<List<Member>> = data.asStateFlow()
+    override fun observeArchivedMembers(): Flow<List<Member>> = MutableStateFlow(emptyList<Member>()).asStateFlow()
     override suspend fun create(member: Member) = Unit
     override suspend fun archive(memberId: String) = Unit
+    override suspend fun restore(memberId: String) = Unit
 }
 
 private class FakeEconomyRepository : EconomyRepository {

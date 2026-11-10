@@ -12,9 +12,11 @@ data class Member(
 
 interface MemberRepository {
     fun observeActiveMembers(): Flow<List<Member>>
+    fun observeArchivedMembers(): Flow<List<Member>>
     /** Creates a new member; existing wallet balances must never be overwritten here. */
     suspend fun create(member: Member)
     suspend fun archive(memberId: String)
+    suspend fun restore(memberId: String)
 }
 
 sealed interface RegisterMemberResult {

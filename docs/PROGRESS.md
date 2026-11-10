@@ -53,7 +53,7 @@ Last updated: 2026-11-10
 - Settings is currently a minimal entry point to Refinery and class-day settings; most of the nine approved settings options are missing.
 - Sessions/attendance now include a month-navigable report with separate counts for all five attendance states, selected-month CSV export, and a live revision-history view; a group filter waits for the group data model.
 - The current weekly strip shows the current Saturday–Friday week and only configured class days; it does not yet provide week navigation.
-- Member profile has partial growth/economy/inventory sections; four-tab Ganjine, received-history filtering and six-axis report card are incomplete.
+- Member profile has partial growth/economy/inventory sections; four-tab Ganjine, received-history filtering and six-axis report card are incomplete. Active/archive switching, confirmed archive and restore actions are now implemented.
 - Encrypted backup/restore, MRT retention of at most two versions, and first-run file-access flow are not implemented.
 - WorkManager is mentioned in README architecture text, but no WorkManager implementation/dependency was found in the audited files.
 - DAO tests now cover class-day persistence and session/attendance persistence, update revisions and deletion restrictions. The 5→6 database migration has not yet been exercised by a dedicated migration test.
@@ -68,7 +68,7 @@ Last updated: 2026-11-10
 - Attendance states: present, absent, excused absence, late, unrecorded.
 - Reason is mandatory for absent, excused absence and unrecorded.
 - Weekly session calendar must be based on class days configured in Settings (Saturday through Friday).
-- Members list has no group filter; attendance may have its own group filter.
+- Members list has no group filter; attendance may have its own group filter. Members can be archived without deletion and restored from a separate archived list.
 - Ganjine has four tabs: avatar, frame, badge, reward. Badges are earned automatically by level; no manual granting or purchase.
 - Shop has three categories: avatar, frame and reward. Avatar/frame use diamonds; rewards use spendable points.
 - Automatic backups retain at most two versions in the MRT folder; this newer owner decision supersedes older guide snapshots mentioning a larger count.
@@ -167,4 +167,11 @@ The available host has GitHub repository read/write integration but no local And
 - Added an Android system document picker action to export the selected month's persisted attendance records as CSV.
 - Export columns: date, session, member, status and reason. Values are escaped according to CSV quoting rules, and a UTF-8 BOM is written for spreadsheet compatibility.
 - The export is user-initiated and writes only to the destination selected in the Android document picker; no storage permission or backend is required.
+- CI verification is pending for this commit.
+
+
+## Latest continuation — member archive and restore
+- Added a separate archived-members view with search/sort reuse; the active members list remains free of group filters.
+- Added confirmation before archiving. Archive changes only the member archived flag and timestamp; it does not delete the member or history.
+- Added restore from the archived list, preserving the original member ID and stored balances/history.
 - CI verification is pending for this commit.
