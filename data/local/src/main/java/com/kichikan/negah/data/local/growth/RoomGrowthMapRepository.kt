@@ -14,6 +14,9 @@ class RoomGrowthMapRepository @Inject constructor(
     override fun observeItems(track: GrowthTrack): Flow<List<GrowthItem>> =
         dao.observeItems(track.name).map { rows -> rows.map(GrowthItemEntity::toDomain) }
 
+    override fun observeAllItems(track: GrowthTrack): Flow<List<GrowthItem>> =
+        dao.observeAllItems(track.name).map { rows -> rows.map(GrowthItemEntity::toDomain) }
+
     override fun observeProgress(memberId: String): Flow<List<MemberGrowthProgress>> =
         dao.observeProgress(memberId).map { rows -> rows.map(MemberGrowthProgressEntity::toDomain) }
 
