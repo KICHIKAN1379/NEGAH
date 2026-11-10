@@ -36,6 +36,7 @@ fun NegahRoot(
     membersViewModel: MembersViewModel,
     refineryViewModel: RefineryViewModel,
     progressViewModel: ProgressViewModel,
+    shopViewModel: ShopViewModel,
 ) {
     var selected by rememberSaveable { mutableStateOf(MainDestination.HOME.name) }
     var openRefinery by rememberSaveable { mutableStateOf(false) }
@@ -71,10 +72,7 @@ fun NegahRoot(
                         }
                     }
                 }
-                MainDestination.SHOP -> Text(
-                    "فروشگاه در حال ساخت است",
-                    modifier = Modifier.padding(padding),
-                )
+                MainDestination.SHOP -> ShopScreen(shopViewModel, Modifier.padding(padding))
             }
         }
     }

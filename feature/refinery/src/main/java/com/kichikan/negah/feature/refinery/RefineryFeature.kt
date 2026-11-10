@@ -82,13 +82,14 @@ class RefineryViewModel @Inject constructor(
         viewModelScope.launch { growth.saveItem(item.copy(isActive = !item.isActive, updatedAtEpochMillis = System.currentTimeMillis())) }
     }
 
-    fun saveCatalog(existing: CatalogItem?, category: InventoryCategory, title: String, description: String) {
+    fun saveCatalog(existing: CatalogItem?, category: InventoryCategory, title: String, description: String, priceAmount: Long?) {
         if (title.isBlank()) return
         viewModelScope.launch {
             inventory.saveCatalogItem(CatalogItem(
                 id = existing?.id ?: UUID.randomUUID().toString(), category = category, title = title.trim(),
                 description = description.trim().ifEmpty { null }, isAvailable = existing?.isAvailable ?: true,
                 sortOrder = existing?.sortOrder ?: state.value.catalogItems.count { it.category == category },
+                priceAmount = priceAmount,
             ))
         }
     }
@@ -107,6 +108,7 @@ fun RefineryScreen(viewModel: RefineryViewModel, modifier: Modifier = Modifier) 
     var editingId by rememberSaveable { mutableStateOf<String?>(null) }
     var title by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
+    var priceText by rememberSaveable { mutableStateOf("") }
     var editorOpen by rememberSaveable { mutableStateOf(false) }
     val selectedTrack = GrowthTrack.valueOf(track)
     val selectedCategory = InventoryCategory.valueOf(category)
@@ -124,7 +126,7 @@ fun RefineryScreen(viewModel: RefineryViewModel, modifier: Modifier = Modifier) 
                 FilterChip(selected = selectedTrack == GrowthTrack.CAPABILITY, onClick = { track = GrowthTrack.CAPABILITY.name }, label = { Text("توانمندی") })
                 FilterChip(selected = selectedTrack == GrowthTrack.SELF_IMPROVEMENT, onClick = { track = GrowthTrack.SELF_IMPROVEMENT.name }, label = { Text("خودسازی") })
             }
-            Button(onClick = { editingId = null; title = ""; description = ""; editorOpen = true }) { Text("افزودن آیتم") }
+            Button(onClick = { editingId = null; title = ""; description = ""; priceText = ""; editorOpen = true }) { Text("افزودن آیتم") }
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(growthItems, key = { it.id }) { item ->
                     Card(Modifier.fillMaxWidth()) {
@@ -133,7 +135,7 @@ fun RefineryScreen(viewModel: RefineryViewModel, modifier: Modifier = Modifier) 
                             item.description?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                             Text(if (item.isActive) "فعال" else "غیرفعال")
                             Row {
-                                TextButton(onClick = { editingId = item.id; title = item.title; description = item.description.orEmpty(); editorOpen = true }) { Text("ویرایش") }
+                                TextButton(onClick = { editingId = item.id; title = item.title; description = item.description.orEmpty(); priceText = item.priceAmount?.toString().orEmpty(); editorOpen = true }) { Text("ویرایش") }
                                 TextButton(onClick = { viewModel.toggleGrowth(item) }) { Text(if (item.isActive) "غیرفعال‌سازی" else "فعال‌سازی") }
                             }
                         }
@@ -176,13 +178,15 @@ fun RefineryScreen(viewModel: RefineryViewModel, modifier: Modifier = Modifier) 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(title, { title = it }, label = { Text("عنوان") }, singleLine = true)
                     OutlinedTextField(description, { description = it }, label = { Text("توضیحات (اختیاری)") }, minLines = 2)
-                    if (!isGrowth) Text("قیمت‌گذاری هنوز تعریف نشده است.", style = MaterialTheme.typography.bodySmall)
+                    if (!isGrowth) {
+                        OutlinedTextField(priceText, { value -> priceText = value.filter(Char::isDigit) }, label = { Text(if (selectedCategory == InventoryCategory.REWARD) "قیمت (امتیاز)" else "قیمت (الماس)") }, singleLine = true)
+                    }
                 }
             },
             confirmButton = {
                 Button(onClick = {
                     if (isGrowth) viewModel.saveGrowth(growthItem, selectedTrack, title, description)
-                    else viewModel.saveCatalog(catalogItem, selectedCategory, title, description)
+                    else viewModel.saveCatalog(catalogItem, selectedCategory, title, description, priceText.toLongOrNull()?.takeIf { it > 0L })
                     editorOpen = false
                 }) { Text("ذخیره") }
             },
