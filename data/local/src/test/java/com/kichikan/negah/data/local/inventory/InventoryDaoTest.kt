@@ -51,6 +51,43 @@ class InventoryDaoTest {
     }
 
     @Test
+    fun grantAvailableCatalogItemAddsInventoryEntryWithItsGrantSource() = runBlocking {
+        val entry = MemberInventoryEntity(MEMBER_ID, "avatar-1", 5L, "COACH_GRANT", "grant-1")
+
+        val granted = dao.grantAvailableItem(entry, InventoryCategory.AVATAR)
+
+        assertTrue(granted)
+        val stored = dao.observeMemberInventory(MEMBER_ID, "AVATAR").first().single()
+        assertEquals("avatar-1", stored.catalogItemId)
+        assertEquals("COACH_GRANT", stored.sourceType)
+        assertEquals("grant-1", stored.sourceId)
+    }
+
+    @Test
+    fun grantRejectsUnavailableCatalogItem() = runBlocking {
+        dao.upsertCatalogItem(CatalogItemEntity("avatar-disabled", "AVATAR", "غیرفعال", null, false, 2))
+
+        val granted = dao.grantAvailableItem(
+            MemberInventoryEntity(MEMBER_ID, "avatar-disabled", 5L, "COACH_GRANT", "grant-2"),
+            InventoryCategory.AVATAR,
+        )
+
+        assertFalse(granted)
+        assertTrue(dao.observeMemberInventory(MEMBER_ID, "AVATAR").first().isEmpty())
+    }
+
+    @Test
+    fun grantRejectsCatalogItemFromDifferentCategory() = runBlocking {
+        val granted = dao.grantAvailableItem(
+            MemberInventoryEntity(MEMBER_ID, "frame-1", 5L, "COACH_GRANT", "grant-3"),
+            InventoryCategory.AVATAR,
+        )
+
+        assertFalse(granted)
+        assertTrue(dao.observeMemberInventory(MEMBER_ID, "AVATAR").first().isEmpty())
+    }
+
+    @Test
     fun activationIsRejectedWhenMemberDoesNotOwnItem() = runBlocking {
         val activated = dao.activateOwnedItem(MEMBER_ID, InventoryCategory.AVATAR, "avatar-1", 10L)
 
