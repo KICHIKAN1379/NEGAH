@@ -57,6 +57,7 @@ import com.kichikan.negah.domain.growth.MemberGrowthProgress
 import com.kichikan.negah.domain.growth.UpdateGrowthProgress
 import com.kichikan.negah.domain.growth.UpdateGrowthProgressResult
 import com.kichikan.negah.domain.inventory.ActiveInventoryItem
+import com.kichikan.negah.domain.inventory.CatalogItem
 import com.kichikan.negah.domain.inventory.InventoryCategory
 import com.kichikan.negah.domain.inventory.InventoryRepository
 import com.kichikan.negah.domain.inventory.MemberInventoryEntry
@@ -84,6 +85,7 @@ data class MembersUiState(
     val growthProgress: List<MemberGrowthProgress> = emptyList(),
     val growthSaveMessage: String? = null,
     val inventoryEntries: List<MemberInventoryEntry> = emptyList(),
+    val availableCatalogItems: List<CatalogItem> = emptyList(),
     val activeInventoryItems: List<ActiveInventoryItem> = emptyList(),
     val inventoryMessage: String? = null,
     val isSaving: Boolean = false,
@@ -128,6 +130,7 @@ class MembersViewModel @Inject constructor(
     private var growthItemsJob: Job? = null
     private var growthProgressJob: Job? = null
     private var inventoryJob: Job? = null
+    private var catalogJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -148,7 +151,8 @@ class MembersViewModel @Inject constructor(
         growthItemsJob?.cancel()
         growthProgressJob?.cancel()
         inventoryJob?.cancel()
-        mutableState.update { it.copy(selectedMemberId = memberId, economyTransactions = emptyList(), growthItems = emptyList(), growthProgress = emptyList(), growthSaveMessage = null, inventoryEntries = emptyList(), activeInventoryItems = emptyList(), inventoryMessage = null) }
+        catalogJob?.cancel()
+        mutableState.update { it.copy(selectedMemberId = memberId, economyTransactions = emptyList(), growthItems = emptyList(), growthProgress = emptyList(), growthSaveMessage = null, inventoryEntries = emptyList(), availableCatalogItems = emptyList(), activeInventoryItems = emptyList(), inventoryMessage = null) }
         economyHistoryJob = viewModelScope.launch {
             economyRepository.observeForMember(memberId).collect { transactions ->
                 mutableState.update { current ->
@@ -190,6 +194,20 @@ class MembersViewModel @Inject constructor(
                 }
             }
         }
+
+        catalogJob = viewModelScope.launch {
+            kotlinx.coroutines.flow.combine(
+                inventoryRepository.observeCatalog(InventoryCategory.AVATAR),
+                inventoryRepository.observeCatalog(InventoryCategory.FRAME),
+                inventoryRepository.observeCatalog(InventoryCategory.REWARD),
+            ) { avatars, frames, rewards -> avatars + frames + rewards }
+                .collect { catalog ->
+                    mutableState.update { current ->
+                        if (current.selectedMemberId == memberId) current.copy(availableCatalogItems = catalog)
+                        else current
+                    }
+                }
+        }
     }
 
     fun onProfileClosed() {
@@ -197,11 +215,13 @@ class MembersViewModel @Inject constructor(
         growthItemsJob?.cancel()
         growthProgressJob?.cancel()
         inventoryJob?.cancel()
+        catalogJob?.cancel()
         economyHistoryJob = null
         growthItemsJob = null
         growthProgressJob = null
         inventoryJob = null
-        mutableState.update { it.copy(selectedMemberId = null, economyTransactions = emptyList(), growthItems = emptyList(), growthProgress = emptyList(), growthSaveMessage = null, inventoryEntries = emptyList(), activeInventoryItems = emptyList(), inventoryMessage = null) }
+        catalogJob = null
+        mutableState.update { it.copy(selectedMemberId = null, economyTransactions = emptyList(), growthItems = emptyList(), growthProgress = emptyList(), growthSaveMessage = null, inventoryEntries = emptyList(), availableCatalogItems = emptyList(), activeInventoryItems = emptyList(), inventoryMessage = null) }
     }
 
     fun saveGrowthProgress(item: GrowthItem, progressPercent: Int, note: String?) {
@@ -240,6 +260,29 @@ class MembersViewModel @Inject constructor(
         }
     }
 
+    fun grantCatalogItem(item: CatalogItem) {
+        val memberId = mutableState.value.selectedMemberId ?: return
+        viewModelScope.launch {
+            try {
+                inventoryRepository.grantItem(
+                    MemberInventoryEntry(
+                        memberId = memberId,
+                        catalogItemId = item.id,
+                        category = item.category,
+                        title = item.title,
+                        description = item.description,
+                        acquiredAtEpochMillis = System.currentTimeMillis(),
+                        sourceType = "COACH_GRANT",
+                        sourceId = java.util.UUID.randomUUID().toString(),
+                    ),
+                )
+                mutableState.update { it.copy(inventoryMessage = "آیتم به گنجینه عضو افزوده شد") }
+            } catch (_: Exception) {
+                mutableState.update { it.copy(inventoryMessage = "این آیتم قبلاً به عضو داده شده یا ثبت آن انجام نشد") }
+            }
+        }
+    }
+
     fun addMember() {
         val snapshot = mutableState.value
         if (snapshot.isSaving) return
@@ -268,7 +311,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val selectedMember = state.members.firstOrNull { it.id == state.selectedMemberId }
     if (selectedMember != null) {
-        MemberProfileScreen(selectedMember, state.economyTransactions, state.growthItems, state.growthProgress, state.growthSaveMessage, state.inventoryEntries, state.activeInventoryItems, state.inventoryMessage, viewModel::saveGrowthProgress, viewModel::activateInventoryItem, viewModel::onProfileClosed, modifier)
+        MemberProfileScreen(selectedMember, state.economyTransactions, state.growthItems, state.growthProgress, state.growthSaveMessage, state.inventoryEntries, state.availableCatalogItems, state.activeInventoryItems, state.inventoryMessage, viewModel::saveGrowthProgress, viewModel::activateInventoryItem, viewModel::grantCatalogItem, viewModel::onProfileClosed, modifier)
         return
     }
 
@@ -405,7 +448,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, growthItems: List<GrowthItem>, growthProgress: List<MemberGrowthProgress>, growthSaveMessage: String?, inventoryEntries: List<MemberInventoryEntry>, activeInventoryItems: List<ActiveInventoryItem>, inventoryMessage: String?, onSaveGrowthProgress: (GrowthItem, Int, String?) -> Unit, onActivateInventoryItem: (MemberInventoryEntry) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
+private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, growthItems: List<GrowthItem>, growthProgress: List<MemberGrowthProgress>, growthSaveMessage: String?, inventoryEntries: List<MemberInventoryEntry>, availableCatalogItems: List<CatalogItem>, activeInventoryItems: List<ActiveInventoryItem>, inventoryMessage: String?, onSaveGrowthProgress: (GrowthItem, Int, String?) -> Unit, onActivateInventoryItem: (MemberInventoryEntry) -> Unit, onGrantCatalogItem: (CatalogItem) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
     var inventoryTab by rememberSaveable { mutableStateOf("آواتار") }
     val level = LevelProgression.levelFor(member.totalXp)
     val currentLevelXp = LevelProgression.minimumXpForLevel(level)
@@ -480,6 +523,21 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                             } else {
                                 TextButton(onClick = { onActivateInventoryItem(entry) }) { Text("انتخاب به‌عنوان فعال") }
                             }
+                        }
+                    }
+                }
+                val grantableItems = availableCatalogItems.filter {
+                    it.category == category && visibleEntries.none { owned -> owned.catalogItemId == it.id }
+                }
+                if (grantableItems.isNotEmpty()) {
+                    Text("آیتم‌های قابل اعطا", style = MaterialTheme.typography.titleSmall)
+                    grantableItems.forEach { item ->
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(item.title, style = MaterialTheme.typography.bodyMedium)
+                                item.description?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                            }
+                            TextButton(onClick = { onGrantCatalogItem(item) }) { Text("اعطا") }
                         }
                     }
                 }
