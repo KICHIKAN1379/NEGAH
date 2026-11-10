@@ -14,6 +14,9 @@ interface InventoryDao {
     @Query("SELECT * FROM catalog_items WHERE category = :category AND isAvailable = 1 ORDER BY sortOrder, title COLLATE NOCASE")
     fun observeCatalog(category: String): Flow<List<CatalogItemEntity>>
 
+    @Query("SELECT * FROM catalog_items WHERE category = :category ORDER BY sortOrder, title COLLATE NOCASE")
+    fun observeAllCatalog(category: String): Flow<List<CatalogItemEntity>>
+
     @Query("""
         SELECT mi.memberId AS memberId, mi.catalogItemId AS catalogItemId,
                ci.category AS category, ci.title AS title, ci.description AS description,
