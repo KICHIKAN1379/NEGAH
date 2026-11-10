@@ -1,14 +1,14 @@
 package com.kichikan.negah.data.local.di
-
 import android.content.Context
 import androidx.room.Room
-import com.kichikan.negah.data.local.NegahDatabase
+import com.kichikan.negah.data.local.*
 import com.kichikan.negah.data.local.attendance.AttendanceDao
 import com.kichikan.negah.data.local.commitment.CommitmentDao
 import com.kichikan.negah.data.local.economy.EconomyTransactionDao
 import com.kichikan.negah.data.local.growth.GrowthMapDao
 import com.kichikan.negah.data.local.member.MemberDao
 import com.kichikan.negah.data.local.inventory.InventoryDao
+import com.kichikan.negah.data.local.inventory.ShopDao
 import com.kichikan.negah.data.local.session.SessionDao
 import dagger.Module
 import dagger.Provides
@@ -16,26 +16,18 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
-
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
-    @Provides
-    @Singleton
-    fun provideNegahDatabase(
-        @ApplicationContext context: Context,
-    ): NegahDatabase = Room.databaseBuilder(
-        context,
-        NegahDatabase::class.java,
-        "negah_coach.db",
-    ).addMigrations(com.kichikan.negah.data.local.MIGRATION_1_2, com.kichikan.negah.data.local.MIGRATION_2_3).build()
-
-    @Provides fun provideMemberDao(database: NegahDatabase): MemberDao = database.memberDao()
-    @Provides fun provideSessionDao(database: NegahDatabase): SessionDao = database.sessionDao()
-    @Provides fun provideAttendanceDao(database: NegahDatabase): AttendanceDao = database.attendanceDao()
-    @Provides fun provideCommitmentDao(database: NegahDatabase): CommitmentDao = database.commitmentDao()
-    @Provides fun provideEconomyTransactionDao(database: NegahDatabase): EconomyTransactionDao =
-        database.economyTransactionDao()
-    @Provides fun provideGrowthMapDao(database: NegahDatabase): GrowthMapDao = database.growthMapDao()
-    @Provides fun provideInventoryDao(database: NegahDatabase): InventoryDao = database.inventoryDao()
+ @Provides @Singleton fun provideNegahDatabase(@ApplicationContext context: Context): NegahDatabase =
+  Room.databaseBuilder(context, NegahDatabase::class.java, "negah_coach.db")
+   .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build()
+ @Provides fun provideMemberDao(database: NegahDatabase): MemberDao = database.memberDao()
+ @Provides fun provideSessionDao(database: NegahDatabase): SessionDao = database.sessionDao()
+ @Provides fun provideAttendanceDao(database: NegahDatabase): AttendanceDao = database.attendanceDao()
+ @Provides fun provideCommitmentDao(database: NegahDatabase): CommitmentDao = database.commitmentDao()
+ @Provides fun provideEconomyTransactionDao(database: NegahDatabase): EconomyTransactionDao = database.economyTransactionDao()
+ @Provides fun provideGrowthMapDao(database: NegahDatabase): GrowthMapDao = database.growthMapDao()
+ @Provides fun provideInventoryDao(database: NegahDatabase): InventoryDao = database.inventoryDao()
+ @Provides fun provideShopDao(database: NegahDatabase): ShopDao = database.shopDao()
 }
