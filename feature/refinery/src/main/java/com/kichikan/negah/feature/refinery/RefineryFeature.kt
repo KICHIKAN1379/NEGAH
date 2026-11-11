@@ -1,6 +1,5 @@
 package com.kichikan.negah.feature.refinery
 
-import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.graphics.BitmapFactory
@@ -31,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -50,6 +50,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class RefineryUiState(val growthItems: List<GrowthItem> = emptyList(), val catalogItems: List<CatalogItem> = emptyList(), val catalogImages: Map<String, ByteArray> = emptyMap(), val mediaMessage: String? = null)
@@ -117,7 +118,12 @@ class RefineryViewModel @Inject constructor(
     fun saveCatalogImage(itemId: String, input: InputStream, mimeType: String) {
         viewModelScope.launch {
             runCatching { catalogMedia.saveCatalogImage(itemId, input, mimeType); catalogMedia.loadCatalogImage(itemId) }
-                .onSuccess { bytes -> mutableState.update { it.copy(catalogImages = it.catalogImages + (itemId to bytes!!), mediaMessage = "تصویر آیتم ذخیره شد") } }
+                .onSuccess { bytes -> mutableState.update { current ->
+                    current.copy(
+                        catalogImages = if (bytes == null) current.catalogImages - itemId else current.catalogImages + (itemId to bytes),
+                        mediaMessage = "تصویر آیتم ذخیره شد",
+                    )
+                } }
                 .onFailure { input.close(); mutableState.update { it.copy(mediaMessage = "ذخیره تصویر آیتم انجام نشد") } }
         }
     }
@@ -133,6 +139,15 @@ class RefineryViewModel @Inject constructor(
     fun toggleCatalog(item: CatalogItem) {
         viewModelScope.launch { inventory.saveCatalogItem(item.copy(isAvailable = !item.isAvailable)) }
     }
+}
+
+private fun catalogImagePreview(bytes: ByteArray?, maxDimension: Int = 360) = bytes?.let {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeByteArray(it, 0, it.size, bounds)
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@let null
+    var sample = 1
+    while (bounds.outWidth / sample > maxDimension || bounds.outHeight / sample > maxDimension) sample *= 2
+    BitmapFactory.decodeByteArray(it, 0, it.size, BitmapFactory.Options().apply { inSampleSize = sample })?.asImageBitmap()
 }
 
 @Composable
@@ -178,11 +193,7 @@ fun RefineryScreen(viewModel: RefineryViewModel, modifier: Modifier = Modifier) 
                 items(growthItems, key = { it.id }) { item ->
                     Card(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            val itemImage = remember(state.catalogImages[item.id]) { catalogImagePreview(state.catalogImages[item.id]) }
-                            itemImage?.let { Image(it, item.title, Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(10.dp)), contentScale = ContentScale.Crop) }
                             Text(item.title, style = MaterialTheme.typography.titleMedium)
-                            TextButton(onClick = { imageTargetId = item.id; catalogImagePicker.launch("image/*") }) { Text("انتخاب تصویر") }
-                            if (itemImage != null) TextButton(onClick = { viewModel.removeCatalogImage(item.id) }) { Text("حذف تصویر") }
                             item.description?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                             Text(if (item.isActive) "فعال" else "غیرفعال")
                             Row {
@@ -204,7 +215,11 @@ fun RefineryScreen(viewModel: RefineryViewModel, modifier: Modifier = Modifier) 
                 items(catalogItems, key = { it.id }) { item ->
                     Card(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            val itemImage = remember(state.catalogImages[item.id]) { catalogImagePreview(state.catalogImages[item.id]) }
+                            itemImage?.let { Image(it, item.title, Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(10.dp)), contentScale = ContentScale.Crop) }
                             Text(item.title, style = MaterialTheme.typography.titleMedium)
+                            TextButton(onClick = { imageTargetId = item.id; catalogImagePicker.launch("image/*") }) { Text("انتخاب تصویر") }
+                            if (itemImage != null) TextButton(onClick = { viewModel.removeCatalogImage(item.id) }) { Text("حذف تصویر") }
                             item.description?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                             Text(if (item.isAvailable) "در دسترس" else "غیرفعال")
                             Row {
