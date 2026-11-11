@@ -16,6 +16,9 @@ interface MemberRepository {
     fun observeArchivedMembers(): Flow<List<Member>>
     /** Creates a new member; existing wallet balances must never be overwritten here. */
     suspend fun create(member: Member)
+    suspend fun updateBirthDate(memberId: String, birthDateJalali: String?, updatedAtEpochMillis: Long) {
+        throw UnsupportedOperationException("Birth date editing is not supported by this repository")
+    }
     suspend fun archive(memberId: String)
     suspend fun restore(memberId: String)
 }
