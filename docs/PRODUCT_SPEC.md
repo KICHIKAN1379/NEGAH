@@ -74,7 +74,7 @@ Ganjine has exactly four tabs, in this order:
 4. جایزه
 
 Each tab shows items the member has received of that type. The coach may change the active item where applicable.
-- Badges (نشان) are earned automatically when the member reaches the required level.
+- Badges (نشان) are earned automatically when the member reaches the required level. The 21 progression tiers follow the approved IRGC rank order; level 1 unlocks the first tier, each subsequent level unlocks the next tier, and level 21 unlocks the final tier. Higher levels do not create additional rank badges.
 - The coach may change which earned badge is active, but cannot manually grant a badge.
 - Badges are not Shop products and are never purchased.
 
@@ -103,8 +103,8 @@ Each tab shows items the member has received of that type. The coach may change 
 ### Birthdays
 
 - Notify the coach three days before a member's birthday.
-- A birthday reward is automatic, not a manual repeatable claim.
-- Reward amount, one-time/idempotency behavior and ledger integration must be derived from approved economy rules and tests; do not invent an amount or allow duplicate rewards after restore.
+- A birthday reward is automatic and equals 30 spendable credits (امتیاز قابل‌خرج); it is recorded in the append-only economy ledger.
+- The reward is not a manual repeatable claim. The same member must not receive duplicate rewards for the same birthday occurrence, including after backup restore.
 
 ## 5. Progress
 
@@ -284,7 +284,7 @@ The Growth Map configuration screen has no direct image in the primary UX PDF; u
 - Reading scoring units/rewards.
 - Wheel probability weights and reward distribution.
 - Group competition formulas and metrics.
-- Birthday reward amount and duplicate-prevention details.
+- Birthday date capture/display convention and notification scheduling details.
 - Purple accent conflict: UX2/current theme uses #8B5CF6, while the product guide lists #6B5CF5.
 - Any behavior that conflicts between the product guide, UX/UX2 and the latest explicit owner instruction.
 

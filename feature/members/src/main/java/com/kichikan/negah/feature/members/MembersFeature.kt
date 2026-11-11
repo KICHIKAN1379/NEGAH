@@ -46,6 +46,7 @@ import com.kichikan.negah.domain.economy.EconomyRepository
 import com.kichikan.negah.domain.economy.EconomyTransaction
 import com.kichikan.negah.domain.economy.EconomyTransactionKind
 import com.kichikan.negah.domain.economy.LevelProgression
+import com.kichikan.negah.domain.economy.RankBadgeProgression
 import com.kichikan.negah.domain.member.Member
 import com.kichikan.negah.domain.member.MemberRepository
 import com.kichikan.negah.domain.member.RegisterMember
@@ -72,7 +73,7 @@ import java.util.Date
 import kotlinx.coroutines.launch
 
 enum class MemberSortOption { NAME, LEVEL, POINTS }
-enum class MemberHistoryFilter { ALL, XP, POINTS, DIAMONDS }
+enum class MemberHistoryFilter { ALL, XP, POINTS, DIAMONDS, ITEMS }
 
 data class MembersUiState(
     val members: List<Member> = emptyList(),
@@ -103,6 +104,7 @@ data class MembersUiState(
                 MemberHistoryFilter.XP -> transaction.currency == EconomyCurrency.XP
                 MemberHistoryFilter.POINTS -> transaction.currency == EconomyCurrency.POINTS
                 MemberHistoryFilter.DIAMONDS -> transaction.currency == EconomyCurrency.DIAMONDS
+                MemberHistoryFilter.ITEMS -> false
             }
         }
 
@@ -505,6 +507,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
 @Composable
 private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, historyFilter: MemberHistoryFilter, onHistoryFilterChanged: (MemberHistoryFilter) -> Unit, growthItems: List<GrowthItem>, growthProgress: List<MemberGrowthProgress>, growthSaveMessage: String?, inventoryEntries: List<MemberInventoryEntry>, availableCatalogItems: List<CatalogItem>, activeInventoryItems: List<ActiveInventoryItem>, inventoryMessage: String?, onSaveGrowthProgress: (GrowthItem, Int, String?) -> Unit, onActivateInventoryItem: (MemberInventoryEntry) -> Unit, onGrantCatalogItem: (CatalogItem) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
     var inventoryTab by rememberSaveable { mutableStateOf("آواتار") }
+    var showAllReceivedHistory by rememberSaveable { mutableStateOf(false) }
     val level = LevelProgression.levelFor(member.totalXp)
     val currentLevelXp = LevelProgression.minimumXpForLevel(level)
     val nextLevelXp = LevelProgression.minimumXpForLevel(level + 1)
@@ -526,6 +529,9 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                         Text(member.fullName, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
                         member.nickname?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer) }
                         Text("سطح " + level, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        RankBadgeProgression.currentForLevel(level)?.let { badge ->
+                            Text("درجه ${badge.title}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        }
                     }
                     Box(modifier = Modifier.size(58.dp).background(MaterialTheme.colorScheme.primary, CircleShape), contentAlignment = Alignment.Center) {
                         Text(level.toString(), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onPrimary)
@@ -553,8 +559,38 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                 }
             }
             if (inventoryTab == "نشان") {
-                Text("نشان‌ها با رسیدن عضو به سطح‌های تعیین‌شده به‌صورت خودکار دریافت می‌شوند و قابل خرید نیستند.",
+                Text("با هر سطح، یک درجه به‌صورت خودکار دریافت می‌شود. نشان‌ها قابل خرید یا اعطای دستی نیستند.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                RankBadgeProgression.all.forEach { badge ->
+                    val earned = level >= badge.level
+                    Card(modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (earned) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.surfaceVariant,
+                        )) {
+                        Row(modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(modifier = Modifier.size(38.dp).background(
+                                if (earned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                                CircleShape,
+                            ), contentAlignment = Alignment.Center) {
+                                Text(badge.level.toString(), color = MaterialTheme.colorScheme.onPrimary,
+                                    style = MaterialTheme.typography.titleMedium)
+                            }
+                            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(badge.title, style = MaterialTheme.typography.titleSmall)
+                                Text("سطح ${badge.level}", style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Text(when {
+                                !earned -> "قفل"
+                                badge.level == level.coerceAtMost(RankBadgeProgression.all.size) -> "درجه فعلی"
+                                else -> "دریافت‌شده"
+                            }, style = MaterialTheme.typography.labelSmall,
+                                color = if (earned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
             } else {
                 val category = when (inventoryTab) {
                     "آواتار" -> InventoryCategory.AVATAR
@@ -604,23 +640,116 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
             ProfileValue("XP ثبت‌شده", member.totalXp.toString())
             ProfileValue("سطح فعلی", level.toString())
         }
-        ProfileSection("سوابق دریافتی", "تراکنش‌های ثبت‌شده در دفتر اقتصادی") {
+        val receivedHistoryRows = buildList {
+            transactions.forEach { transaction ->
+                val currencyLabel = when (transaction.currency) {
+                    EconomyCurrency.XP -> "XP"
+                    EconomyCurrency.POINTS -> "اعتبار"
+                    EconomyCurrency.DIAMONDS -> "الماس"
+                }
+                val kindLabel = when (transaction.kind) {
+                    EconomyTransactionKind.EARN -> "دریافت"
+                    EconomyTransactionKind.SPEND -> "خرج"
+                    EconomyTransactionKind.CORRECTION -> "اصلاح"
+                    EconomyTransactionKind.REFUND -> "بازگشت"
+                }
+                val sourceLabel = when (transaction.sourceType) {
+                    "BIRTHDAY_REWARD" -> "پاداش تولد"
+                    "STORE_PURCHASE" -> "خرید از فروشگاه"
+                    "MISSION_REWARD" -> "پاداش مأموریت"
+                    else -> "ثبت‌شده در دفتر اقتصادی"
+                }
+                add(ReceivedHistoryRow(
+                    id = transaction.id,
+                    timestamp = transaction.createdAtEpochMillis,
+                    title = "$kindLabel $currencyLabel",
+                    detail = sourceLabel,
+                    amount = if (transaction.amountDelta > 0) "+${transaction.amountDelta}" else transaction.amountDelta.toString(),
+                    isPositive = transaction.amountDelta > 0,
+                ))
+            }
+            if (historyFilter == MemberHistoryFilter.ALL || historyFilter == MemberHistoryFilter.ITEMS) {
+                inventoryEntries.forEach { entry ->
+                    val sourceLabel = when (entry.sourceType) {
+                        "PURCHASE", "STORE_PURCHASE" -> "خرید از فروشگاه"
+                        "COACH_GRANT" -> "اعطای مربی"
+                        else -> "دریافت آیتم"
+                    }
+                    add(ReceivedHistoryRow(
+                        id = "${entry.memberId}:${entry.catalogItemId}",
+                        timestamp = entry.acquiredAtEpochMillis,
+                        title = entry.title,
+                        detail = "$sourceLabel • ${when (entry.category) {
+                            InventoryCategory.AVATAR -> "آواتار"
+                            InventoryCategory.FRAME -> "قاب"
+                            InventoryCategory.REWARD -> "جایزه"
+                        }}",
+                    ))
+                }
+            }
+        }.sortedByDescending { it.timestamp }
+        ProfileSection("سوابق دریافتی", "پاداش‌ها، تراکنش‌ها و آیتم‌های دریافت‌شده") {
             Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 MemberHistoryFilter.entries.forEach { filter ->
                     FilterChip(
                         selected = historyFilter == filter,
-                        onClick = { onHistoryFilterChanged(filter) },
+                        onClick = { onHistoryFilterChanged(filter); showAllReceivedHistory = false },
                         label = { Text(when (filter) {
                             MemberHistoryFilter.ALL -> "همه"
                             MemberHistoryFilter.XP -> "XP"
-                            MemberHistoryFilter.POINTS -> "امتیاز"
+                            MemberHistoryFilter.POINTS -> "اعتبار"
                             MemberHistoryFilter.DIAMONDS -> "الماس"
+                            MemberHistoryFilter.ITEMS -> "آیتم‌ها"
                         }) },
                     )
                 }
             }
-            if (transactions.isEmpty()) Text("برای این فیلتر تراکنشی ثبت نشده است", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            else transactions.forEach { EconomyTransactionRow(it) }
+            if (receivedHistoryRows.isEmpty()) {
+                Text("برای این فیلتر سابقه‌ای ثبت نشده است", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                receivedHistoryRows.take(if (showAllReceivedHistory) receivedHistoryRows.size else 3)
+                    .forEach { ReceivedHistoryRowCard(it) }
+                if (receivedHistoryRows.size > 3) {
+                    TextButton(onClick = { showAllReceivedHistory = !showAllReceivedHistory }) {
+                        Text(if (showAllReceivedHistory) "نمایش کمتر" else "همه")
+                    }
+                }
+            }
+        }
+    }
+}
+
+private data class ReceivedHistoryRow(
+    val id: String,
+    val timestamp: Long,
+    val title: String,
+    val detail: String,
+    val amount: String? = null,
+    val isPositive: Boolean = true,
+)
+
+@Composable
+private fun ReceivedHistoryRowCard(row: ReceivedHistoryRow) {
+    val timestamp = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
+        .format(Date(row.timestamp))
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(row.title, style = MaterialTheme.typography.titleSmall)
+                Text(row.detail, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(timestamp, style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            row.amount?.let {
+                Text(it, style = MaterialTheme.typography.titleMedium,
+                    color = if (row.isPositive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+            }
         }
     }
 }
