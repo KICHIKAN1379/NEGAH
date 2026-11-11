@@ -239,7 +239,7 @@ The Growth Map configuration screen has no direct image in the primary UX PDF; u
 - Full-ring export must preserve the data required to restore the ring's state, including image files; member export is a separate scoped export.
 - Never overwrite live data silently. Validate before restore and create a safety point where appropriate.
 - On first launch, explain why file access is needed and use an Android-appropriate user-mediated folder/file picker. Do not request broad all-files access merely for convenience.
-- Backup encryption is a project requirement in the technical baseline. The portable key/recovery design must be specified and tested before implementation; do not invent a key recovery model.
+- Owner decision (2026-11-12): defer backup encryption and portable key/recovery design until the online-service phase. Do not implement encryption or ask the owner to choose a recovery model during the current offline MVP.
 - Owner decision: attempt automatic backup when the app leaves the foreground (moves to the background). Android may not guarantee execution on force-stop, process kill, crash or device shutdown; implementation must use an Android-appropriate durable/lifecycle-aware approach and must not promise those cases.
 - Image assets are part of the backup payload: preserve the actual image bytes for the ring image/banner, member profile images, and catalog/avatar/frame images, together with their ownership/associations. Do not treat a database ID or transient content URI as a sufficient backup.
 - Never include passwords, tokens, invitation codes or secrets in public backup files.

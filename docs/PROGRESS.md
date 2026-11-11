@@ -199,3 +199,10 @@ The available host has GitHub repository read/write integration but no local And
 - Added JVM tests for byte round-trip, metadata, deletion, empty input, unsupported MIME types and path traversal rejection.
 - This is infrastructure only: no screen currently invokes it; member/catalog records are not yet wired to the stored asset IDs, and portable backup/restore is not implemented.
 - CI must verify Room schema generation, migration wiring, Hilt construction and tests before this slice is considered validated.
+
+
+## Latest continuation — media database wiring and backup scope (2026-11-12)
+- Corrected the image-storage foundation so it is actually registered with Room: schema version 9 includes `media_assets`, its unique owner/role index, and the 8→9 migration.
+- Registered `MediaAssetDao` with the database and Hilt provider, and added the 8→9 migration to the production Room builder. Without these registrations, the previously added entity/DAO were not part of the live database and the manager could not be constructed.
+- Owner decision: backup encryption and portable key/recovery design are deferred until online-service work. No encryption implementation is in scope for the offline MVP.
+- Member-profile image selection/display is still not connected to the UI; this commit closes the database/DI gap only. CI verification is required before considering it validated.

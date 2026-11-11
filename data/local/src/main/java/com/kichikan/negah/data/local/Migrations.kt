@@ -48,3 +48,11 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
   database.execSQL("ALTER TABLE members ADD COLUMN birthDateJalali TEXT")
  }
 }
+
+
+val MIGRATION_8_9 = object : Migration(8, 9) {
+ override fun migrate(database: SupportSQLiteDatabase) {
+  database.execSQL("""CREATE TABLE IF NOT EXISTS media_assets (id TEXT NOT NULL, ownerType TEXT NOT NULL, ownerId TEXT NOT NULL, role TEXT NOT NULL, relativePath TEXT NOT NULL, mimeType TEXT NOT NULL, byteSize INTEGER NOT NULL, sha256 TEXT NOT NULL, createdAtEpochMillis INTEGER NOT NULL, PRIMARY KEY(id))""")
+  database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_media_assets_ownerType_ownerId_role ON media_assets(ownerType, ownerId, role)")
+ }
+}
