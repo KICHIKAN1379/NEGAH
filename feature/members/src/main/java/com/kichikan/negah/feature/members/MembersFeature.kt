@@ -10,6 +10,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
@@ -84,6 +85,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import java.text.DateFormat
 import java.util.Date
@@ -344,6 +346,9 @@ class MembersViewModel @Inject constructor(
                         avatarMessage = "تصویر پروفایل ذخیره شد",
                     ) else current
                 }
+            } catch (cancelled: CancellationException) {
+                runCatching { input.close() }
+                throw cancelled
             } catch (_: Exception) {
                 runCatching { input.close() }
                 mutableState.update { current ->
@@ -686,7 +691,7 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                     Image(
                         bitmap = avatarBitmap,
                         contentDescription = "تصویر پروفایل ${member.fullName}",
-                        modifier = Modifier.size(76.dp),
+                        modifier = Modifier.size(76.dp).clip(CircleShape),
                         contentScale = ContentScale.Crop,
                     )
                 } else {
