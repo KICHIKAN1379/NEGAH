@@ -15,10 +15,6 @@ import javax.inject.Singleton
 abstract class MemberAvatarRepositoryModule {
     @Binds
     @Singleton
-    abstract fun bindMemberAvatarRepository(implementation: MediaAssetManager): MemberAvatarRepository
-
-    @Binds
-    @Singleton
     abstract fun bindRingProfileMediaRepository(implementation: MediaAssetManager): RingProfileMediaRepository
 
     @Binds

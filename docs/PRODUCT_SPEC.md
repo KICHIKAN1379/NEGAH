@@ -104,7 +104,7 @@ Each tab shows items the member has received of that type. The coach may change 
 ### Birthdays
 
 - Notify the coach three days before a member's birthday.
-- A birthday reward is automatic and equals 30 diamonds (الماس); it is recorded in the append-only economy ledger.
+- A birthday reward is automatic and equals 30 spendable credits (امتیاز قابل‌خرج); it is recorded in the append-only economy ledger.
 - The reward is not a manual repeatable claim. The same member must not receive duplicate rewards for the same birthday occurrence, including after backup restore.
 
 ## 5. Progress
@@ -286,10 +286,10 @@ The Growth Map configuration screen has no direct image in the primary UX PDF; u
 - Reading scoring units/rewards.
 - Wheel probability weights and reward distribution.
 - Group competition formulas and metrics.
-- Birthday notification scheduling details.
+- Birthday date capture/display convention and notification scheduling details.
 - Purple accent conflict: UX2/current theme uses #8B5CF6, while the product guide lists #6B5CF5.
 - Any behavior that conflicts between the product guide, UX/UX2 and the latest explicit owner instruction.
 
 Resolve material conflicts with the owner before implementation. Do not silently promote illustrative mockup values or inferred rules to product requirements.
 
-- Birthday reward is 30 diamonds (DIAMONDS), issued automatically once per member per Solar Hijri year on their recorded Solar Hijri birthday. The birthday date is optional and stored in YYYY/MM/DD format. A deterministic ledger transaction ID prevents duplicate diamond awards when the app is reopened or member data is re-emitted.
+- Birthday reward is 30 spendable credits (POINTS), issued automatically once per member per Solar Hijri year on their recorded Solar Hijri birthday. The birthday date is optional and stored in YYYY/MM/DD format. A deterministic ledger transaction ID prevents duplicate credits when the app is reopened or member data is re-emitted.
