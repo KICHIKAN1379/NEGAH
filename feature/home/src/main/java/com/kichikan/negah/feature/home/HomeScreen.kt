@@ -27,7 +27,7 @@ data class HomeAttendanceDay(val label: String, val presentCount: Int, val recor
 data class HomeRecentSession(val title: String, val dateLabel: String, val completed: Boolean)
 data class HomeDashboardState(
     val activeMemberCount: Int = 0, val totalXp: Long = 0, val totalPoints: Long = 0,
-    val totalDiamonds: Long = 0, val weekSessionCount: Int = 0,
+    val totalDiamonds: Long = 0, val activeMissionCount: Int = 0, val weekSessionCount: Int = 0,
     val weekRecordedAttendanceCount: Int = 0, val attendanceDays: List<HomeAttendanceDay> = emptyList(),
     val recentSessions: List<HomeRecentSession> = emptyList(),
 )
@@ -163,6 +163,7 @@ fun HomeWeeklyPulseScreen(dashboard: HomeDashboardState, onBack: () -> Unit, mod
                 SummaryValue("XP", dashboard.totalXp.toString())
                 SummaryValue("امتیاز قابل‌خرج", dashboard.totalPoints.toString())
                 SummaryValue("الماس", dashboard.totalDiamonds.toString())
+                SummaryValue("مأموریت‌های فعال", dashboard.activeMissionCount.toString())
                 SummaryValue("جلسات هفته", dashboard.weekSessionCount.toString())
                 SummaryValue("وضعیت‌های حضور ثبت‌شده", dashboard.weekRecordedAttendanceCount.toString())
             }

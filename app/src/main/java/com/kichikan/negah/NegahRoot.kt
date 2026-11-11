@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kichikan.negah.domain.attendance.AttendanceStatus
 import com.kichikan.negah.domain.session.Session
+import com.kichikan.negah.domain.mission.Mission
 import com.kichikan.negah.domain.settings.HomeShortcut
 import com.kichikan.negah.feature.home.HomeAttendanceDay
 import com.kichikan.negah.feature.home.CoachAssistantScreen
@@ -66,13 +67,15 @@ fun NegahRoot(
     var openCoachAssistant by rememberSaveable { mutableStateOf(false) }
     val membersState by membersViewModel.state.collectAsStateWithLifecycle()
     val sessionsState by sessionsViewModel.uiState.collectAsStateWithLifecycle()
+    val progressState by progressViewModel.state.collectAsStateWithLifecycle()
     val homeShortcuts by homeShortcutsViewModel.uiState.collectAsStateWithLifecycle()
     val ringProfile by ringProfileViewModel.uiState.collectAsStateWithLifecycle()
-    val dashboard = remember(membersState.members, sessionsState.sessions, sessionsState.attendanceRecords) {
+    val dashboard = remember(membersState.members, sessionsState.sessions, sessionsState.attendanceRecords, progressState.missions) {
         buildHomeDashboard(
             members = membersState.members,
             sessions = sessionsState.sessions,
             attendance = sessionsState.attendanceRecords,
+            missions = progressState.missions,
         )
     }
 
@@ -234,6 +237,7 @@ private fun buildHomeDashboard(
     members: List<com.kichikan.negah.domain.member.Member>,
     sessions: List<Session>,
     attendance: List<com.kichikan.negah.domain.attendance.AttendanceRecord>,
+    missions: List<Mission>,
 ): HomeDashboardState {
     val today = LocalDate.now()
     val attendanceBySession = attendance.groupBy { it.sessionId }
@@ -269,6 +273,7 @@ private fun buildHomeDashboard(
         totalXp = members.sumOf { it.totalXp },
         totalPoints = members.sumOf { it.spendablePoints },
         totalDiamonds = members.sumOf { it.diamonds },
+        activeMissionCount = missions.count { it.isActive },
         weekSessionCount = currentWeekSessions.size,
         weekRecordedAttendanceCount = currentWeekAttendance.size,
         attendanceDays = days,
