@@ -265,3 +265,12 @@ The available host has GitHub repository read/write integration but no local And
 - Catalog image bytes remain separate from catalog metadata and are stored in the private media directory with Room ownership metadata.
 - Added a persistence-isolation test for two catalog item images.
 - Backup inclusion of media files remains pending; this is not yet a portable backup solution.
+
+
+## Mission scope clarification — 2026-11-12
+- Owner confirmed that members have no capabilities in this application; all member-related data and operations are controlled by the coach.
+- Owner confirmed that the Missions icon opens one destination containing three tabs: مأموریت، مأموریت ویژه (مخفی)، پازل گروهی.
+- Regular mission workflow is coach-defined and coach-recorded: create, assign, record progress, approve completion, and award a preconfigured reward once.
+- Reward currency and amount are explicitly selected by the coach; no guessed formulas.
+- Hidden and group-puzzle tabs remain part of the destination. Their unique mechanics are not inferred; they require their own approved rules before specialized behavior is added.
+- No member login, submission, request, or self-service flow is permitted.

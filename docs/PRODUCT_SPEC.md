@@ -121,12 +121,14 @@ Do not merge Shop into Progress. Do not enable competition between rings. Do not
 
 ### Missions
 
-- Track mission requests/progress for each member.
-- A member request may require coach review/approval.
-- Hidden/special missions remain hidden according to their own access rules.
-- Mission notifications are distinguishable from general notifications and correctly update read/unread state.
-- Restoring a backup must not grant the same mission reward twice.
-- Mission lifecycle, completion conditions, cancellation/rejection and reward amounts must follow approved domain rules; do not invent formulas.
+- The Missions destination has exactly three tabs, in this order: مأموریت، مأموریت ویژه (مخفی)، پازل گروهی. All three are tabs inside the single Missions entry point; none is a separate main navigation destination.
+- This is a coach-only application. The member has no app-side capabilities: no login, mission request, progress submission, completion request, approval, or editing of any member data. The coach performs every operation, including recording each member's progress.
+- The coach creates and manages missions, selects the intended member(s), records progress, and decides when completion is approved.
+- The coach sets the reward currency (XP, spendable points or diamonds) and amount explicitly when defining a mission. No automatic or inferred reward formula is allowed.
+- A completion reward is appended to the economy ledger only after coach approval. Reward issuance must be atomic/idempotent so a repeated action or backup restore cannot grant the same member/mission reward twice.
+- Hidden/special missions and group puzzles remain distinct mission types under their respective tabs. Their detailed mechanics, visibility rules, group eligibility and completion conditions must be explicitly defined before those mechanics are implemented; do not invent them.
+- Mission notifications, if/when implemented, are coach-facing and distinguishable from general notifications.
+- Do not implement member-facing requests, submissions or approval workflows.
 
 ### Reading
 
@@ -293,4 +295,4 @@ The Growth Map configuration screen has no direct image in the primary UX PDF; u
 
 Resolve material conflicts with the owner before implementation. Do not silently promote illustrative mockup values or inferred rules to product requirements.
 
-- Birthday reward is 30 spendable credits (POINTS), issued automatically once per member per Solar Hijri year on their recorded Solar Hijri birthday. The birthday date is optional and stored in YYYY/MM/DD format. A deterministic ledger transaction ID prevents duplicate credits when the app is reopened or member data is re-emitted.
+- Birthday reward is 30 diamonds (DIAMONDS), issued automatically once per member per Solar Hijri year on their recorded Solar Hijri birthday. The birthday date is optional and stored in YYYY/MM/DD format. A deterministic ledger transaction ID prevents duplicate awards when the app is reopened or member data is re-emitted.

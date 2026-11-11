@@ -242,3 +242,11 @@ This is a delivery order, not a permanent scope reduction. Any unfinished item m
 - README build prerequisites conflict with the actual project configuration.
 - Backup encryption/recovery are explicitly deferred until online-service work. The automatic trigger (app backgrounding) and two-version MRT retention are already owner decisions.
 - Any unrecorded mission/reading/wheel/competition scoring rule must be reconciled against approved product sources or referred to the owner.
+
+
+## Mission implementation slice — owner-confirmed scope
+
+- Preserve one Missions destination with exactly three tabs: regular missions, hidden/special missions, and group puzzle.
+- Coach-only operation throughout: members cannot access or submit anything; the coach records member progress and controls every state transition.
+- Coach-configured reward currency and amount; coach approval before one-time ledger award.
+- Build the shared persistence and reward-integrity foundation first. Do not invent hidden-mission or group-puzzle mechanics; keep their tabs present while their domain-specific rules remain explicitly pending.
