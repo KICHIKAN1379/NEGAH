@@ -1010,7 +1010,7 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                             }
                         }
                         OutlinedTextField(value = adjustmentAmountDraft, onValueChange = { adjustmentAmountDraft = it },
-                            label = { Text("مقدار تغییر") }, placeholder = { Text("مثلاً ۲۰ یا ۵-") }, singleLine = true,
+                            label = { Text("مقدار تغییر") }, placeholder = { Text("مثلاً ۲۰ یا -۵") }, singleLine = true,
                             supportingText = { Text("عدد مثبت برای افزایش و عدد منفی برای کاهش؛ XP قابل خرج‌کردن نیست") })
                         OutlinedTextField(value = adjustmentReasonDraft, onValueChange = { adjustmentReasonDraft = it },
                             label = { Text("دلیل اصلاح (الزامی)") }, singleLine = true)
