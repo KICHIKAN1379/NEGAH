@@ -291,7 +291,7 @@ private fun buildHomeDashboard(
     }
     val memberNames = members.associate { it.id to it.fullName }
     val timedEvents = buildList {
-        sessions.forEach { session -> add(TimedHomeEvent(if (session.isCompleted) "جلسه · تکمیل‌شده" else "جلسه · در انتظار", session.title, session.createdAtEpochMillis)) }
+        sessions.forEach { session -> add(TimedHomeEvent("جلسه ثبت شد", session.title + " · " + if (session.isCompleted) "وضعیت فعلی: تکمیل‌شده" else "وضعیت فعلی: در انتظار", session.createdAtEpochMillis)) }
         attendance.forEach { record ->
             val statusLabel = when (record.status) {
                 AttendanceStatus.PRESENT -> "حاضر"
