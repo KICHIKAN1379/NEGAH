@@ -48,12 +48,12 @@ Last updated: 2026-11-11
 
 ## Confirmed gaps / risks
 
-- Home is still a placeholder and does not implement the approved Home reference (UX pages 35–36).
+- Home now has a data-backed weekly pulse, seven-day attendance summary, recent sessions and configurable shortcuts. Ring identity/profile, ring image, Home banner and daily quote are still missing, so the approved Home reference (UX pages 35–36) is not complete.
 - Progress is not yet the full six-entry experience; missions, reading, wheel and competition are not implemented as complete flows.
 - Settings is currently a minimal entry point to Refinery and class-day settings; most of the nine approved settings options are missing.
 - Sessions/attendance now include a month-navigable report with separate counts for all five attendance states, selected-month CSV export, and a live revision-history view; a group filter waits for the group data model.
-- The current weekly strip shows the current Saturday–Friday week and only configured class days; it does not yet provide week navigation.
-- Member profile has partial growth/economy/inventory sections; four-tab Ganjine, received-history filtering and six-axis report card are incomplete. Active/archive switching, confirmed archive and restore actions are now implemented.
+- The Sessions screen now supports previous/next week navigation; its seven-day window starts on Saturday and day chips remain limited to configured class days.
+- Member profile now includes growth/economy/inventory sections, four Ganjine tabs, automatic level badges, received-history filters, a six-axis report card, and active/archive switching with restore. Image assets and visual avatar/frame rendering remain unsupported.
 - Encrypted backup/restore, MRT retention of at most two versions, and first-run file-access flow are not implemented.
 - WorkManager is mentioned in README architecture text, but no WorkManager implementation/dependency was found in the audited files.
 - DAO tests now cover class-day persistence and session/attendance persistence, update revisions and deletion restrictions. The 5→6 database migration has not yet been exercised by a dedicated migration test.
@@ -143,12 +143,12 @@ Last updated: 2026-11-11
 
 ## Next permitted work
 
-1. Complete Sessions: CSV export and visible attendance-revision history; monthly reporting is implemented.
-2. Add group filter when the group data model and UX rules are implemented.
-3. Complete member profile, Ganjine, received history and archive/restore.
-4. Implement Home pages 35–36.
-5. Continue through remaining Progress domains, Shop and the nine Settings options.
-6. Implement encrypted backup/restore, MRT two-version retention and first-run storage permission flow.
+1. Re-check CI for the birthday profile-edit change and keep the exact commit/result linked.
+2. Add durable image-asset storage and image selection/display for member, ring and catalog assets; later include actual bytes in portable backup/restore.
+3. Complete ring profile and Home identity/banner/daily-quote flows.
+4. Complete the remaining Settings options and the missing Progress domains (missions, reading, wheel and competition) without inventing unresolved scoring rules.
+5. Add group filter only when the group data model and UX rules are implemented.
+6. Design and implement portable encrypted backup/restore only after the owner selects the recovery design; keep the agreed MRT two-version retention and background trigger.
 7. Run CI after each meaningful code slice and record exact commit-linked results.
 8. Keep merge, release, destructive data operations and material unresolved product decisions behind owner approval.
 
