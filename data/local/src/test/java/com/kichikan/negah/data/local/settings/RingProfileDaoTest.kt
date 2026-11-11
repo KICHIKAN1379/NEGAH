@@ -53,7 +53,7 @@ class RingProfileDaoTest {
     }
 
     @Test
-    fun blankOptionalUsernameIsStoredAsNull() = runBlocking {
+    fun missingOptionalUsernameRemainsNull() = runBlocking {
         val profile = RingProfile(name = "حلقه", username = null, updatedAtEpochMillis = 2L)
         RoomRingProfileRepository(database.ringProfileDao()).saveProfile(profile)
 
