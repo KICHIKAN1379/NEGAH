@@ -12,7 +12,7 @@ class RoomHomeShortcutsRepository @Inject constructor(
     override fun observeSelectedShortcuts(): Flow<List<HomeShortcut>> =
         combine(dao.observeConfigured(), dao.observeSelectedShortcutIds()) { configured, ids ->
             if (configured == true) {
-                ids.mapNotNull(HomeShortcut::fromId)
+                ids.mapNotNull { HomeShortcut.fromId(it) }
             } else {
                 HomeShortcut.defaultSelection
             }

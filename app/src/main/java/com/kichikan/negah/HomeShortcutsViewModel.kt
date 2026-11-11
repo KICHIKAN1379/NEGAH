@@ -28,12 +28,14 @@ class HomeShortcutsViewModel @Inject constructor(
     repository: HomeShortcutsRepository,
     private val saveHomeShortcuts: SaveHomeShortcuts,
 ) : ViewModel() {
+    private var persistedSelection: List<HomeShortcut> = emptyList()
     private val _uiState = MutableStateFlow(HomeShortcutsUiState())
     val uiState = _uiState.asStateFlow()
 
     init {
         viewModelScope.launch {
             repository.observeSelectedShortcuts().collect { selected ->
+                persistedSelection = selected
                 _uiState.update {
                     it.copy(
                         selected = selected,
@@ -68,6 +70,17 @@ class HomeShortcutsViewModel @Inject constructor(
         }
     }
 
+    fun discardChanges() {
+        _uiState.update { state ->
+            if (state.isSaving) state else state.copy(
+                selected = persistedSelection,
+                hasUnsavedChanges = false,
+                message = null,
+                messageIsError = false,
+            )
+        }
+    }
+
     fun save() {
         val current = _uiState.value
         if (current.isLoading || current.isSaving || !current.hasUnsavedChanges) return
@@ -77,6 +90,7 @@ class HomeShortcutsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 saveHomeShortcuts(selected)
+                persistedSelection = selected
                 _uiState.update {
                     it.copy(
                         isSaving = false,

@@ -75,6 +75,7 @@ fun NegahRoot(
                     NavigationBarItem(
                         selected = selected == destination.name,
                         onClick = {
+                            if (openHomeShortcuts) homeShortcutsViewModel.discardChanges()
                             selected = destination.name
                             openRefinery = false
                             openClassDays = false

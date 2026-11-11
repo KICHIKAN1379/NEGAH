@@ -33,7 +33,10 @@ fun HomeShortcutsScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack) { Text("بازگشت") }
+            TextButton(onClick = {
+                viewModel.discardChanges()
+                onBack()
+            }) { Text("بازگشت") }
             Text("میان‌برهای خانه", style = MaterialTheme.typography.headlineSmall)
         }
         Text("مشخص کنید چه بخش‌هایی در دسترسی سریع خانه نمایش داده شوند. حداکثر چهار مورد قابل انتخاب است.")
