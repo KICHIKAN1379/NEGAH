@@ -187,7 +187,7 @@ The available host has GitHub repository read/write integration but no local And
 - Optional Jalali birthday editing is now wired in the member profile; clearing the field persists null. The latest profile-edit test commit is `2f9dfdd864edec46d3f9ad630095b71e95135fa8`.
 - CI run #123 for that exact commit was still pending at the latest check; the workflow returned no jobs yet. Do not treat it as passed.
 - Birthday reward logic currently checks active-member stream emissions and writes an idempotent 30-point ledger entry for the Jalali year. A scheduled birthday reminder (three days before) is not implemented, and the reward check is not a durable midnight scheduler.
-- Media audit: the current `MemberEntity` has no avatar/profile-image reference; `CatalogItem` / `CatalogItemEntity` contain title/description/price but no image asset reference; no persisted ring profile image/banner implementation was found in the inspected app tree. Actual image-byte storage, member/ring associations and portable image backup are therefore not implemented.
+- Media audit: member avatar bytes are now associated through `media_assets` using MEMBER/AVATAR ownership (without changing the existing member model or its avatar_id/catalog semantics). Catalog items still have no image association, and persisted ring profile image/banner flows remain unimplemented. Portable image backup is not implemented.
 - Required next media slice: define an app-private asset store with stable logical IDs and explicit owner/category metadata; copy selected content into managed storage rather than retaining temporary picker URIs; include binary assets in full-ring backup/export and remap local paths on restore. Keep encryption/recovery implementation blocked until the owner selects its portable recovery design.
 - Owner backup decisions now recorded: portable to a new phone; attempt automatic backup when the app moves to the background; retain at most two automatic versions in MRT. Do not claim guaranteed execution after force-stop, crash, process kill or shutdown.
 
@@ -205,7 +205,7 @@ The available host has GitHub repository read/write integration but no local And
 - Corrected the image-storage foundation so it is actually registered with Room: schema version 9 includes `media_assets`, its unique owner/role index, and the 8→9 migration.
 - Registered `MediaAssetDao` with the database and Hilt provider, and added the 8→9 migration to the production Room builder. Without these registrations, the previously added entity/DAO were not part of the live database and the manager could not be constructed.
 - Owner decision: backup encryption and portable key/recovery design are deferred until online-service work. No encryption implementation is in scope for the offline MVP.
-- Member-profile image selection/display is still not connected to the UI; this commit closes the database/DI gap only. CI verification is required before considering it validated.
+- Member-profile avatar selection/display is now connected through the domain repository boundary. Catalog/ring image screens and portable backup remain unimplemented. CI verification is required before considering this slice validated.
 
 
 ## Latest continuation — member profile avatar flow (2026-11-12)
@@ -214,3 +214,7 @@ The available host has GitHub repository read/write integration but no local And
 - The profile loads and displays the saved avatar and supports replacing it. The UI decodes a downsampled preview to limit display memory use.
 - Added ViewModel tests for loading an existing avatar and saving/reloading a newly selected avatar. CI has not yet completed for this change.
 - Ring image/banner and catalog image selection/display remain future work. No image bytes are included in backup yet.
+
+
+## Avatar-flow follow-up
+- Added a regression test ensuring switching from a member with a saved avatar to a member without one does not display the previous member's image.

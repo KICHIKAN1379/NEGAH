@@ -79,6 +79,17 @@ class MembersViewModelTest {
     }
 
     @Test
+    fun switchingMemberDoesNotCarryPreviousAvatarIntoNextProfile() = runTest {
+        avatars.images["member-1"] = byteArrayOf(1, 2, 3)
+        viewModel.onMemberSelected("member-1")
+        assertArrayEquals(byteArrayOf(1, 2, 3), viewModel.state.value.avatarBytes)
+
+        viewModel.onMemberSelected("member-2")
+
+        assertNull(viewModel.state.value.avatarBytes)
+    }
+
+    @Test
     fun selectingNewAvatarPersistsAndRefreshesProfileState() = runTest {
         viewModel.onMemberSelected("member-1")
         viewModel.updateMemberAvatar(ByteArrayInputStream(byteArrayOf(9, 8, 7)), "image/png")
