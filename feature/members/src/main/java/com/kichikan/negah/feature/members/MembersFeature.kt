@@ -107,6 +107,7 @@ data class MembersUiState(
     val isSaving: Boolean = false,
     val validationMessage: String? = null,
     val savedMessage: String? = null,
+    val profileMessage: String? = null,
 ) {
     val visibleEconomyTransactions: List<EconomyTransaction>
         get() = economyTransactions.filter { transaction ->
@@ -211,6 +212,18 @@ class MembersViewModel @Inject constructor(
     }
     fun onNicknameChanged(value: String) = mutableState.update { it.copy(nickname = value, savedMessage = null) }
     fun onBirthDateChanged(value: String) = mutableState.update { it.copy(birthDateJalali = value, validationMessage = null, savedMessage = null) }
+    fun updateSelectedMemberBirthDate(value: String) {
+        val memberId = mutableState.value.selectedMemberId ?: return
+        viewModelScope.launch {
+            try {
+                val normalized = value.trim().takeIf(String::isNotEmpty)?.let(::normalizeJalaliDate)
+                repository.updateBirthDate(memberId, normalized, System.currentTimeMillis())
+                mutableState.update { it.copy(profileMessage = "تاریخ تولد ذخیره شد") }
+            } catch (_: Exception) {
+                mutableState.update { it.copy(profileMessage = "تاریخ واردشده معتبر نیست یا ذخیره انجام نشد") }
+            }
+        }
+    }
     fun onSearchChanged(value: String) = mutableState.update { it.copy(searchQuery = value) }
     fun onSortChanged(value: MemberSortOption) = mutableState.update { it.copy(sortOption = value) }
     fun onHistoryFilterChanged(value: MemberHistoryFilter) = mutableState.update { it.copy(historyFilter = value) }
@@ -416,7 +429,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val selectedMember = state.members.firstOrNull { it.id == state.selectedMemberId }
     if (selectedMember != null) {
-        MemberProfileScreen(selectedMember, state.economyTransactions, state.historyFilter, viewModel::onHistoryFilterChanged, state.growthItems, state.growthProgress, state.growthSaveMessage, state.inventoryEntries, state.availableCatalogItems, state.activeInventoryItems, state.inventoryMessage, viewModel::saveGrowthProgress, viewModel::activateInventoryItem, viewModel::grantCatalogItem, viewModel::onProfileClosed, modifier)
+        MemberProfileScreen(selectedMember, state.economyTransactions, state.historyFilter, viewModel::onHistoryFilterChanged, state.growthItems, state.growthProgress, state.growthSaveMessage, state.inventoryEntries, state.availableCatalogItems, state.activeInventoryItems, state.inventoryMessage, state.profileMessage, viewModel::updateSelectedMemberBirthDate, viewModel::saveGrowthProgress, viewModel::activateInventoryItem, viewModel::grantCatalogItem, viewModel::onProfileClosed, modifier)
         return
     }
 
@@ -576,9 +589,11 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, historyFilter: MemberHistoryFilter, onHistoryFilterChanged: (MemberHistoryFilter) -> Unit, growthItems: List<GrowthItem>, growthProgress: List<MemberGrowthProgress>, growthSaveMessage: String?, inventoryEntries: List<MemberInventoryEntry>, availableCatalogItems: List<CatalogItem>, activeInventoryItems: List<ActiveInventoryItem>, inventoryMessage: String?, onSaveGrowthProgress: (GrowthItem, Int, String?) -> Unit, onActivateInventoryItem: (MemberInventoryEntry) -> Unit, onGrantCatalogItem: (CatalogItem) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
+private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, historyFilter: MemberHistoryFilter, onHistoryFilterChanged: (MemberHistoryFilter) -> Unit, growthItems: List<GrowthItem>, growthProgress: List<MemberGrowthProgress>, growthSaveMessage: String?, inventoryEntries: List<MemberInventoryEntry>, availableCatalogItems: List<CatalogItem>, activeInventoryItems: List<ActiveInventoryItem>, inventoryMessage: String?, profileMessage: String?, onUpdateBirthDate: (String) -> Unit, onSaveGrowthProgress: (GrowthItem, Int, String?) -> Unit, onActivateInventoryItem: (MemberInventoryEntry) -> Unit, onGrantCatalogItem: (CatalogItem) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
     var inventoryTab by rememberSaveable { mutableStateOf("آواتار") }
     var showAllReceivedHistory by rememberSaveable { mutableStateOf(false) }
+    var showBirthDateDialog by rememberSaveable { mutableStateOf(false) }
+    var birthDateDraft by rememberSaveable(member.id) { mutableStateOf(member.birthDateJalali.orEmpty()) }
     val level = LevelProgression.levelFor(member.totalXp)
     val currentLevelXp = LevelProgression.minimumXpForLevel(level)
     val nextLevelXp = LevelProgression.minimumXpForLevel(level + 1)
@@ -592,6 +607,11 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                 Text("پرونده عضو حلقه", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             TextButton(onClick = onBack) { Text("بازگشت") }
+        }
+        ProfileSection("اطلاعات عضو", "مشخصات پایه") {
+            Text("تاریخ تولد شمسی: ${member.birthDateJalali ?: "ثبت نشده"}", style = MaterialTheme.typography.bodyMedium)
+            TextButton(onClick = { birthDateDraft = member.birthDateJalali.orEmpty(); showBirthDateDialog = true }) { Text("ویرایش تاریخ تولد") }
+            profileMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
         }
         Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
             Column(modifier = Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -797,6 +817,26 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                     }
                 }
             }
+        }
+        if (showBirthDateDialog) {
+            AlertDialog(
+                onDismissRequest = { showBirthDateDialog = false },
+                title = { Text("ویرایش تاریخ تولد شمسی") },
+                text = {
+                    OutlinedTextField(
+                        value = birthDateDraft,
+                        onValueChange = { birthDateDraft = it },
+                        label = { Text("سال/ماه/روز") },
+                        placeholder = { Text("۱۴۰۰/۰۵/۲۱") },
+                        singleLine = true,
+                        supportingText = { Text("برای حذف تاریخ تولد، فیلد را خالی بگذارید") },
+                    )
+                },
+                confirmButton = {
+                    Button(onClick = { onUpdateBirthDate(birthDateDraft); showBirthDateDialog = false }) { Text("ذخیره") }
+                },
+                dismissButton = { TextButton(onClick = { showBirthDateDialog = false }) { Text("انصراف") } },
+            )
         }
     }
 }
