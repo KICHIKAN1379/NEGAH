@@ -283,7 +283,6 @@ private fun buildHomeDashboard(
             completed = session.isCompleted,
         )
     }
-    val memberNames = members.associate { it.id to it.fullName }
     val timedEvents = buildList {
         sessions.forEach { session -> add(TimedHomeEvent("جلسه ثبت شد", session.title + " · " + if (session.isCompleted) "وضعیت فعلی: تکمیل‌شده" else "وضعیت فعلی: در انتظار", session.createdAtEpochMillis)) }
         attendance.forEach { record ->
@@ -294,7 +293,7 @@ private fun buildHomeDashboard(
                 AttendanceStatus.LATE -> "تأخیر"
                 AttendanceStatus.UNRECORDED -> "بدون ثبت"
             }
-            add(TimedHomeEvent("ثبت حضور و غیاب", (memberNames[record.memberId] ?: "عضو") + " · " + statusLabel, record.updatedAtEpochMillis))
+            add(TimedHomeEvent("ثبت حضور و غیاب", statusLabel, record.updatedAtEpochMillis))
         }
         transactions.forEach { transaction ->
             val currency = when (transaction.currency) {
@@ -303,7 +302,7 @@ private fun buildHomeDashboard(
                 EconomyCurrency.DIAMONDS -> "الماس"
             }
             val amount = if (transaction.amountDelta > 0) "+" + transaction.amountDelta else transaction.amountDelta.toString()
-            add(TimedHomeEvent("تغییر موجودی " + currency, (memberNames[transaction.memberId] ?: "عضو") + " · " + amount, transaction.createdAtEpochMillis))
+            add(TimedHomeEvent("تغییر موجودی " + currency, amount, transaction.createdAtEpochMillis))
         }
     }.sortedByDescending { it.timestampEpochMillis }.take(20)
     val activeQuotes = quotes.filter { it.isActive }.sortedBy { it.createdAtEpochMillis }
