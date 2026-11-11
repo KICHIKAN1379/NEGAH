@@ -18,6 +18,7 @@ class MainActivity : ComponentActivity() {
     private val shopViewModel: ShopViewModel by viewModels()
     private val classDaysViewModel: ClassDaysViewModel by viewModels()
     private val homeShortcutsViewModel: HomeShortcutsViewModel by viewModels()
+    private val ringProfileViewModel: RingProfileViewModel by viewModels()
     private val sessionsViewModel: SessionsViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,6 +33,7 @@ class MainActivity : ComponentActivity() {
                         shopViewModel,
                         classDaysViewModel,
                         homeShortcutsViewModel,
+                        ringProfileViewModel,
                         sessionsViewModel,
                     )
                 }
