@@ -16,6 +16,8 @@ interface MemberDao {
     suspend fun findById(memberId: String): MemberEntity?
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(member: MemberEntity)
+    @Query("UPDATE members SET birthDateJalali = :birthDateJalali, updatedAtEpochMillis = :updatedAtEpochMillis WHERE id = :memberId")
+    suspend fun updateBirthDate(memberId: String, birthDateJalali: String?, updatedAtEpochMillis: Long)
     @Query("UPDATE members SET isArchived = 1, updatedAtEpochMillis = :updatedAt WHERE id = :memberId AND isArchived = 0")
     suspend fun archive(memberId: String, updatedAt: Long)
     @Query("UPDATE members SET isArchived = 0, updatedAtEpochMillis = :updatedAt WHERE id = :memberId AND isArchived = 1")
