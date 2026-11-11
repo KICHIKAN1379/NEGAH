@@ -6,6 +6,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
 import java.io.InputStream
 import com.kichikan.negah.domain.member.MemberAvatarRepository
+import com.kichikan.negah.domain.settings.RingProfileMediaRepository
 import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
@@ -13,7 +14,7 @@ import javax.inject.Inject
 class MediaAssetManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val mediaAssetDao: MediaAssetDao,
-) : MemberAvatarRepository {
+) : MemberAvatarRepository, RingProfileMediaRepository {
     private val fileStore by lazy {
         MediaAssetFileStore(context.filesDir.resolve("media-assets"))
     }
@@ -79,6 +80,37 @@ class MediaAssetManager @Inject constructor(
         previous?.let { fileStore.delete(it.relativePath) }
     }
 
+
+    override suspend fun saveRingImage(input: InputStream, mimeType: String) =
+        saveRingAsset(input, mimeType, MediaAssetRole.RING_IMAGE)
+    override suspend fun loadRingImage(): ByteArray? = loadRingAsset(MediaAssetRole.RING_IMAGE)
+    override suspend fun removeRingImage(): Boolean =
+        removeImage(MediaAssetOwnerType.RING, RING_OWNER_ID, MediaAssetRole.RING_IMAGE)
+    override suspend fun saveRingBanner(input: InputStream, mimeType: String) =
+        saveRingAsset(input, mimeType, MediaAssetRole.RING_BANNER)
+    override suspend fun loadRingBanner(): ByteArray? = loadRingAsset(MediaAssetRole.RING_BANNER)
+    override suspend fun removeRingBanner(): Boolean =
+        removeImage(MediaAssetOwnerType.RING, RING_OWNER_ID, MediaAssetRole.RING_BANNER)
+
+    private suspend fun saveRingAsset(input: InputStream, mimeType: String, role: MediaAssetRole) {
+        val stored = fileStore.write(input, mimeType)
+        val asset = MediaAssetEntity(
+            id = UUID.randomUUID().toString(), ownerType = MediaAssetOwnerType.RING.name,
+            ownerId = RING_OWNER_ID, role = role.name, relativePath = stored.relativePath,
+            mimeType = stored.mimeType, byteSize = stored.byteSize, sha256 = stored.sha256,
+            createdAtEpochMillis = System.currentTimeMillis(),
+        )
+        val previous = try { mediaAssetDao.replaceForOwner(asset) }
+        catch (failure: Exception) { fileStore.delete(stored.relativePath); throw failure }
+        previous?.let { fileStore.delete(it.relativePath) }
+    }
+
+    private suspend fun loadRingAsset(role: MediaAssetRole): ByteArray? {
+        val asset = mediaAssetDao.findByOwner(MediaAssetOwnerType.RING.name, RING_OWNER_ID, role.name)
+            ?: return null
+        return fileStore.open(asset.relativePath)?.use { it.readBytes() }
+    }
+
     override suspend fun removeAvatar(memberId: String): Boolean =
         removeImage(MediaAssetOwnerType.MEMBER, memberId, MediaAssetRole.AVATAR)
 
@@ -106,4 +138,5 @@ class MediaAssetManager @Inject constructor(
         fileStore.delete(removed.relativePath)
         return true
     }
+    private companion object { const val RING_OWNER_ID = "primary" }
 }

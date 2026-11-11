@@ -246,3 +246,12 @@ The available host has GitHub repository read/write integration but no local And
 - CI is queued and has not validated the migration or Android build yet.
 
 - Added Room/Robolectric tests for an empty first-run ring profile, persistence after repository recreation, and the optional username remaining null when unset.
+
+
+## Ring profile media integration (2026-11-12)
+- Connected ring image and banner roles to a domain media contract and the private-file/Room media manager.
+- Added image/banner selection, persisted previews, and removal controls to ring profile settings.
+- Kept text metadata in its existing repository; image bytes remain separate assets owned by the stable ring profile key.
+- Added a Robolectric test for independent image/banner persistence and removal.
+- Backup packaging of media files and remapping on restore remain pending; selecting images does not yet make backups portable.
+- CI must validate Hilt, Compose, Room, and test integration.
