@@ -168,6 +168,17 @@ class MembersViewModelTest {
     }
 
     @Test
+    fun clearingBirthdayFromProfilePersistsNullDate() = runTest {
+        viewModel.onMemberSelected("member-1")
+
+        viewModel.updateSelectedMemberBirthDate("")
+
+        assertEquals("member-1", members.updatedBirthDateMemberId)
+        assertNull(members.updatedBirthDate)
+        assertEquals("تاریخ تولد ذخیره شد", viewModel.state.value.profileMessage)
+    }
+
+    @Test
     fun closingProfileClearsSelectionAndHistory() = runTest {
         val entry = transaction("tx-1", "member-1", 10)
         economy.emit("member-1", listOf(entry))
@@ -214,7 +225,13 @@ private class FakeMemberRepository : MemberRepository {
     fun emit(value: List<Member>) { data.value = value }
     override fun observeActiveMembers(): Flow<List<Member>> = data.asStateFlow()
     override fun observeArchivedMembers(): Flow<List<Member>> = MutableStateFlow(emptyList<Member>()).asStateFlow()
+    var updatedBirthDateMemberId: String? = null
+    var updatedBirthDate: String? = "not-updated"
     override suspend fun create(member: Member) = Unit
+    override suspend fun updateBirthDate(memberId: String, birthDateJalali: String?, updatedAtEpochMillis: Long) {
+        updatedBirthDateMemberId = memberId
+        updatedBirthDate = birthDateJalali
+    }
     override suspend fun archive(memberId: String) = Unit
     override suspend fun restore(memberId: String) = Unit
 }
