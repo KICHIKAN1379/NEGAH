@@ -93,6 +93,10 @@ fun NegahRoot(
                     dashboard = dashboard,
                     shortcuts = homeShortcuts.selected,
                     onOpenShortcut = { shortcut ->
+                        openRefinery = false
+                        openClassDays = false
+                        openHomeShortcuts = false
+                        openSessions = false
                         when (shortcut) {
                             HomeShortcut.MEMBERS -> selected = MainDestination.MEMBERS.name
                             HomeShortcut.PROGRESS -> {

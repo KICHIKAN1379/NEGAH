@@ -93,15 +93,6 @@ fun HomeShortcutsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        Switch(
-                            checked = shortcut in state.selected,
-                            onCheckedChange = { viewModel.toggle(shortcut) },
-                        )
-                        Text(
-                            shortcut.label,
-                            modifier = Modifier.weight(1f).padding(horizontal = 14.dp),
-                            style = MaterialTheme.typography.titleMedium,
-                        )
                         Box(
                             modifier = Modifier
                                 .size(44.dp)
@@ -117,8 +108,16 @@ fun HomeShortcutsScreen(
                                 style = MaterialTheme.typography.titleLarge,
                             )
                         }
+                        Text(
+                            shortcut.label,
+                            modifier = Modifier.weight(1f).padding(horizontal = 14.dp),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Switch(
+                            checked = shortcut in state.selected,
+                            onCheckedChange = { viewModel.toggle(shortcut) },
+                        )
                     }
-                }
             }
         }
 
