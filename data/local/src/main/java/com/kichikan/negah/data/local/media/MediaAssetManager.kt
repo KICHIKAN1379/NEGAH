@@ -7,6 +7,7 @@ import java.io.IOException
 import java.io.InputStream
 import com.kichikan.negah.domain.member.MemberAvatarRepository
 import com.kichikan.negah.domain.settings.RingProfileMediaRepository
+import com.kichikan.negah.domain.inventory.CatalogItemMediaRepository
 import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
@@ -14,7 +15,7 @@ import javax.inject.Inject
 class MediaAssetManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val mediaAssetDao: MediaAssetDao,
-) : MemberAvatarRepository, RingProfileMediaRepository {
+) : MemberAvatarRepository, RingProfileMediaRepository, CatalogItemMediaRepository {
     private val fileStore by lazy {
         MediaAssetFileStore(context.filesDir.resolve("media-assets"))
     }
@@ -80,6 +81,40 @@ class MediaAssetManager @Inject constructor(
         previous?.let { fileStore.delete(it.relativePath) }
     }
 
+
+
+    override suspend fun saveCatalogImage(itemId: String, input: InputStream, mimeType: String) {
+        require(itemId.isNotBlank()) { "A catalog item ID is required" }
+        val stored = fileStore.write(input, mimeType)
+        val asset = MediaAssetEntity(
+            id = UUID.randomUUID().toString(),
+            ownerType = MediaAssetOwnerType.CATALOG_ITEM.name,
+            ownerId = itemId,
+            role = MediaAssetRole.CATALOG_IMAGE.name,
+            relativePath = stored.relativePath,
+            mimeType = stored.mimeType,
+            byteSize = stored.byteSize,
+            sha256 = stored.sha256,
+            createdAtEpochMillis = System.currentTimeMillis(),
+        )
+        val previous = try {
+            mediaAssetDao.replaceForOwner(asset)
+        } catch (failure: Exception) {
+            fileStore.delete(stored.relativePath)
+            throw failure
+        }
+        previous?.let { fileStore.delete(it.relativePath) }
+    }
+
+    override suspend fun loadCatalogImage(itemId: String): ByteArray? {
+        val asset = mediaAssetDao.findByOwner(
+            MediaAssetOwnerType.CATALOG_ITEM.name, itemId, MediaAssetRole.CATALOG_IMAGE.name,
+        ) ?: return null
+        return fileStore.open(asset.relativePath)?.use { it.readBytes() }
+    }
+
+    override suspend fun removeCatalogImage(itemId: String): Boolean =
+        removeImage(MediaAssetOwnerType.CATALOG_ITEM, itemId, MediaAssetRole.CATALOG_IMAGE)
 
     override suspend fun saveRingImage(input: InputStream, mimeType: String) =
         saveRingAsset(input, mimeType, MediaAssetRole.RING_IMAGE)

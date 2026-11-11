@@ -257,3 +257,11 @@ The available host has GitHub repository read/write integration but no local And
 - CI must validate Hilt, Compose, Room, and test integration.
 
 - Added the missing Hilt binding for the new `RingProfileMediaRepository` contract to the existing local media manager. The feature screen can now receive the media contract without depending on the data module.
+
+
+## Catalog image integration (2026-11-12)
+- Added a domain media contract and local asset-manager implementation for catalog item images, keyed by catalog item ID.
+- Added image selection/removal to the Refinery catalog editor and image previews in the Shop.
+- Catalog image bytes remain separate from catalog metadata and are stored in the private media directory with Room ownership metadata.
+- Added a persistence-isolation test for two catalog item images.
+- Backup inclusion of media files remains pending; this is not yet a portable backup solution.

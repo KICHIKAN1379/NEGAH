@@ -1,5 +1,16 @@
 package com.kichikan.negah.feature.refinery
 
+import android.content.Context
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import java.io.InputStream
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.compose.foundation.layout.Arrangement
@@ -32,6 +43,7 @@ import com.kichikan.negah.domain.growth.GrowthTrack
 import com.kichikan.negah.domain.inventory.CatalogItem
 import com.kichikan.negah.domain.inventory.InventoryCategory
 import com.kichikan.negah.domain.inventory.InventoryRepository
+import com.kichikan.negah.domain.inventory.CatalogItemMediaRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.UUID
 import javax.inject.Inject
@@ -40,12 +52,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
-data class RefineryUiState(val growthItems: List<GrowthItem> = emptyList(), val catalogItems: List<CatalogItem> = emptyList())
+data class RefineryUiState(val growthItems: List<GrowthItem> = emptyList(), val catalogItems: List<CatalogItem> = emptyList(), val catalogImages: Map<String, ByteArray> = emptyMap(), val mediaMessage: String? = null)
 
 @HiltViewModel
 class RefineryViewModel @Inject constructor(
     private val growth: GrowthMapRepository,
     private val inventory: InventoryRepository,
+    private val catalogMedia: CatalogItemMediaRepository,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(RefineryUiState())
     val state = mutableState.asStateFlow()
@@ -60,7 +73,14 @@ class RefineryViewModel @Inject constructor(
                 inventory.observeAllCatalog(InventoryCategory.REWARD),
             ) { cap, self, avatar, frame, reward ->
                 RefineryUiState(cap + self, avatar + frame + reward)
-            }.collect { mutableState.value = it }
+            }.collect { next ->
+                mutableState.value = next
+                val images = next.catalogItems.mapNotNull { item ->
+                    runCatching { catalogMedia.loadCatalogImage(item.id) }.getOrNull()
+                        ?.let { item.id to it }
+                }.toMap()
+                mutableState.update { current -> current.copy(catalogImages = images) }
+            }
         }
     }
 
@@ -94,6 +114,22 @@ class RefineryViewModel @Inject constructor(
         }
     }
 
+    fun saveCatalogImage(itemId: String, input: InputStream, mimeType: String) {
+        viewModelScope.launch {
+            runCatching { catalogMedia.saveCatalogImage(itemId, input, mimeType); catalogMedia.loadCatalogImage(itemId) }
+                .onSuccess { bytes -> mutableState.update { it.copy(catalogImages = it.catalogImages + (itemId to bytes!!), mediaMessage = "تصویر آیتم ذخیره شد") } }
+                .onFailure { input.close(); mutableState.update { it.copy(mediaMessage = "ذخیره تصویر آیتم انجام نشد") } }
+        }
+    }
+
+    fun removeCatalogImage(itemId: String) {
+        viewModelScope.launch {
+            runCatching { catalogMedia.removeCatalogImage(itemId) }
+                .onSuccess { mutableState.update { it.copy(catalogImages = it.catalogImages - itemId, mediaMessage = "تصویر آیتم حذف شد") } }
+                .onFailure { mutableState.update { it.copy(mediaMessage = "حذف تصویر آیتم انجام نشد") } }
+        }
+    }
+
     fun toggleCatalog(item: CatalogItem) {
         viewModelScope.launch { inventory.saveCatalogItem(item.copy(isAvailable = !item.isAvailable)) }
     }
@@ -102,6 +138,16 @@ class RefineryViewModel @Inject constructor(
 @Composable
 fun RefineryScreen(viewModel: RefineryViewModel, modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    var imageTargetId by rememberSaveable { mutableStateOf<String?>(null) }
+    val catalogImagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        val targetId = imageTargetId
+        if (uri != null && targetId != null) {
+            val mime = context.contentResolver.getType(uri)
+            val input = context.contentResolver.openInputStream(uri)
+            if (mime != null && input != null) viewModel.saveCatalogImage(targetId, input, mime) else input?.close()
+        }
+    }
     var section by rememberSaveable { mutableStateOf(0) }
     var track by rememberSaveable { mutableStateOf(GrowthTrack.CAPABILITY.name) }
     var category by rememberSaveable { mutableStateOf(InventoryCategory.AVATAR.name) }
@@ -121,6 +167,7 @@ fun RefineryScreen(viewModel: RefineryViewModel, modifier: Modifier = Modifier) 
             FilterChip(selected = section == 0, onClick = { section = 0 }, label = { Text("نقشه کمال") })
             FilterChip(selected = section == 1, onClick = { section = 1 }, label = { Text("کاتالوگ گنجینه") })
         }
+        state.mediaMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
         if (section == 0) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(selected = selectedTrack == GrowthTrack.CAPABILITY, onClick = { track = GrowthTrack.CAPABILITY.name }, label = { Text("توانمندی") })
@@ -131,7 +178,11 @@ fun RefineryScreen(viewModel: RefineryViewModel, modifier: Modifier = Modifier) 
                 items(growthItems, key = { it.id }) { item ->
                     Card(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            val itemImage = remember(state.catalogImages[item.id]) { catalogImagePreview(state.catalogImages[item.id]) }
+                            itemImage?.let { Image(it, item.title, Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(10.dp)), contentScale = ContentScale.Crop) }
                             Text(item.title, style = MaterialTheme.typography.titleMedium)
+                            TextButton(onClick = { imageTargetId = item.id; catalogImagePicker.launch("image/*") }) { Text("انتخاب تصویر") }
+                            if (itemImage != null) TextButton(onClick = { viewModel.removeCatalogImage(item.id) }) { Text("حذف تصویر") }
                             item.description?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                             Text(if (item.isActive) "فعال" else "غیرفعال")
                             Row {

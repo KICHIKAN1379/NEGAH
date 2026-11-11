@@ -1,4 +1,6 @@
 package com.kichikan.negah
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -8,9 +10,25 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kichikan.negah.domain.inventory.InventoryCategory
+private fun catalogImagePreview(bytes: ByteArray?, maxDimension: Int = 360) = bytes?.let {
+    val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    android.graphics.BitmapFactory.decodeByteArray(it, 0, it.size, bounds)
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@let null
+    var sample = 1
+    while (bounds.outWidth / sample > maxDimension || bounds.outHeight / sample > maxDimension) sample *= 2
+    android.graphics.BitmapFactory.decodeByteArray(
+        it, 0, it.size, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample },
+    )?.asImageBitmap()
+}
+
 @Composable
 fun ShopScreen(viewModel: ShopViewModel, modifier: Modifier = Modifier) {
  val state by viewModel.state.collectAsStateWithLifecycle()
@@ -38,6 +56,8 @@ fun ShopScreen(viewModel: ShopViewModel, modifier: Modifier = Modifier) {
     items(categoryItems, key = { it.id }) { item ->
      val owned = item.id in state.ownedItemIds
      Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+      val image = remember(state.catalogImages[item.id]) { catalogImagePreview(state.catalogImages[item.id], 512) }
+      image?.let { Image(it, item.title, Modifier.fillMaxWidth().height(128.dp).clip(RoundedCornerShape(10.dp)), contentScale = ContentScale.Crop) }
       Text(item.title, style = MaterialTheme.typography.titleMedium)
       item.description?.takeIf(String::isNotBlank)?.let { Text(it) }
       Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {

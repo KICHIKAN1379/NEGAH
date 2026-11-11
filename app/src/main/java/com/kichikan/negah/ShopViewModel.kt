@@ -13,9 +13,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-data class ShopUiState(val members: List<Member> = emptyList(), val selectedMemberId: String? = null, val items: List<CatalogItem> = emptyList(), val ownedItemIds: Set<String> = emptySet(), val category: InventoryCategory = InventoryCategory.AVATAR, val message: String? = null)
+data class ShopUiState(val members: List<Member> = emptyList(), val selectedMemberId: String? = null, val items: List<CatalogItem> = emptyList(), val ownedItemIds: Set<String> = emptySet(), val category: InventoryCategory = InventoryCategory.AVATAR, val message: String? = null, val catalogImages: Map<String, ByteArray> = emptyMap())
 @HiltViewModel
-class ShopViewModel @Inject constructor(private val members: MemberRepository, private val inventory: InventoryRepository) : ViewModel() {
+class ShopViewModel @Inject constructor(private val members: MemberRepository, private val inventory: InventoryRepository, private val catalogMedia: CatalogItemMediaRepository) : ViewModel() {
  private val mutableState = MutableStateFlow(ShopUiState())
  val state = mutableState.asStateFlow()
  private var memberJob: Job? = null
@@ -29,7 +29,13 @@ class ShopViewModel @Inject constructor(private val members: MemberRepository, p
     if (selected != null) observeMember(selected) else { memberJob?.cancel(); memberJob = null; observedMemberId = null; mutableState.update { it.copy(ownedItemIds = emptySet()) } }
    }
   } }
-  viewModelScope.launch { combine(inventory.observeCatalog(InventoryCategory.AVATAR), inventory.observeCatalog(InventoryCategory.FRAME), inventory.observeCatalog(InventoryCategory.REWARD)) { a, f, r -> a + f + r }.collect { all -> mutableState.update { it.copy(items = all) } } }
+  viewModelScope.launch { combine(inventory.observeCatalog(InventoryCategory.AVATAR), inventory.observeCatalog(InventoryCategory.FRAME), inventory.observeCatalog(InventoryCategory.REWARD)) { a, f, r -> a + f + r }.collect { all ->
+   mutableState.update { it.copy(items = all, catalogImages = it.catalogImages.filterKeys { id -> all.any { item -> item.id == id } }) }
+   val images = all.mapNotNull { item ->
+    runCatching { catalogMedia.loadCatalogImage(item.id) }.getOrNull()?.let { item.id to it }
+   }.toMap()
+   mutableState.update { it.copy(catalogImages = images) }
+  } }
  }
  fun selectMember(id: String) { if (state.value.members.none { it.id == id }) return; mutableState.update { it.copy(selectedMemberId = id, message = null) }; if (observedMemberId != id) observeMember(id) }
  private fun observeMember(id: String) {
