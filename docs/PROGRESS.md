@@ -190,3 +190,12 @@ The available host has GitHub repository read/write integration but no local And
 - Media audit: the current `MemberEntity` has no avatar/profile-image reference; `CatalogItem` / `CatalogItemEntity` contain title/description/price but no image asset reference; no persisted ring profile image/banner implementation was found in the inspected app tree. Actual image-byte storage, member/ring associations and portable image backup are therefore not implemented.
 - Required next media slice: define an app-private asset store with stable logical IDs and explicit owner/category metadata; copy selected content into managed storage rather than retaining temporary picker URIs; include binary assets in full-ring backup/export and remap local paths on restore. Keep encryption/recovery implementation blocked until the owner selects its portable recovery design.
 - Owner backup decisions now recorded: portable to a new phone; attempt automatic backup when the app moves to the background; retain at most two automatic versions in MRT. Do not claim guaranteed execution after force-stop, crash, process kill or shutdown.
+
+
+## Latest continuation — durable image asset foundation
+- Added Room `media_assets` metadata with a unique owner-type/owner-ID/role association and a version 8→9 migration.
+- Added app-private binary storage for JPEG, PNG and WebP imports. The storage layer copies bytes out of temporary picker URIs, uses generated filenames (not user-supplied paths), records byte size and SHA-256, and validates paths before opening/deleting.
+- Added an injectable manager to import, replace, open and remove an asset associated with a member, ring or catalog item.
+- Added JVM tests for byte round-trip, metadata, deletion, empty input, unsupported MIME types and path traversal rejection.
+- This is infrastructure only: no screen currently invokes it; member/catalog records are not yet wired to the stored asset IDs, and portable backup/restore is not implemented.
+- CI must verify Room schema generation, migration wiring, Hilt construction and tests before this slice is considered validated.
