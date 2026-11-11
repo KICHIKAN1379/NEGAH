@@ -732,6 +732,15 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
     val nextLevelXp = LevelProgression.minimumXpForLevel(level + 1)
     val progress = ((member.totalXp - currentLevelXp).coerceAtLeast(0L).toFloat() /
         (nextLevelXp - currentLevelXp).coerceAtLeast(1L).toFloat()).coerceIn(0f, 1f)
+    val parsedAdjustmentAmount = adjustmentAmountDraft.trim()
+        .map { digit -> when (digit) {
+            '۰' -> '0'; '۱' -> '1'; '۲' -> '2'; '۳' -> '3'; '۴' -> '4'
+            '۵' -> '5'; '۶' -> '6'; '۷' -> '7'; '۸' -> '8'; '۹' -> '9'
+            '٠' -> '0'; '١' -> '1'; '٢' -> '2'; '٣' -> '3'; '٤' -> '4'
+            '٥' -> '5'; '٦' -> '6'; '٧' -> '7'; '٨' -> '8'; '٩' -> '9'
+            '−' -> '-'
+            else -> digit
+        } }.joinToString("").toLongOrNull()
     Column(modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -919,6 +928,7 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                 }
                 val sourceLabel = when (transaction.sourceType) {
                     "BIRTHDAY_REWARD" -> "پاداش تولد"
+                    "COACH_ADJUSTMENT" -> "اصلاح مربی: ${transaction.sourceId.orEmpty()}"
                     "STORE_PURCHASE" -> "خرید از فروشگاه"
                     "MISSION_REWARD" -> "پاداش مأموریت"
                     else -> "ثبت‌شده در دفتر اقتصادی"
@@ -1008,12 +1018,12 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                 },
                 confirmButton = {
                     Button(onClick = {
-                        val delta = adjustmentAmountDraft.trim().toLongOrNull()
+                        val delta = parsedAdjustmentAmount
                         if (delta != null && delta != 0L && adjustmentReasonDraft.isNotBlank()) {
                             onAdjustEconomy(adjustmentCurrency, delta, adjustmentReasonDraft)
                             showEconomyAdjustmentDialog = false
                         }
-                    }, enabled = adjustmentAmountDraft.trim().toLongOrNull()?.let { it != 0L } == true && adjustmentReasonDraft.isNotBlank()) {
+                    }, enabled = parsedAdjustmentAmount?.let { it != 0L } == true && adjustmentReasonDraft.isNotBlank()) {
                         Text("ثبت اصلاح")
                     }
                 },
