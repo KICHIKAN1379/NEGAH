@@ -14,6 +14,7 @@ import com.kichikan.negah.data.local.settings.ClassDaysDao
 import com.kichikan.negah.data.local.settings.HomeShortcutsDao
 import com.kichikan.negah.data.local.media.MediaAssetDao
 import com.kichikan.negah.data.local.settings.RingProfileDao
+import com.kichikan.negah.data.local.mission.MissionDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -25,7 +26,7 @@ import javax.inject.Singleton
 object DatabaseModule {
  @Provides @Singleton fun provideNegahDatabase(@ApplicationContext context: Context): NegahDatabase =
   Room.databaseBuilder(context, NegahDatabase::class.java, "negah_coach.db")
-   .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10).build()
+   .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11).build()
  @Provides fun provideMemberDao(database: NegahDatabase): MemberDao = database.memberDao()
  @Provides fun provideSessionDao(database: NegahDatabase): SessionDao = database.sessionDao()
  @Provides fun provideAttendanceDao(database: NegahDatabase): AttendanceDao = database.attendanceDao()
@@ -38,4 +39,5 @@ object DatabaseModule {
  @Provides fun provideHomeShortcutsDao(database: NegahDatabase): HomeShortcutsDao = database.homeShortcutsDao()
  @Provides fun provideMediaAssetDao(database: NegahDatabase): MediaAssetDao = database.mediaAssetDao()
  @Provides fun provideRingProfileDao(database: NegahDatabase): RingProfileDao = database.ringProfileDao()
+ @Provides fun provideMissionDao(database: NegahDatabase): MissionDao = database.missionDao()
 }

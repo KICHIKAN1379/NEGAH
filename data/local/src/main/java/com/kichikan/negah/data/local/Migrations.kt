@@ -42,24 +42,26 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
   database.execSQL("INSERT INTO home_shortcut_settings (id, configured) VALUES (1, 0)")
  }
 }
-
 val MIGRATION_7_8 = object : Migration(7, 8) {
- override fun migrate(database: SupportSQLiteDatabase) {
-  database.execSQL("ALTER TABLE members ADD COLUMN birthDateJalali TEXT")
- }
+ override fun migrate(database: SupportSQLiteDatabase) { database.execSQL("ALTER TABLE members ADD COLUMN birthDateJalali TEXT") }
 }
-
-
 val MIGRATION_8_9 = object : Migration(8, 9) {
  override fun migrate(database: SupportSQLiteDatabase) {
   database.execSQL("""CREATE TABLE IF NOT EXISTS media_assets (id TEXT NOT NULL, ownerType TEXT NOT NULL, ownerId TEXT NOT NULL, role TEXT NOT NULL, relativePath TEXT NOT NULL, mimeType TEXT NOT NULL, byteSize INTEGER NOT NULL, sha256 TEXT NOT NULL, createdAtEpochMillis INTEGER NOT NULL, PRIMARY KEY(id))""")
   database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_media_assets_ownerType_ownerId_role ON media_assets(ownerType, ownerId, role)")
  }
 }
-
-
 val MIGRATION_9_10 = object : Migration(9, 10) {
  override fun migrate(database: SupportSQLiteDatabase) {
   database.execSQL("""CREATE TABLE IF NOT EXISTS ring_profile (id TEXT NOT NULL, name TEXT NOT NULL, username TEXT, updatedAtEpochMillis INTEGER NOT NULL, PRIMARY KEY(id))""")
+ }
+}
+val MIGRATION_10_11 = object : Migration(10, 11) {
+ override fun migrate(database: SupportSQLiteDatabase) {
+  database.execSQL("""CREATE TABLE IF NOT EXISTS missions (id TEXT NOT NULL, kind TEXT NOT NULL, title TEXT NOT NULL, description TEXT, rewardCurrency TEXT NOT NULL, rewardAmount INTEGER NOT NULL, isActive INTEGER NOT NULL, createdAtEpochMillis INTEGER NOT NULL, PRIMARY KEY(id))""")
+  database.execSQL("""CREATE TABLE IF NOT EXISTS mission_assignments (id TEXT NOT NULL, missionId TEXT NOT NULL, memberId TEXT NOT NULL, status TEXT NOT NULL, coachProgressNote TEXT, updatedAtEpochMillis INTEGER NOT NULL, PRIMARY KEY(id), FOREIGN KEY(missionId) REFERENCES missions(id) ON UPDATE NO ACTION ON DELETE RESTRICT, FOREIGN KEY(memberId) REFERENCES members(id) ON UPDATE NO ACTION ON DELETE RESTRICT)""")
+  database.execSQL("CREATE INDEX IF NOT EXISTS index_mission_assignments_missionId ON mission_assignments(missionId)")
+  database.execSQL("CREATE INDEX IF NOT EXISTS index_mission_assignments_memberId ON mission_assignments(memberId)")
+  database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_mission_assignments_missionId_memberId ON mission_assignments(missionId, memberId)")
  }
 }
