@@ -168,7 +168,7 @@ Tasks:
 1. Implement the nine Settings options in the approved order: Refinery, ring profile, sound/background/theme, daily quotes, class weekdays, Home shortcuts, import/export, factory reset, help.
 2. Implement deleted-member recovery inside the import/export/data-management area.
 3. Implement ring profile, theme, quotes, class weekdays and shortcuts (maximum four).
-4. Define portable backup encryption and recovery before writing the final backup flow.
+4. Defer backup encryption and portable recovery-key design until online-service implementation, per owner decision (2026-11-12).
 5. Implement user-selected MRT folder access using Android's system picker.
 6. Implement JSON/ZIP manual export/import with schema/version validation.
 7. Keep automatic backups always enabled and retain at most two versions; verify rotation, restore and failure recovery.
@@ -208,7 +208,7 @@ P0 (first reviewable app):
 3. Member list/add/profile.
 4. Session creation and five-state attendance with required reasons and explicit save.
 5. Home identity, banner, quote, weekly pulse and shortcuts.
-6. Local data persistence and a safe backup/export path if the encryption decision is resolved.
+6. Local data persistence and backup/export flows; keep encryption and portable key recovery deferred until online-service work.
 
 P1 (complete core experience):
 1. Economy/level integrity and Growth Map.
@@ -221,7 +221,7 @@ P2 (remaining product completeness):
 2. Reading and six-axis report card.
 3. Wheel and within-ring competition.
 4. Birthday automation, notifications and remaining refinements.
-5. Full encrypted automatic backup/restore if not already complete.
+5. Local automatic backup/restore with MRT two-version retention; backup encryption and portable key recovery remain deferred until online-service work.
 
 This is a delivery order, not a permanent scope reduction. Any unfinished item must remain explicitly marked as incomplete.
 
@@ -240,5 +240,5 @@ This is a delivery order, not a permanent scope reduction. Any unfinished item m
 - No local Android SDK/Gradle execution is available in the current host; use GitHub Actions or another compatible build host.
 - The repository does not currently contain Gradle wrapper scripts/JAR; local wrapper use is unavailable until restored.
 - README build prerequisites conflict with the actual project configuration.
-- Backup encryption/recovery and cadence require a concrete design before implementation.
+- Backup encryption/recovery are explicitly deferred until online-service work. The automatic trigger (app backgrounding) and two-version MRT retention are already owner decisions.
 - Any unrecorded mission/reading/wheel/competition scoring rule must be reconciled against approved product sources or referred to the owner.

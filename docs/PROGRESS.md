@@ -54,7 +54,7 @@ Last updated: 2026-11-11
 - Sessions/attendance now include a month-navigable report with separate counts for all five attendance states, selected-month CSV export, and a live revision-history view; a group filter waits for the group data model.
 - The Sessions screen now supports previous/next week navigation; its seven-day window starts on Saturday and day chips remain limited to configured class days.
 - Member profile now includes growth/economy/inventory sections, four Ganjine tabs, automatic level badges, received-history filters, a six-axis report card, and active/archive switching with restore. Member profile avatar selection and display now use app-private image storage; catalog and ring image flows and frame rendering remain unsupported.
-- Encrypted backup/restore, MRT retention of at most two versions, and first-run file-access flow are not implemented.
+- Backup/restore, MRT retention of at most two versions, and first-run file-access flow are not implemented. Backup encryption and portable key recovery are explicitly deferred until online-service work.
 - WorkManager is mentioned in README architecture text, but no WorkManager implementation/dependency was found in the audited files.
 - DAO tests now cover class-day persistence and session/attendance persistence, update revisions and deletion restrictions. The 5→6 database migration has not yet been exercised by a dedicated migration test.
 - The repository contains gradle/wrapper/gradle-wrapper.properties but no gradlew script, gradlew.bat or gradle-wrapper.jar; local wrapper builds are not currently available.
@@ -148,7 +148,7 @@ Last updated: 2026-11-11
 3. Complete ring profile and Home identity/banner/daily-quote flows.
 4. Complete the remaining Settings options and the missing Progress domains (missions, reading, wheel and competition) without inventing unresolved scoring rules.
 5. Add group filter only when the group data model and UX rules are implemented.
-6. Design and implement portable encrypted backup/restore only after the owner selects the recovery design; keep the agreed MRT two-version retention and background trigger.
+6. Implement the local backup/restore flow when scheduled in the offline MVP plan; keep encryption and portable key recovery deferred until online-service work, with the agreed MRT two-version retention and background trigger.
 7. Run CI after each meaningful code slice and record exact commit-linked results.
 8. Keep merge, release, destructive data operations and material unresolved product decisions behind owner approval.
 
@@ -188,7 +188,7 @@ The available host has GitHub repository read/write integration but no local And
 - CI run #123 for that exact commit was still pending at the latest check; the workflow returned no jobs yet. Do not treat it as passed.
 - Birthday reward logic currently checks active-member stream emissions and writes an idempotent 30-point ledger entry for the Jalali year. A scheduled birthday reminder (three days before) is not implemented, and the reward check is not a durable midnight scheduler.
 - Media audit: member avatar bytes are now associated through `media_assets` using MEMBER/AVATAR ownership (without changing the existing member model or its avatar_id/catalog semantics). Catalog items still have no image association, and persisted ring profile image/banner flows remain unimplemented. Portable image backup is not implemented.
-- Required next media slice: define an app-private asset store with stable logical IDs and explicit owner/category metadata; copy selected content into managed storage rather than retaining temporary picker URIs; include binary assets in full-ring backup/export and remap local paths on restore. Keep encryption/recovery implementation blocked until the owner selects its portable recovery design.
+- Required next media slice: define an app-private asset store with stable logical IDs and explicit owner/category metadata; copy selected content into managed storage rather than retaining temporary picker URIs; include binary assets in full-ring backup/export and remap local paths on restore. Keep encryption/recovery deferred until the online-service phase, per the owner decision.
 - Owner backup decisions now recorded: portable to a new phone; attempt automatic backup when the app moves to the background; retain at most two automatic versions in MRT. Do not claim guaranteed execution after force-stop, crash, process kill or shutdown.
 
 
@@ -218,3 +218,8 @@ The available host has GitHub repository read/write integration but no local And
 
 ## Avatar-flow follow-up
 - Added a regression test ensuring switching from a member with a saved avatar to a member without one does not display the previous member's image.
+
+
+## Documentation alignment — backup encryption deferral
+- Reconciled README, architecture, implementation plan/status and progress notes with the owner's decision: encryption and portable key recovery are deferred until online-service work.
+- Local backup/restore and the two-version MRT retention requirement remain product work; this documentation change does not implement backup.
