@@ -226,6 +226,27 @@ class MembersViewModelTest {
     }
 
     @Test
+    fun coachCanIncreaseAndDecreaseXpOnlyAsCorrectionsWithReason() = runTest {
+        viewModel.onMemberSelected("member-1")
+        viewModel.adjustEconomyBalance(EconomyCurrency.XP, 25L, "اصلاح ثبت اولیه")
+        viewModel.adjustEconomyBalance(EconomyCurrency.XP, -5L, "اصلاح اشتباه ثبت")
+        assertEquals(2, economy.appended.size)
+        assertEquals(listOf(25L, -5L), economy.appended.map(EconomyTransaction::amountDelta))
+        assertEquals(listOf(EconomyTransactionKind.CORRECTION, EconomyTransactionKind.CORRECTION), economy.appended.map(EconomyTransaction::kind))
+        assertEquals(listOf(EconomyCurrency.XP, EconomyCurrency.XP), economy.appended.map(EconomyTransaction::currency))
+        assertEquals(listOf("اصلاح ثبت اولیه", "اصلاح اشتباه ثبت"), economy.appended.map(EconomyTransaction::sourceId))
+    }
+
+    @Test
+    fun coachCanCorrectPointsAndDiamondsAsLedgerCorrections() = runTest {
+        viewModel.onMemberSelected("member-1")
+        viewModel.adjustEconomyBalance(EconomyCurrency.POINTS, 40L, "اصلاح امتیاز")
+        viewModel.adjustEconomyBalance(EconomyCurrency.DIAMONDS, -2L, "اصلاح الماس")
+        assertEquals(listOf(EconomyCurrency.POINTS, EconomyCurrency.DIAMONDS), economy.appended.map(EconomyTransaction::currency))
+        assertEquals(listOf(EconomyTransactionKind.CORRECTION, EconomyTransactionKind.CORRECTION), economy.appended.map(EconomyTransaction::kind))
+    }
+
+    @Test
     fun closingProfileClearsSelectionAndHistory() = runTest {
         val entry = transaction("tx-1", "member-1", 10)
         economy.emit("member-1", listOf(entry))
@@ -294,6 +315,7 @@ private class FakeMemberRepository : MemberRepository {
 }
 
 private class FakeEconomyRepository : EconomyRepository {
+    val appended = mutableListOf<EconomyTransaction>()
     private val histories = mutableMapOf<String, MutableStateFlow<List<EconomyTransaction>>>()
     fun emit(memberId: String, value: List<EconomyTransaction>) {
         histories.getOrPut(memberId) { MutableStateFlow(emptyList()) }.value = value
@@ -301,7 +323,7 @@ private class FakeEconomyRepository : EconomyRepository {
     override fun observeForMember(memberId: String): Flow<List<EconomyTransaction>> =
         histories.getOrPut(memberId) { MutableStateFlow(emptyList()) }.asStateFlow()
     override suspend fun appendAtomically(transaction: EconomyTransaction) =
-        com.kichikan.negah.domain.economy.LedgerAppendResult.APPENDED
+        com.kichikan.negah.domain.economy.LedgerAppendResult.APPENDED.also { appended += transaction }
 }
 
 

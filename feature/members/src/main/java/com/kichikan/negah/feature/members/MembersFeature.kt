@@ -180,7 +180,7 @@ class MembersViewModel @Inject constructor(
         viewModelScope.launch {
             repository.observeActiveMembers().collect { members ->
                 mutableState.update { it.copy(members = members) }
-                grantBirthdayCredits(members)
+                grantBirthdayDiamonds(members)
             }
         }
         viewModelScope.launch {
@@ -190,7 +190,7 @@ class MembersViewModel @Inject constructor(
         }
     }
 
-    private fun grantBirthdayCredits(members: List<Member>) {
+    private fun grantBirthdayDiamonds(members: List<Member>) {
         // Android ICU is unavailable in plain JVM unit tests; skip the
         // device-calendar check there while retaining it on Android.
         val today = runCatching {
@@ -209,7 +209,7 @@ class MembersViewModel @Inject constructor(
             val transaction = EconomyTransaction(
                 id = "birthday-${member.id}-$currentYear",
                 memberId = member.id,
-                currency = EconomyCurrency.POINTS,
+                currency = EconomyCurrency.DIAMONDS,
                 amountDelta = 30L,
                 kind = EconomyTransactionKind.EARN,
                 sourceType = "BIRTHDAY_REWARD",
@@ -237,6 +237,36 @@ class MembersViewModel @Inject constructor(
             } catch (_: Exception) {
                 mutableState.update { it.copy(profileMessage = "تاریخ واردشده معتبر نیست یا ذخیره انجام نشد") }
             }
+        }
+    }
+    fun adjustEconomyBalance(currency: EconomyCurrency, amountDelta: Long, reason: String) {
+        val memberId = mutableState.value.selectedMemberId ?: return
+        val normalizedReason = reason.trim()
+        if (amountDelta == 0L || normalizedReason.isBlank()) {
+            mutableState.update { it.copy(profileMessage = "مقدار اصلاح و دلیل آن را وارد کنید") }
+            return
+        }
+        val transaction = EconomyTransaction(
+            id = "coach-adjustment-${java.util.UUID.randomUUID()}",
+            memberId = memberId,
+            currency = currency,
+            amountDelta = amountDelta,
+            kind = EconomyTransactionKind.CORRECTION,
+            sourceType = "COACH_ADJUSTMENT",
+            sourceId = normalizedReason,
+            createdAtEpochMillis = System.currentTimeMillis(),
+        )
+        viewModelScope.launch {
+            runCatching { economyRepository.appendAtomically(transaction) }
+                .onSuccess { result ->
+                    val message = when (result) {
+                        com.kichikan.negah.domain.economy.LedgerAppendResult.APPENDED -> "اصلاح موجودی ثبت شد"
+                        com.kichikan.negah.domain.economy.LedgerAppendResult.INSUFFICIENT_BALANCE -> "موجودی پس از کاهش نمی‌تواند منفی شود"
+                        com.kichikan.negah.domain.economy.LedgerAppendResult.BALANCE_OVERFLOW -> "مقدار واردشده بیش از حد مجاز است"
+                    }
+                    mutableState.update { it.copy(profileMessage = message) }
+                }
+                .onFailure { mutableState.update { it.copy(profileMessage = "ثبت اصلاح موجودی انجام نشد") } }
         }
     }
     fun onSearchChanged(value: String) = mutableState.update { it.copy(searchQuery = value) }
@@ -507,7 +537,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val selectedMember = state.members.firstOrNull { it.id == state.selectedMemberId }
     if (selectedMember != null) {
-        MemberProfileScreen(selectedMember, state.economyTransactions, state.historyFilter, viewModel::onHistoryFilterChanged, state.growthItems, state.growthProgress, state.growthSaveMessage, state.inventoryEntries, state.availableCatalogItems, state.activeInventoryItems, state.inventoryMessage, state.profileMessage, state.avatarBytes, state.avatarMessage, viewModel::updateSelectedMemberBirthDate, viewModel::updateMemberAvatar, viewModel::removeMemberAvatar, viewModel::saveGrowthProgress, viewModel::activateInventoryItem, viewModel::grantCatalogItem, viewModel::onProfileClosed, modifier)
+        MemberProfileScreen(selectedMember, state.economyTransactions, state.historyFilter, viewModel::onHistoryFilterChanged, state.growthItems, state.growthProgress, state.growthSaveMessage, state.inventoryEntries, state.availableCatalogItems, state.activeInventoryItems, state.inventoryMessage, state.profileMessage, state.avatarBytes, state.avatarMessage, viewModel::updateSelectedMemberBirthDate, viewModel::adjustEconomyBalance, viewModel::updateMemberAvatar, viewModel::removeMemberAvatar, viewModel::saveGrowthProgress, viewModel::activateInventoryItem, viewModel::grantCatalogItem, viewModel::onProfileClosed, modifier)
         return
     }
 
@@ -667,11 +697,15 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, historyFilter: MemberHistoryFilter, onHistoryFilterChanged: (MemberHistoryFilter) -> Unit, growthItems: List<GrowthItem>, growthProgress: List<MemberGrowthProgress>, growthSaveMessage: String?, inventoryEntries: List<MemberInventoryEntry>, availableCatalogItems: List<CatalogItem>, activeInventoryItems: List<ActiveInventoryItem>, inventoryMessage: String?, profileMessage: String?, avatarBytes: ByteArray?, avatarMessage: String?, onUpdateBirthDate: (String) -> Unit, onUpdateAvatar: (InputStream, String) -> Unit, onRemoveAvatar: () -> Unit, onSaveGrowthProgress: (GrowthItem, Int, String?) -> Unit, onActivateInventoryItem: (MemberInventoryEntry) -> Unit, onGrantCatalogItem: (CatalogItem) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
+private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, historyFilter: MemberHistoryFilter, onHistoryFilterChanged: (MemberHistoryFilter) -> Unit, growthItems: List<GrowthItem>, growthProgress: List<MemberGrowthProgress>, growthSaveMessage: String?, inventoryEntries: List<MemberInventoryEntry>, availableCatalogItems: List<CatalogItem>, activeInventoryItems: List<ActiveInventoryItem>, inventoryMessage: String?, profileMessage: String?, avatarBytes: ByteArray?, avatarMessage: String?, onUpdateBirthDate: (String) -> Unit, onAdjustEconomy: (EconomyCurrency, Long, String) -> Unit, onUpdateAvatar: (InputStream, String) -> Unit, onRemoveAvatar: () -> Unit, onSaveGrowthProgress: (GrowthItem, Int, String?) -> Unit, onActivateInventoryItem: (MemberInventoryEntry) -> Unit, onGrantCatalogItem: (CatalogItem) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
     var inventoryTab by rememberSaveable { mutableStateOf("آواتار") }
     var showAllReceivedHistory by rememberSaveable { mutableStateOf(false) }
     var showBirthDateDialog by rememberSaveable { mutableStateOf(false) }
     var birthDateDraft by rememberSaveable(member.id) { mutableStateOf(member.birthDateJalali.orEmpty()) }
+    var showEconomyAdjustmentDialog by rememberSaveable { mutableStateOf(false) }
+    var adjustmentCurrency by rememberSaveable { mutableStateOf(EconomyCurrency.XP) }
+    var adjustmentAmountDraft by rememberSaveable { mutableStateOf("") }
+    var adjustmentReasonDraft by rememberSaveable { mutableStateOf("") }
     val context = LocalContext.current
     val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
@@ -757,10 +791,16 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
             }
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ProfileWalletCard("XP", member.totalXp.toString(), "پیشرفت دائمی", Modifier.weight(1f))
+            ProfileWalletCard("XP", member.totalXp.toString(), "غیرقابل خرج", Modifier.weight(1f))
             ProfileWalletCard("امتیاز", member.spendablePoints.toString(), "قابل خرج", Modifier.weight(1f))
-            ProfileWalletCard("الماس", member.diamonds.toString(), "شخصی‌سازی", Modifier.weight(1f))
+            ProfileWalletCard("الماس", member.diamonds.toString(), "قابل خرج", Modifier.weight(1f))
         }
+        TextButton(onClick = {
+            adjustmentCurrency = EconomyCurrency.XP
+            adjustmentAmountDraft = ""
+            adjustmentReasonDraft = ""
+            showEconomyAdjustmentDialog = true
+        }) { Text("اصلاح XP، امتیاز یا الماس") }
         ProfileSection("نقشه کمال", "دو مسیر مستقل رشد عضو") {
             GrowthTrackSection("توانمندی", growthItems.filter { it.track == GrowthTrack.CAPABILITY }, growthProgress, onSaveGrowthProgress)
             GrowthTrackSection("خودسازی", growthItems.filter { it.track == GrowthTrack.SELF_IMPROVEMENT }, growthProgress, onSaveGrowthProgress)
@@ -921,7 +961,7 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                         label = { Text(when (filter) {
                             MemberHistoryFilter.ALL -> "همه"
                             MemberHistoryFilter.XP -> "XP"
-                            MemberHistoryFilter.POINTS -> "اعتبار"
+                            MemberHistoryFilter.POINTS -> "امتیاز"
                             MemberHistoryFilter.DIAMONDS -> "الماس"
                             MemberHistoryFilter.ITEMS -> "آیتم‌ها"
                         }) },
@@ -940,6 +980,45 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                     }
                 }
             }
+        }
+        if (showEconomyAdjustmentDialog) {
+            AlertDialog(
+                onDismissRequest = { showEconomyAdjustmentDialog = false },
+                title = { Text("اصلاح موجودی شناسنامه") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("واحد موردنظر را انتخاب کن")
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf(EconomyCurrency.XP, EconomyCurrency.POINTS, EconomyCurrency.DIAMONDS).forEach { currency ->
+                                FilterChip(selected = adjustmentCurrency == currency, onClick = { adjustmentCurrency = currency }, label = {
+                                    Text(when (currency) {
+                                        EconomyCurrency.XP -> "XP"
+                                        EconomyCurrency.POINTS -> "امتیاز"
+                                        EconomyCurrency.DIAMONDS -> "الماس"
+                                    })
+                                })
+                            }
+                        }
+                        OutlinedTextField(value = adjustmentAmountDraft, onValueChange = { adjustmentAmountDraft = it },
+                            label = { Text("مقدار تغییر") }, placeholder = { Text("مثلاً ۲۰ یا ۵-") }, singleLine = true,
+                            supportingText = { Text("عدد مثبت برای افزایش و عدد منفی برای کاهش؛ XP قابل خرج‌کردن نیست") })
+                        OutlinedTextField(value = adjustmentReasonDraft, onValueChange = { adjustmentReasonDraft = it },
+                            label = { Text("دلیل اصلاح (الزامی)") }, singleLine = true)
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        val delta = adjustmentAmountDraft.trim().toLongOrNull()
+                        if (delta != null && delta != 0L && adjustmentReasonDraft.isNotBlank()) {
+                            onAdjustEconomy(adjustmentCurrency, delta, adjustmentReasonDraft)
+                            showEconomyAdjustmentDialog = false
+                        }
+                    }, enabled = adjustmentAmountDraft.trim().toLongOrNull()?.let { it != 0L } == true && adjustmentReasonDraft.isNotBlank()) {
+                        Text("ثبت اصلاح")
+                    }
+                },
+                dismissButton = { TextButton(onClick = { showEconomyAdjustmentDialog = false }) { Text("انصراف") } },
+            )
         }
         if (showBirthDateDialog) {
             AlertDialog(

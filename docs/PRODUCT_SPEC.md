@@ -104,7 +104,7 @@ Each tab shows items the member has received of that type. The coach may change 
 ### Birthdays
 
 - Notify the coach three days before a member's birthday.
-- A birthday reward is automatic and equals 30 spendable credits (امتیاز قابل‌خرج); it is recorded in the append-only economy ledger.
+- A birthday reward is automatic and equals 30 diamonds (الماس); it is recorded in the append-only economy ledger with currency DIAMONDS.
 - The reward is not a manual repeatable claim. The same member must not receive duplicate rewards for the same birthday occurrence, including after backup restore.
 
 ## 5. Progress
@@ -179,9 +179,10 @@ A session is a scheduled event; attendance is a separate record of actual partic
 ## 7. Economy, growth and inventory
 
 - XP, spendable points and diamonds are three independent currencies.
-- XP is used for permanent progression, level and rank; it is not spendable.
-- Spendable points are used for Shop rewards.
-- Diamonds are used for avatar and frame purchases.
+- XP is used for permanent progression, level and rank; it is never spendable, but the coach may increase or decrease it through a signed correction in the member profile.
+- Spendable points are used for Shop rewards and may be increased or decreased by a coach correction in the member profile.
+- Diamonds are used for avatar and frame purchases and may be increased or decreased by a coach correction in the member profile.
+- All three balances are shown and editable in the member profile. Manual changes are append-only CORRECTION ledger entries with a required reason; they are not purchases or XP spending. A correction may not make any balance negative.
 - Every earning, spend, refund or correction must be represented in an append-only, traceable economy ledger.
 - Purchases must be atomic: balance deduction and inventory grant either both succeed or both fail.
 - Badges are earned automatically by level; no manual badge grant and no badge sale.
