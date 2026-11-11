@@ -75,6 +75,7 @@ Ganjine has exactly four tabs, in this order:
 
 Each tab shows items the member has received of that type. The coach may change the active item where applicable.
 - Badges (نشان) are earned automatically when the member reaches the required level. The 21 progression tiers follow the approved IRGC rank order; level 1 unlocks the first tier, each subsequent level unlocks the next tier, and level 21 unlocks the final tier. Higher levels do not create additional rank badges.
+- These rank names are used only as symbolic in-app progress badges; they do not represent real-world rank, authority, affiliation, or promotion.
 - The coach may change which earned badge is active, but cannot manually grant a badge.
 - Badges are not Shop products and are never purchased.
 

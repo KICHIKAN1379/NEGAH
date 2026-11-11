@@ -566,7 +566,7 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                 }
             }
             if (inventoryTab == "نشان") {
-                Text("با هر سطح، یک درجه به‌صورت خودکار دریافت می‌شود. نشان‌ها قابل خرید یا اعطای دستی نیستند.",
+                Text("این نشان‌ها نماد پیشرفت در نگاه‌اند، نه درجه یا ترفیع واقعی. با هر سطح یک نشان باز می‌شود؛ خرید و اعطای دستی ندارند.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 RankBadgeProgression.all.forEach { badge ->
                     val earned = level >= badge.level
