@@ -223,3 +223,9 @@ The available host has GitHub repository read/write integration but no local And
 ## Documentation alignment — backup encryption deferral
 - Reconciled README, architecture, implementation plan/status and progress notes with the owner's decision: encryption and portable key recovery are deferred until online-service work.
 - Local backup/restore and the two-version MRT retention requirement remain product work; this documentation change does not implement backup.
+
+
+## Dependency-injection verification follow-up — member avatar (2026-11-12)
+- Added the missing Hilt binding from the domain-level `MemberAvatarRepository` contract to the Room/private-file-backed `MediaAssetManager`.
+- This closes the runtime graph gap between the MembersViewModel and local media persistence. The feature module remains dependent only on the domain contract.
+- Avatar picker, private-file persistence, profile preview, and ViewModel regression tests are present; CI is still queued, so compilation and test execution are not yet confirmed.
