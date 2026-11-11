@@ -1,6 +1,7 @@
 package com.kichikan.negah.feature.members
 
-import android.icu.util.PersianCalendar
+import android.icu.util.Calendar
+import android.icu.util.ULocale
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -174,10 +175,10 @@ class MembersViewModel @Inject constructor(
     }
 
     private fun grantBirthdayCredits(members: List<Member>) {
-        val today = PersianCalendar()
-        val currentYear = today.get(PersianCalendar.YEAR)
-        val currentMonth = today.get(PersianCalendar.MONTH) + 1
-        val currentDay = today.get(PersianCalendar.DATE)
+        val today = Calendar.getInstance(ULocale("fa_IR@calendar=persian"))
+        val currentYear = today.get(Calendar.YEAR)
+        val currentMonth = today.get(Calendar.MONTH) + 1
+        val currentDay = today.get(Calendar.DATE)
         val now = System.currentTimeMillis()
         members.forEach { member ->
             val parts = member.birthDateJalali?.split("/") ?: return@forEach
@@ -398,7 +399,12 @@ private fun normalizeJalaliDate(value: String): String {
     val month = parts[1].toIntOrNull() ?: error("ماه تولد نامعتبر است")
     val day = parts[2].toIntOrNull() ?: error("روز تولد نامعتبر است")
     require(year in 1200..1600 && month in 1..12 && day in 1..31) { "تاریخ تولد شمسی معتبر نیست" }
-    return "%04d/%02d/%02d".format(year, month, day)
+    val calendar = Calendar.getInstance(ULocale("fa_IR@calendar=persian"))
+    calendar.isLenient = false
+    calendar.clear()
+    calendar.set(year, month - 1, day)
+    calendar.timeInMillis // Force strict calendar validation (including month length and leap years).
+    return "%04d/%02d/%02d".format(java.util.Locale.ROOT, year, month, day)
 }
 
 @Composable
