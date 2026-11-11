@@ -59,7 +59,6 @@ fun NegahRoot(
     var openClassDays by rememberSaveable { mutableStateOf(false) }
     var openHomeShortcuts by rememberSaveable { mutableStateOf(false) }
     var openRingProfile by rememberSaveable { mutableStateOf(false) }
-    var openRingProfile by rememberSaveable { mutableStateOf(false) }
     var openSessions by rememberSaveable { mutableStateOf(false) }
     var openWeeklyPulse by rememberSaveable { mutableStateOf(false) }
     val membersState by membersViewModel.state.collectAsStateWithLifecycle()
@@ -163,7 +162,6 @@ fun NegahRoot(
                     when {
                         openRefinery -> RefineryScreen(refineryViewModel, Modifier.padding(padding))
                         openRingProfile -> RingProfileScreen(ringProfileViewModel, onBack = { openRingProfile = false }, modifier = Modifier.padding(padding))
-                        openRingProfile -> RingProfileScreen(ringProfileViewModel, onBack = { openRingProfile = false }, modifier = Modifier.padding(padding))
                         openClassDays -> ClassDaysScreen(
                             viewModel = classDaysViewModel,
                             onBack = { openClassDays = false },
@@ -182,9 +180,6 @@ fun NegahRoot(
                                 Text("تنظیمات", style = MaterialTheme.typography.headlineSmall)
                                 Button(onClick = { openHomeShortcuts = true }, modifier = Modifier.fillMaxWidth()) {
                                     Text("میان‌برهای خانه")
-                                }
-                                Button(onClick = { openRingProfile = true }, modifier = Modifier.fillMaxWidth()) {
-                                    Text("ویرایش پروفایل حلقه")
                                 }
                                 Button(onClick = { openRingProfile = true }, modifier = Modifier.fillMaxWidth()) {
                                     Text("ویرایش پروفایل حلقه")
