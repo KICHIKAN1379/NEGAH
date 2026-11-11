@@ -175,7 +175,11 @@ class MembersViewModel @Inject constructor(
     }
 
     private fun grantBirthdayCredits(members: List<Member>) {
-        val today = Calendar.getInstance(ULocale("fa_IR@calendar=persian"))
+        // Android ICU is unavailable in plain JVM unit tests; skip the
+        // device-calendar check there while retaining it on Android.
+        val today = runCatching {
+            Calendar.getInstance(ULocale("fa_IR@calendar=persian"))
+        }.getOrNull() ?: return
         val currentYear = today.get(Calendar.YEAR)
         val currentMonth = today.get(Calendar.MONTH) + 1
         val currentDay = today.get(Calendar.DATE)
