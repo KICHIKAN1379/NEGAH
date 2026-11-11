@@ -180,7 +180,7 @@ class MembersViewModel @Inject constructor(
         viewModelScope.launch {
             repository.observeActiveMembers().collect { members ->
                 mutableState.update { it.copy(members = members) }
-                grantBirthdayCredits(members)
+                grantBirthdayDiamonds(members)
             }
         }
         viewModelScope.launch {
@@ -190,7 +190,7 @@ class MembersViewModel @Inject constructor(
         }
     }
 
-    private fun grantBirthdayCredits(members: List<Member>) {
+    private fun grantBirthdayDiamonds(members: List<Member>) {
         // Android ICU is unavailable in plain JVM unit tests; skip the
         // device-calendar check there while retaining it on Android.
         val today = runCatching {
@@ -209,7 +209,7 @@ class MembersViewModel @Inject constructor(
             val transaction = EconomyTransaction(
                 id = "birthday-${member.id}-$currentYear",
                 memberId = member.id,
-                currency = EconomyCurrency.POINTS,
+                currency = EconomyCurrency.DIAMONDS,
                 amountDelta = 30L,
                 kind = EconomyTransactionKind.EARN,
                 sourceType = "BIRTHDAY_REWARD",
@@ -652,7 +652,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
                     OutlinedTextField(value = state.birthDateJalali, onValueChange = viewModel::onBirthDateChanged,
                         label = { Text("تاریخ تولد شمسی (اختیاری)") },
                         placeholder = { Text("۱۴۰۰/۰۵/۲۱") }, singleLine = true,
-                        supportingText = { Text("سال/ماه/روز؛ پاداش تولد سالانه ۳۰ اعتبار است") })
+                        supportingText = { Text("سال/ماه/روز؛ پاداش تولد سالانه ۳۰ الماس است") })
                     state.validationMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 }
             },
