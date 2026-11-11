@@ -236,11 +236,12 @@ The Growth Map configuration screen has no direct image in the primary UX PDF; u
 - Keep no more than two automatic backup versions. This newer explicit owner decision supersedes older product-guide snapshots that mention a larger retention count.
 - Automatic backup and manual export are complementary, separate flows.
 - Support the agreed JSON/ZIP manual export/import flows with schema/version validation before restore.
-- Full-ring export must preserve the data required to restore the ring's state; member export is a separate scoped export.
+- Full-ring export must preserve the data required to restore the ring's state, including image files; member export is a separate scoped export.
 - Never overwrite live data silently. Validate before restore and create a safety point where appropriate.
 - On first launch, explain why file access is needed and use an Android-appropriate user-mediated folder/file picker. Do not request broad all-files access merely for convenience.
 - Backup encryption is a project requirement in the technical baseline. The portable key/recovery design must be specified and tested before implementation; do not invent a key recovery model.
-- Automatic backup cadence/trigger remains an open technical/product detail; an older snapshot mentions Activity exit, but that trigger must not be assumed final without reconciliation.
+- Owner decision: attempt automatic backup when the app leaves the foreground (moves to the background). Android may not guarantee execution on force-stop, process kill, crash or device shutdown; implementation must use an Android-appropriate durable/lifecycle-aware approach and must not promise those cases.
+- Image assets are part of the backup payload: preserve the actual image bytes for the ring image/banner, member profile images, and catalog/avatar/frame images, together with their ownership/associations. Do not treat a database ID or transient content URI as a sufficient backup.
 - Never include passwords, tokens, invitation codes or secrets in public backup files.
 
 ## 10. Visual and interaction baseline
