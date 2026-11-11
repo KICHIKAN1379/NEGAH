@@ -65,3 +65,9 @@ val MIGRATION_10_11 = object : Migration(10, 11) {
   database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_mission_assignments_missionId_memberId ON mission_assignments(missionId, memberId)")
  }
 }
+
+val MIGRATION_11_12 = object : Migration(11, 12) {
+ override fun migrate(database: SupportSQLiteDatabase) {
+  database.execSQL("""CREATE TABLE IF NOT EXISTS daily_quotes (id TEXT NOT NULL, text TEXT NOT NULL, isActive INTEGER NOT NULL, createdAtEpochMillis INTEGER NOT NULL, PRIMARY KEY(id))""")
+ }
+}

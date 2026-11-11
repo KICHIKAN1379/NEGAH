@@ -26,6 +26,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kichikan.negah.domain.attendance.AttendanceStatus
 import com.kichikan.negah.domain.session.Session
 import com.kichikan.negah.domain.mission.Mission
+import com.kichikan.negah.domain.economy.EconomyCurrency
+import com.kichikan.negah.domain.economy.EconomyTransaction
+import com.kichikan.negah.domain.settings.DailyQuote
 import com.kichikan.negah.domain.settings.HomeShortcut
 import com.kichikan.negah.feature.home.HomeAttendanceDay
 import com.kichikan.negah.feature.home.CoachAssistantScreen
@@ -55,6 +58,8 @@ fun NegahRoot(
     homeShortcutsViewModel: HomeShortcutsViewModel,
     ringProfileViewModel: RingProfileViewModel,
     sessionsViewModel: SessionsViewModel,
+    homeDashboardViewModel: HomeDashboardViewModel,
+    dailyQuotesViewModel: DailyQuotesViewModel,
 ) {
     var selected by rememberSaveable { mutableStateOf(MainDestination.HOME.name) }
     var openRefinery by rememberSaveable { mutableStateOf(false) }
@@ -65,17 +70,23 @@ fun NegahRoot(
     var openMissions by rememberSaveable { mutableStateOf(false) }
     var openWeeklyPulse by rememberSaveable { mutableStateOf(false) }
     var openCoachAssistant by rememberSaveable { mutableStateOf(false) }
+    var openDailyQuotes by rememberSaveable { mutableStateOf(false) }
     val membersState by membersViewModel.state.collectAsStateWithLifecycle()
     val sessionsState by sessionsViewModel.uiState.collectAsStateWithLifecycle()
     val progressState by progressViewModel.state.collectAsStateWithLifecycle()
+    val homeAssets by homeDashboardViewModel.state.collectAsStateWithLifecycle()
+    val dailyQuotesState by dailyQuotesViewModel.state.collectAsStateWithLifecycle()
     val homeShortcuts by homeShortcutsViewModel.uiState.collectAsStateWithLifecycle()
     val ringProfile by ringProfileViewModel.uiState.collectAsStateWithLifecycle()
-    val dashboard = remember(membersState.members, sessionsState.sessions, sessionsState.attendanceRecords, progressState.missions) {
+    val dashboard = remember(membersState.members, sessionsState.sessions, sessionsState.attendanceRecords, progressState.missions, homeAssets.avatars, homeAssets.transactions, dailyQuotesState.quotes) {
         buildHomeDashboard(
             members = membersState.members,
             sessions = sessionsState.sessions,
             attendance = sessionsState.attendanceRecords,
             missions = progressState.missions,
+            avatarBytes = homeAssets.avatars,
+            transactions = homeAssets.transactions,
+            quotes = dailyQuotesState.quotes,
         )
     }
 
@@ -96,6 +107,7 @@ fun NegahRoot(
                             openMissions = false
                             openWeeklyPulse = false
                             openCoachAssistant = false
+                            openDailyQuotes = false
                         },
                         icon = { Text(destination.title.take(1)) },
                         label = { Text(destination.title) },
@@ -195,6 +207,7 @@ fun NegahRoot(
                     when {
                         openRefinery -> RefineryScreen(refineryViewModel, Modifier.padding(padding))
                         openRingProfile -> RingProfileScreen(ringProfileViewModel, onBack = { openRingProfile = false }, modifier = Modifier.padding(padding))
+                        openDailyQuotes -> DailyQuotesScreen(dailyQuotesViewModel, onBack = { openDailyQuotes = false }, modifier = Modifier.padding(padding))
                         openClassDays -> ClassDaysScreen(
                             viewModel = classDaysViewModel,
                             onBack = { openClassDays = false },
@@ -220,9 +233,8 @@ fun NegahRoot(
                                 Button(onClick = { openRefinery = true }, modifier = Modifier.fillMaxWidth()) {
                                     Text("پالایشگاه")
                                 }
-                                Button(onClick = { openClassDays = true }, modifier = Modifier.fillMaxWidth()) {
-                                    Text("روزهای کلاس")
-                                }
+                                Button(onClick = { openDailyQuotes = true }, modifier = Modifier.fillMaxWidth()) { Text("جمله‌های روز") }
+                                Button(onClick = { openClassDays = true }, modifier = Modifier.fillMaxWidth()) { Text("روزهای کلاس") }
                             }
                         }
                     }
@@ -233,11 +245,16 @@ fun NegahRoot(
     }
 }
 
+private data class TimedHomeEvent(val title: String, val detail: String, val timestampEpochMillis: Long)
+
 private fun buildHomeDashboard(
     members: List<com.kichikan.negah.domain.member.Member>,
     sessions: List<Session>,
     attendance: List<com.kichikan.negah.domain.attendance.AttendanceRecord>,
     missions: List<Mission>,
+    avatarBytes: Map<String, ByteArray>,
+    transactions: List<EconomyTransaction>,
+    quotes: List<DailyQuote>,
 ): HomeDashboardState {
     val today = LocalDate.now()
     val attendanceBySession = attendance.groupBy { it.sessionId }
@@ -268,12 +285,48 @@ private fun buildHomeDashboard(
             completed = session.isCompleted,
         )
     }
+    val memberNames = members.associate { it.id to it.fullName }
+    val timedEvents = buildList {
+        sessions.forEach { session -> add(TimedHomeEvent(if (session.isCompleted) "جلسه · تکمیل‌شده" else "جلسه · در انتظار", session.title, session.createdAtEpochMillis)) }
+        attendance.forEach { record ->
+            val statusLabel = when (record.status) {
+                AttendanceStatus.PRESENT -> "حاضر"
+                AttendanceStatus.ABSENT -> "غیبت"
+                AttendanceStatus.EXCUSED_ABSENCE -> "غیبت موجه"
+                AttendanceStatus.LATE -> "تأخیر"
+                AttendanceStatus.UNRECORDED -> "بدون ثبت"
+            }
+            add(TimedHomeEvent("ثبت حضور و غیاب", (memberNames[record.memberId] ?: "عضو") + " · " + statusLabel, record.updatedAtEpochMillis))
+        }
+        transactions.forEach { transaction ->
+            val currency = when (transaction.currency) {
+                EconomyCurrency.XP -> "XP"
+                EconomyCurrency.POINTS -> "امتیاز"
+                EconomyCurrency.DIAMONDS -> "الماس"
+            }
+            val amount = if (transaction.amountDelta > 0) "+" + transaction.amountDelta else transaction.amountDelta.toString()
+            add(TimedHomeEvent("تغییر موجودی " + currency, (memberNames[transaction.memberId] ?: "عضو") + " · " + amount, transaction.createdAtEpochMillis))
+        }
+        missions.forEach { mission -> add(TimedHomeEvent("مأموریت تعریف شد", mission.title, mission.createdAtEpochMillis)) }
+    }.sortedByDescending { it.timestampEpochMillis }.take(20)
+    val activeQuotes = quotes.filter { it.isActive }.sortedBy { it.createdAtEpochMillis }
+    val dailyQuote = if (activeQuotes.isEmpty()) "" else activeQuotes[Math.floorMod(today.toEpochDay(), activeQuotes.size.toLong()).toInt()].text
+    val memberPreviews = members.sortedBy { it.fullName }.map { member ->
+        com.kichikan.negah.feature.home.HomeMemberPreview(member.id, member.fullName, avatarBytes[member.id])
+    }
     return HomeDashboardState(
+        dailyQuote = dailyQuote,
+        recentEvents = timedEvents.map { event ->
+            com.kichikan.negah.feature.home.HomeRecentEvent(event.title, event.detail,
+                java.time.Instant.ofEpochMilli(event.timestampEpochMillis).atZone(java.time.ZoneId.systemDefault()).toLocalDate().format(dateFormatter))
+        },
+        memberPreviews = memberPreviews,
         activeMemberCount = members.size,
         totalXp = members.sumOf { it.totalXp },
         totalPoints = members.sumOf { it.spendablePoints },
         totalDiamonds = members.sumOf { it.diamonds },
         activeMissionCount = missions.count { it.isActive },
+        activeMissionTitles = missions.filter { it.isActive }.map { it.title },
         weekSessionCount = currentWeekSessions.size,
         weekRecordedAttendanceCount = currentWeekAttendance.size,
         attendanceDays = days,

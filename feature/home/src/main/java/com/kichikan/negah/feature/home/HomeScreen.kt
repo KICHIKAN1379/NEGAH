@@ -4,6 +4,7 @@ import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
@@ -25,11 +26,16 @@ data class HomeAttendanceDay(val label: String, val presentCount: Int, val recor
     val presentRatio: Float get() = if (recordedCount == 0) 0f else presentCount.toFloat() / recordedCount
 }
 data class HomeRecentSession(val title: String, val dateLabel: String, val completed: Boolean)
+data class HomeRecentEvent(val title: String, val detail: String, val timestampLabel: String)
+data class HomeMemberPreview(val id: String, val name: String, val avatarBytes: ByteArray?)
 data class HomeDashboardState(
     val activeMemberCount: Int = 0, val totalXp: Long = 0, val totalPoints: Long = 0,
-    val totalDiamonds: Long = 0, val activeMissionCount: Int = 0, val weekSessionCount: Int = 0,
+    val totalDiamonds: Long = 0, val activeMissionCount: Int = 0, val activeMissionTitles: List<String> = emptyList(), val weekSessionCount: Int = 0,
     val weekRecordedAttendanceCount: Int = 0, val attendanceDays: List<HomeAttendanceDay> = emptyList(),
     val recentSessions: List<HomeRecentSession> = emptyList(),
+    val dailyQuote: String = "",
+    val recentEvents: List<HomeRecentEvent> = emptyList(),
+    val memberPreviews: List<HomeMemberPreview> = emptyList(),
 )
 
 private val dailyCoachMessages = listOf(
@@ -108,7 +114,7 @@ fun HomeScreen(
             Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("جملهٔ امروز", style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSecondaryContainer)
-                Text(dailyCoachMessage(), style = MaterialTheme.typography.titleMedium,
+                Text(dashboard.dailyQuote.ifBlank { dailyCoachMessage() }, style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSecondaryContainer)
             }
         }
@@ -170,6 +176,14 @@ fun HomeWeeklyPulseScreen(dashboard: HomeDashboardState, onBack: () -> Unit, mod
         }
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("مأموریت‌های فعال", style = MaterialTheme.typography.titleMedium)
+                if (dashboard.activeMissionTitles.isEmpty()) {
+                    Text("مأموریت فعالی ثبت نشده است.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else dashboard.activeMissionTitles.forEach { title -> Text("• " + title, style = MaterialTheme.typography.bodyMedium) }
+            }
+        }
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("روند حضور در ۷ روز اخیر", style = MaterialTheme.typography.titleMedium)
                 if (dashboard.attendanceDays.none { it.recordedCount > 0 }) {
                     Text("در این بازه هنوز وضعیت حضوری ثبت نشده است.", style = MaterialTheme.typography.bodySmall,
@@ -189,6 +203,39 @@ fun HomeWeeklyPulseScreen(dashboard: HomeDashboardState, onBack: () -> Unit, mod
                 }
                 Text("نسبت حاضرها از مجموع وضعیت‌های ثبت‌شده محاسبه می‌شود؛ «بدون ثبت» نیز در مخرج شمارش است.",
                     style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("اعضای حلقه", style = MaterialTheme.typography.titleMedium)
+                if (dashboard.memberPreviews.isEmpty()) {
+                    Text("هنوز عضوی ثبت نشده است.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    dashboard.memberPreviews.forEach { member ->
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp), modifier = Modifier.width(72.dp)) {
+                            val avatar = remember(member.avatarBytes) { decodePreview(member.avatarBytes, 128) }
+                            if (avatar != null) Image(avatar, "تصویر " + member.name, Modifier.size(52.dp).clip(CircleShape), contentScale = ContentScale.Crop)
+                            else Surface(Modifier.size(52.dp), shape = CircleShape, color = MaterialTheme.colorScheme.secondaryContainer) {
+                                Box(contentAlignment = Alignment.Center) { Text(member.name.firstOrNull()?.toString().orEmpty(), style = MaterialTheme.typography.titleMedium) }
+                            }
+                            Text(member.name, style = MaterialTheme.typography.labelSmall, maxLines = 2)
+                        }
+                    }
+                }
+            }
+        }
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("آخرین رویدادها", style = MaterialTheme.typography.titleMedium)
+                if (dashboard.recentEvents.isEmpty()) {
+                    Text("هنوز رویدادی برای نمایش ثبت نشده است.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else dashboard.recentEvents.take(20).forEachIndexed { index, event ->
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(event.title, style = MaterialTheme.typography.bodyMedium)
+                        Text(event.detail + " · " + event.timestampLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if (index < dashboard.recentEvents.take(20).lastIndex) HorizontalDivider()
+                }
             }
         }
         Card(Modifier.fillMaxWidth()) {

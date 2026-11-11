@@ -18,11 +18,13 @@ import com.kichikan.negah.data.local.media.MediaAssetEntity
 import com.kichikan.negah.data.local.media.MediaAssetDao
 import com.kichikan.negah.data.local.settings.RingProfileEntity
 import com.kichikan.negah.data.local.settings.RingProfileDao
+import com.kichikan.negah.data.local.settings.DailyQuoteEntity
+import com.kichikan.negah.data.local.settings.DailyQuoteDao
 import com.kichikan.negah.data.local.mission.MissionEntity
 import com.kichikan.negah.data.local.mission.MissionAssignmentEntity
 import com.kichikan.negah.data.local.mission.MissionDao
 
-@Database(entities = [MemberEntity::class, SessionEntity::class, AttendanceEntity::class, AttendanceRevisionEntity::class, CommitmentEntity::class, CommitmentRevisionEntity::class, EconomyTransactionEntity::class, GrowthItemEntity::class, MemberGrowthProgressEntity::class, CatalogItemEntity::class, MemberInventoryEntity::class, MemberActiveItemEntity::class, ClassDayEntity::class, HomeShortcutEntity::class, HomeShortcutSettingsEntity::class, MediaAssetEntity::class, RingProfileEntity::class, MissionEntity::class, MissionAssignmentEntity::class], version = 11, exportSchema = true)
+@Database(entities = [MemberEntity::class, SessionEntity::class, AttendanceEntity::class, AttendanceRevisionEntity::class, CommitmentEntity::class, CommitmentRevisionEntity::class, EconomyTransactionEntity::class, GrowthItemEntity::class, MemberGrowthProgressEntity::class, CatalogItemEntity::class, MemberInventoryEntity::class, MemberActiveItemEntity::class, ClassDayEntity::class, HomeShortcutEntity::class, HomeShortcutSettingsEntity::class, MediaAssetEntity::class, RingProfileEntity::class, MissionEntity::class, MissionAssignmentEntity::class, DailyQuoteEntity::class], version = 12, exportSchema = true)
 @TypeConverters(AttendanceStatusConverter::class)
 abstract class NegahDatabase : RoomDatabase() {
  abstract fun memberDao(): MemberDao
@@ -38,4 +40,5 @@ abstract class NegahDatabase : RoomDatabase() {
  abstract fun mediaAssetDao(): MediaAssetDao
  abstract fun ringProfileDao(): RingProfileDao
  abstract fun missionDao(): MissionDao
+ abstract fun dailyQuoteDao(): DailyQuoteDao
 }

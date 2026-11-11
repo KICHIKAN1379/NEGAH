@@ -15,6 +15,10 @@ import javax.inject.Singleton
 abstract class MemberAvatarRepositoryModule {
     @Binds
     @Singleton
+    abstract fun bindMemberAvatarRepository(implementation: MediaAssetManager): com.kichikan.negah.domain.member.MemberAvatarRepository
+
+    @Binds
+    @Singleton
     abstract fun bindRingProfileMediaRepository(implementation: MediaAssetManager): RingProfileMediaRepository
 
     @Binds
