@@ -28,23 +28,23 @@ class HomeShortcutsTest {
     }
 
     @Test
-    fun rejectsMoreThanFourShortcuts() = runBlocking {
+    fun rejectsMoreThanFourShortcuts() {
         val repository = FakeRepository()
         val save = SaveHomeShortcuts(repository)
 
         assertFailsWith<IllegalArgumentException> {
-            save(HomeShortcut.entries)
+            runBlocking { save(HomeShortcut.entries) }
         }
         assertEquals(null, repository.saved)
     }
 
     @Test
-    fun rejectsDuplicateShortcuts() = runBlocking {
+    fun rejectsDuplicateShortcuts() {
         val repository = FakeRepository()
         val save = SaveHomeShortcuts(repository)
 
         assertFailsWith<IllegalArgumentException> {
-            save(listOf(HomeShortcut.MEMBERS, HomeShortcut.MEMBERS))
+            runBlocking { save(listOf(HomeShortcut.MEMBERS, HomeShortcut.MEMBERS)) }
         }
         assertEquals(null, repository.saved)
     }
