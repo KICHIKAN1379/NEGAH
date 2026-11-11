@@ -9,7 +9,8 @@ enum class HomeShortcut(val id: String, val label: String) {
     SESSIONS("sessions", "جلسات و حضور و غیاب"),
     SHOP("shop", "فروشگاه"),
     REFINERY("refinery", "پالایشگاه"),
-    CLASS_DAYS("class_days", "روزهای کلاس");
+    CLASS_DAYS("class_days", "روزهای کلاس"),
+    COACH_ASSISTANT("coach_assistant", "دستیار مربی");
 
     companion object {
         val defaultSelection = listOf(MEMBERS, PROGRESS, SESSIONS, SHOP)

@@ -27,6 +27,7 @@ import com.kichikan.negah.domain.attendance.AttendanceStatus
 import com.kichikan.negah.domain.session.Session
 import com.kichikan.negah.domain.settings.HomeShortcut
 import com.kichikan.negah.feature.home.HomeAttendanceDay
+import com.kichikan.negah.feature.home.CoachAssistantScreen
 import com.kichikan.negah.feature.home.HomeDashboardState
 import com.kichikan.negah.feature.home.HomeRecentSession
 import com.kichikan.negah.feature.home.HomeScreen
@@ -62,9 +63,11 @@ fun NegahRoot(
     var openSessions by rememberSaveable { mutableStateOf(false) }
     var openMissions by rememberSaveable { mutableStateOf(false) }
     var openWeeklyPulse by rememberSaveable { mutableStateOf(false) }
+    var openCoachAssistant by rememberSaveable { mutableStateOf(false) }
     val membersState by membersViewModel.state.collectAsStateWithLifecycle()
     val sessionsState by sessionsViewModel.uiState.collectAsStateWithLifecycle()
     val homeShortcuts by homeShortcutsViewModel.uiState.collectAsStateWithLifecycle()
+    val ringProfile by ringProfileViewModel.uiState.collectAsStateWithLifecycle()
     val dashboard = remember(membersState.members, sessionsState.sessions, sessionsState.attendanceRecords) {
         buildHomeDashboard(
             members = membersState.members,
@@ -89,6 +92,7 @@ fun NegahRoot(
                             openSessions = false
                             openMissions = false
                             openWeeklyPulse = false
+                            openCoachAssistant = false
                         },
                         icon = { Text(destination.title.take(1)) },
                         label = { Text(destination.title) },
@@ -98,7 +102,15 @@ fun NegahRoot(
         }) { padding ->
             when (MainDestination.valueOf(selected)) {
                 MainDestination.HOME -> {
-                    if (openWeeklyPulse) {
+                    if (openCoachAssistant) {
+                        CoachAssistantScreen(
+                            dashboard = dashboard,
+                            onBack = { openCoachAssistant = false },
+                            onOpenMembers = { selected = MainDestination.MEMBERS.name; openCoachAssistant = false },
+                            onOpenSessions = { selected = MainDestination.PROGRESS.name; openSessions = true; openCoachAssistant = false },
+                            modifier = Modifier.padding(padding),
+                        )
+                    } else if (openWeeklyPulse) {
                         HomeWeeklyPulseScreen(
                             dashboard = dashboard,
                             onBack = { openWeeklyPulse = false },
@@ -108,6 +120,10 @@ fun NegahRoot(
                         HomeScreen(
                             dashboard = dashboard,
                             shortcuts = homeShortcuts.selected,
+                            ringName = ringProfile.name,
+                            ringUsername = ringProfile.username,
+                            ringImageBytes = ringProfile.ringImageBytes,
+                            bannerBytes = ringProfile.bannerBytes,
                             onOpenShortcut = { shortcut ->
                                 openRefinery = false
                                 openClassDays = false
@@ -115,6 +131,7 @@ fun NegahRoot(
                                 openRingProfile = false
                                 openSessions = false
                                 openWeeklyPulse = false
+                                openCoachAssistant = false
                                 when (shortcut) {
                                     HomeShortcut.MEMBERS -> selected = MainDestination.MEMBERS.name
                                     HomeShortcut.PROGRESS -> selected = MainDestination.PROGRESS.name
@@ -130,6 +147,10 @@ fun NegahRoot(
                                     HomeShortcut.CLASS_DAYS -> {
                                         selected = MainDestination.SETTINGS.name
                                         openClassDays = true
+                                    }
+                                    HomeShortcut.COACH_ASSISTANT -> {
+                                        selected = MainDestination.HOME.name
+                                        openCoachAssistant = true
                                     }
                                 }
                             },
