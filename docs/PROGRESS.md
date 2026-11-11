@@ -1,6 +1,6 @@
 # NEGAH Coach — Mission Progress
 
-Last updated: 2026-11-10
+Last updated: 2026-11-11
 
 ## Mission and approval boundary
 
@@ -182,3 +182,11 @@ The available host has GitHub repository read/write integration but no local And
 - Filters operate on the existing ledger stream only; no balance or ledger data is modified.
 - Added ViewModel coverage for currency filtering and returning to the full history.
 - CI verification is pending for this commit.
+
+## Latest continuation — birthday profile edit and image-asset audit (2026-11-11)
+- Optional Jalali birthday editing is now wired in the member profile; clearing the field persists null. The latest profile-edit test commit is `2f9dfdd864edec46d3f9ad630095b71e95135fa8`.
+- CI run #123 for that exact commit was still pending at the latest check; the workflow returned no jobs yet. Do not treat it as passed.
+- Birthday reward logic currently checks active-member stream emissions and writes an idempotent 30-point ledger entry for the Jalali year. A scheduled birthday reminder (three days before) is not implemented, and the reward check is not a durable midnight scheduler.
+- Media audit: the current `MemberEntity` has no avatar/profile-image reference; `CatalogItem` / `CatalogItemEntity` contain title/description/price but no image asset reference; no persisted ring profile image/banner implementation was found in the inspected app tree. Actual image-byte storage, member/ring associations and portable image backup are therefore not implemented.
+- Required next media slice: define an app-private asset store with stable logical IDs and explicit owner/category metadata; copy selected content into managed storage rather than retaining temporary picker URIs; include binary assets in full-ring backup/export and remap local paths on restore. Keep encryption/recovery implementation blocked until the owner selects its portable recovery design.
+- Owner backup decisions now recorded: portable to a new phone; attempt automatic backup when the app moves to the background; retain at most two automatic versions in MRT. Do not claim guaranteed execution after force-stop, crash, process kill or shutdown.
