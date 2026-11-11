@@ -60,6 +60,7 @@ fun NegahRoot(
     var openHomeShortcuts by rememberSaveable { mutableStateOf(false) }
     var openRingProfile by rememberSaveable { mutableStateOf(false) }
     var openSessions by rememberSaveable { mutableStateOf(false) }
+    var openMissions by rememberSaveable { mutableStateOf(false) }
     var openWeeklyPulse by rememberSaveable { mutableStateOf(false) }
     val membersState by membersViewModel.state.collectAsStateWithLifecycle()
     val sessionsState by sessionsViewModel.uiState.collectAsStateWithLifecycle()
@@ -86,6 +87,7 @@ fun NegahRoot(
                             openHomeShortcuts = false
                             openRingProfile = false
                             openSessions = false
+                            openMissions = false
                             openWeeklyPulse = false
                         },
                         icon = { Text(destination.title.take(1)) },
@@ -138,7 +140,9 @@ fun NegahRoot(
                 }
                 MainDestination.MEMBERS -> MembersScreen(membersViewModel, Modifier.padding(padding))
                 MainDestination.PROGRESS -> {
-                    if (openSessions) {
+                    if (openMissions) {
+                        MissionsScreen(progressViewModel, Modifier.padding(padding))
+                    } else if (openSessions) {
                         SessionsScreen(
                             viewModel = sessionsViewModel,
                             onBack = { openSessions = false },
@@ -151,11 +155,16 @@ fun NegahRoot(
                             modifier = Modifier.padding(padding),
                         )
                     } else {
-                        ProgressScreen(
-                            viewModel = progressViewModel,
-                            onOpenSessions = { openSessions = true },
-                            modifier = Modifier.padding(padding),
-                        )
+                        Column(Modifier.fillMaxSize().padding(padding)) {
+                            Button(onClick = { openMissions = true }, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                                Text("مأموریت‌ها")
+                            }
+                            ProgressScreen(
+                                viewModel = progressViewModel,
+                                onOpenSessions = { openSessions = true },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
                     }
                 }
                 MainDestination.SETTINGS -> {
