@@ -16,7 +16,9 @@ import com.kichikan.negah.data.local.settings.HomeShortcutSettingsEntity
 import com.kichikan.negah.data.local.settings.HomeShortcutsDao
 import com.kichikan.negah.data.local.media.MediaAssetEntity
 import com.kichikan.negah.data.local.media.MediaAssetDao
-@Database(entities = [MemberEntity::class, SessionEntity::class, AttendanceEntity::class, AttendanceRevisionEntity::class, CommitmentEntity::class, CommitmentRevisionEntity::class, EconomyTransactionEntity::class, GrowthItemEntity::class, MemberGrowthProgressEntity::class, CatalogItemEntity::class, MemberInventoryEntity::class, MemberActiveItemEntity::class, ClassDayEntity::class, HomeShortcutEntity::class, HomeShortcutSettingsEntity::class, MediaAssetEntity::class], version = 9, exportSchema = true)
+import com.kichikan.negah.data.local.settings.RingProfileEntity
+import com.kichikan.negah.data.local.settings.RingProfileDao
+@Database(entities = [MemberEntity::class, SessionEntity::class, AttendanceEntity::class, AttendanceRevisionEntity::class, CommitmentEntity::class, CommitmentRevisionEntity::class, EconomyTransactionEntity::class, GrowthItemEntity::class, MemberGrowthProgressEntity::class, CatalogItemEntity::class, MemberInventoryEntity::class, MemberActiveItemEntity::class, ClassDayEntity::class, HomeShortcutEntity::class, HomeShortcutSettingsEntity::class, MediaAssetEntity::class, RingProfileEntity::class], version = 10, exportSchema = true)
 @TypeConverters(AttendanceStatusConverter::class)
 abstract class NegahDatabase : RoomDatabase() {
  abstract fun memberDao(): MemberDao
@@ -30,4 +32,5 @@ abstract class NegahDatabase : RoomDatabase() {
  abstract fun classDaysDao(): ClassDaysDao
  abstract fun homeShortcutsDao(): HomeShortcutsDao
  abstract fun mediaAssetDao(): MediaAssetDao
+ abstract fun ringProfileDao(): RingProfileDao
 }

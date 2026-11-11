@@ -236,3 +236,11 @@ The available host has GitHub repository read/write integration but no local And
 - Added a profile action to remove the currently displayed avatar, clear the persisted media asset, and immediately clear the in-memory preview.
 - Added a ViewModel regression test for persisted and visible avatar removal.
 - Replacing, loading, and removing a member avatar now have explicit profile-level flows; ring and catalog images remain separate future integrations.
+
+
+## Ring profile settings — persistent metadata slice (2026-11-12)
+- Added a domain contract and Room-backed persistence for the ring's name and optional display username.
+- Added schema migration 9→10 and Hilt bindings for the repository.
+- Added a dedicated Settings destination and editable screen; the profile is stored locally and no example ring identity is prefilled.
+- Ring image and Home banner selection/display are not yet connected; they remain the next part of this profile slice.
+- CI is queued and has not validated the migration or Android build yet.

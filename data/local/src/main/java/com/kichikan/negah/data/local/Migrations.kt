@@ -56,3 +56,10 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
   database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_media_assets_ownerType_ownerId_role ON media_assets(ownerType, ownerId, role)")
  }
 }
+
+
+val MIGRATION_9_10 = object : Migration(9, 10) {
+ override fun migrate(database: SupportSQLiteDatabase) {
+  database.execSQL("""CREATE TABLE IF NOT EXISTS ring_profile (id TEXT NOT NULL, name TEXT NOT NULL, username TEXT, updatedAtEpochMillis INTEGER NOT NULL, PRIMARY KEY(id))""")
+ }
+}
