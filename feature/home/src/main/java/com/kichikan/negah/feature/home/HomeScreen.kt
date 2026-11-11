@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.kichikan.negah.domain.settings.HomeShortcut
 
 data class HomeAttendanceDay(
     val label: String,
@@ -47,9 +48,8 @@ data class HomeDashboardState(
 @Composable
 fun HomeScreen(
     dashboard: HomeDashboardState,
-    onOpenMembers: () -> Unit,
-    onOpenProgress: () -> Unit,
-    onOpenSessions: () -> Unit,
+    shortcuts: List<HomeShortcut>,
+    onOpenShortcut: (HomeShortcut) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -207,14 +207,21 @@ fun HomeScreen(
 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("دسترسی سریع", style = MaterialTheme.typography.titleMedium)
-            Button(onClick = onOpenMembers, modifier = Modifier.fillMaxWidth()) {
-                Text("مدیریت اعضا")
-            }
-            Button(onClick = onOpenProgress, modifier = Modifier.fillMaxWidth()) {
-                Text("بخش پیشرفت")
-            }
-            Button(onClick = onOpenSessions, modifier = Modifier.fillMaxWidth()) {
-                Text("جلسات و حضور و غیاب")
+            if (shortcuts.isEmpty()) {
+                Text(
+                    "میان‌بری انتخاب نشده است. از تنظیمات، میان‌برهای خانه را مشخص کنید.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                shortcuts.forEach { shortcut ->
+                    Button(
+                        onClick = { onOpenShortcut(shortcut) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(shortcut.label)
+                    }
+                }
             }
         }
     }

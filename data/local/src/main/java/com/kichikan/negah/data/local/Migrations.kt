@@ -35,3 +35,10 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
   database.execSQL("CREATE INDEX IF NOT EXISTS index_attendance_revisions_sessionId ON attendance_revisions(sessionId)")
  }
 }
+val MIGRATION_6_7 = object : Migration(6, 7) {
+ override fun migrate(database: SupportSQLiteDatabase) {
+  database.execSQL("CREATE TABLE IF NOT EXISTS home_shortcut_selections (shortcutId TEXT NOT NULL, sortOrder INTEGER NOT NULL, PRIMARY KEY(shortcutId))")
+  database.execSQL("CREATE TABLE IF NOT EXISTS home_shortcut_settings (id INTEGER NOT NULL, configured INTEGER NOT NULL, PRIMARY KEY(id))")
+  database.execSQL("INSERT INTO home_shortcut_settings (id, configured) VALUES (1, 0)")
+ }
+}

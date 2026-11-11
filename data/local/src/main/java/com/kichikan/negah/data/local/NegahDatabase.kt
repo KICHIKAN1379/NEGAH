@@ -11,7 +11,10 @@ import com.kichikan.negah.data.local.inventory.*
 import com.kichikan.negah.data.local.session.*
 import com.kichikan.negah.data.local.settings.ClassDayEntity
 import com.kichikan.negah.data.local.settings.ClassDaysDao
-@Database(entities = [MemberEntity::class, SessionEntity::class, AttendanceEntity::class, AttendanceRevisionEntity::class, CommitmentEntity::class, CommitmentRevisionEntity::class, EconomyTransactionEntity::class, GrowthItemEntity::class, MemberGrowthProgressEntity::class, CatalogItemEntity::class, MemberInventoryEntity::class, MemberActiveItemEntity::class, ClassDayEntity::class], version = 6, exportSchema = true)
+import com.kichikan.negah.data.local.settings.HomeShortcutEntity
+import com.kichikan.negah.data.local.settings.HomeShortcutSettingsEntity
+import com.kichikan.negah.data.local.settings.HomeShortcutsDao
+@Database(entities = [MemberEntity::class, SessionEntity::class, AttendanceEntity::class, AttendanceRevisionEntity::class, CommitmentEntity::class, CommitmentRevisionEntity::class, EconomyTransactionEntity::class, GrowthItemEntity::class, MemberGrowthProgressEntity::class, CatalogItemEntity::class, MemberInventoryEntity::class, MemberActiveItemEntity::class, ClassDayEntity::class, HomeShortcutEntity::class, HomeShortcutSettingsEntity::class], version = 7, exportSchema = true)
 @TypeConverters(AttendanceStatusConverter::class)
 abstract class NegahDatabase : RoomDatabase() {
  abstract fun memberDao(): MemberDao
@@ -23,4 +26,5 @@ abstract class NegahDatabase : RoomDatabase() {
  abstract fun inventoryDao(): InventoryDao
  abstract fun shopDao(): ShopDao
  abstract fun classDaysDao(): ClassDaysDao
+ abstract fun homeShortcutsDao(): HomeShortcutsDao
 }

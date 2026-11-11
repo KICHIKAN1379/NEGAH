@@ -11,6 +11,7 @@ import com.kichikan.negah.data.local.inventory.InventoryDao
 import com.kichikan.negah.data.local.inventory.ShopDao
 import com.kichikan.negah.data.local.session.SessionDao
 import com.kichikan.negah.data.local.settings.ClassDaysDao
+import com.kichikan.negah.data.local.settings.HomeShortcutsDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -22,7 +23,7 @@ import javax.inject.Singleton
 object DatabaseModule {
  @Provides @Singleton fun provideNegahDatabase(@ApplicationContext context: Context): NegahDatabase =
   Room.databaseBuilder(context, NegahDatabase::class.java, "negah_coach.db")
-   .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6).build()
+   .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7).build()
  @Provides fun provideMemberDao(database: NegahDatabase): MemberDao = database.memberDao()
  @Provides fun provideSessionDao(database: NegahDatabase): SessionDao = database.sessionDao()
  @Provides fun provideAttendanceDao(database: NegahDatabase): AttendanceDao = database.attendanceDao()
@@ -32,4 +33,5 @@ object DatabaseModule {
  @Provides fun provideInventoryDao(database: NegahDatabase): InventoryDao = database.inventoryDao()
  @Provides fun provideShopDao(database: NegahDatabase): ShopDao = database.shopDao()
  @Provides fun provideClassDaysDao(database: NegahDatabase): ClassDaysDao = database.classDaysDao()
+ @Provides fun provideHomeShortcutsDao(database: NegahDatabase): HomeShortcutsDao = database.homeShortcutsDao()
 }

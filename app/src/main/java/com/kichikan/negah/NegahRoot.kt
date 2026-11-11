@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kichikan.negah.domain.attendance.AttendanceStatus
 import com.kichikan.negah.domain.session.Session
+import com.kichikan.negah.domain.settings.HomeShortcut
 import com.kichikan.negah.feature.home.HomeAttendanceDay
 import com.kichikan.negah.feature.home.HomeDashboardState
 import com.kichikan.negah.feature.home.HomeRecentSession
@@ -48,14 +49,17 @@ fun NegahRoot(
     progressViewModel: ProgressViewModel,
     shopViewModel: ShopViewModel,
     classDaysViewModel: ClassDaysViewModel,
+    homeShortcutsViewModel: HomeShortcutsViewModel,
     sessionsViewModel: SessionsViewModel,
 ) {
     var selected by rememberSaveable { mutableStateOf(MainDestination.HOME.name) }
     var openRefinery by rememberSaveable { mutableStateOf(false) }
     var openClassDays by rememberSaveable { mutableStateOf(false) }
+    var openHomeShortcuts by rememberSaveable { mutableStateOf(false) }
     var openSessions by rememberSaveable { mutableStateOf(false) }
     val membersState by membersViewModel.state.collectAsStateWithLifecycle()
     val sessionsState by sessionsViewModel.uiState.collectAsStateWithLifecycle()
+    val homeShortcuts by homeShortcutsViewModel.uiState.collectAsStateWithLifecycle()
     val dashboard = remember(membersState.members, sessionsState.sessions, sessionsState.attendanceRecords) {
         buildHomeDashboard(
             members = membersState.members,
@@ -74,6 +78,7 @@ fun NegahRoot(
                             selected = destination.name
                             openRefinery = false
                             openClassDays = false
+                            openHomeShortcuts = false
                             openSessions = false
                         },
                         icon = { Text(destination.title.take(1)) },
@@ -85,11 +90,28 @@ fun NegahRoot(
             when (MainDestination.valueOf(selected)) {
                 MainDestination.HOME -> HomeScreen(
                     dashboard = dashboard,
-                    onOpenMembers = { selected = MainDestination.MEMBERS.name },
-                    onOpenProgress = { selected = MainDestination.PROGRESS.name },
-                    onOpenSessions = {
-                        selected = MainDestination.PROGRESS.name
-                        openSessions = true
+                    shortcuts = homeShortcuts.selected,
+                    onOpenShortcut = { shortcut ->
+                        when (shortcut) {
+                            HomeShortcut.MEMBERS -> selected = MainDestination.MEMBERS.name
+                            HomeShortcut.PROGRESS -> {
+                                selected = MainDestination.PROGRESS.name
+                                openSessions = false
+                            }
+                            HomeShortcut.SESSIONS -> {
+                                selected = MainDestination.PROGRESS.name
+                                openSessions = true
+                            }
+                            HomeShortcut.SHOP -> selected = MainDestination.SHOP.name
+                            HomeShortcut.REFINERY -> {
+                                selected = MainDestination.SETTINGS.name
+                                openRefinery = true
+                            }
+                            HomeShortcut.CLASS_DAYS -> {
+                                selected = MainDestination.SETTINGS.name
+                                openClassDays = true
+                            }
+                        }
                     },
                     modifier = Modifier.padding(padding),
                 )
@@ -123,12 +145,20 @@ fun NegahRoot(
                             onBack = { openClassDays = false },
                             modifier = Modifier.padding(padding),
                         )
+                        openHomeShortcuts -> HomeShortcutsScreen(
+                            viewModel = homeShortcutsViewModel,
+                            onBack = { openHomeShortcuts = false },
+                            modifier = Modifier.padding(padding),
+                        )
                         else -> {
                             Column(
                                 modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
                                 Text("تنظیمات", style = MaterialTheme.typography.headlineSmall)
+                                Button(onClick = { openHomeShortcuts = true }, modifier = Modifier.fillMaxWidth()) {
+                                    Text("میان‌برهای خانه")
+                                }
                                 Button(onClick = { openRefinery = true }, modifier = Modifier.fillMaxWidth()) {
                                     Text("پالایشگاه")
                                 }
@@ -151,7 +181,6 @@ private fun buildHomeDashboard(
     attendance: List<com.kichikan.negah.domain.attendance.AttendanceRecord>,
 ): HomeDashboardState {
     val today = LocalDate.now()
-    val sessionsById = sessions.associateBy(Session::id)
     val attendanceBySession = attendance.groupBy { it.sessionId }
     val days = (6L downTo 0L).map { offset ->
         val date = today.minusDays(offset)
