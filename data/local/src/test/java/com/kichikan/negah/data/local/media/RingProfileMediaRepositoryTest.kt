@@ -23,7 +23,7 @@ class RingProfileMediaRepositoryTest {
     }
     @After fun tearDown() {
         db.close()
-        RuntimeEnvironment.getApplication<android.app.Application>().filesDir.resolve("media-assets").deleteRecursively()
+        RuntimeEnvironment.getApplication().filesDir.resolve("media-assets").deleteRecursively()
     }
     @Test fun catalogImagesAreStoredIndependentlyByCatalogItem()=runBlocking {
         val first = byteArrayOf(3, 4, 5)
