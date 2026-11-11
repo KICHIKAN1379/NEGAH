@@ -255,3 +255,5 @@ The available host has GitHub repository read/write integration but no local And
 - Added a Robolectric test for independent image/banner persistence and removal.
 - Backup packaging of media files and remapping on restore remain pending; selecting images does not yet make backups portable.
 - CI must validate Hilt, Compose, Room, and test integration.
+
+- Added the missing Hilt binding for the new `RingProfileMediaRepository` contract to the existing local media manager. The feature screen can now receive the media contract without depending on the data module.
