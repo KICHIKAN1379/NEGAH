@@ -244,3 +244,5 @@ The available host has GitHub repository read/write integration but no local And
 - Added a dedicated Settings destination and editable screen; the profile is stored locally and no example ring identity is prefilled.
 - Ring image and Home banner selection/display are not yet connected; they remain the next part of this profile slice.
 - CI is queued and has not validated the migration or Android build yet.
+
+- Added Room/Robolectric tests for an empty first-run ring profile, persistence after repository recreation, and the optional username remaining null when unset.
