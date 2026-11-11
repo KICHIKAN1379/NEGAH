@@ -118,6 +118,7 @@ fun HomeShortcutsScreen(
                             onCheckedChange = { viewModel.toggle(shortcut) },
                         )
                     }
+                }
             }
         }
 
