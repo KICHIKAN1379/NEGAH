@@ -3,9 +3,11 @@ package com.kichikan.negah.feature.members
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CardDefaults
@@ -24,6 +26,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -40,6 +43,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kichikan.negah.domain.economy.EconomyCurrency
 import com.kichikan.negah.domain.economy.EconomyRepository
@@ -47,6 +51,7 @@ import com.kichikan.negah.domain.economy.EconomyTransaction
 import com.kichikan.negah.domain.economy.EconomyTransactionKind
 import com.kichikan.negah.domain.economy.LevelProgression
 import com.kichikan.negah.domain.economy.RankBadgeProgression
+import com.kichikan.negah.domain.report.MemberReportCalculator
 import com.kichikan.negah.domain.member.Member
 import com.kichikan.negah.domain.member.MemberRepository
 import com.kichikan.negah.domain.member.RegisterMember
@@ -70,6 +75,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.Job
 import java.text.DateFormat
 import java.util.Date
+import java.time.YearMonth
 import kotlinx.coroutines.launch
 
 enum class MemberSortOption { NAME, LEVEL, POINTS }
@@ -349,7 +355,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val selectedMember = state.members.firstOrNull { it.id == state.selectedMemberId }
     if (selectedMember != null) {
-        MemberProfileScreen(selectedMember, state.visibleEconomyTransactions, state.historyFilter, viewModel::onHistoryFilterChanged, state.growthItems, state.growthProgress, state.growthSaveMessage, state.inventoryEntries, state.availableCatalogItems, state.activeInventoryItems, state.inventoryMessage, viewModel::saveGrowthProgress, viewModel::activateInventoryItem, viewModel::grantCatalogItem, viewModel::onProfileClosed, modifier)
+        MemberProfileScreen(selectedMember, state.economyTransactions, state.historyFilter, viewModel::onHistoryFilterChanged, state.growthItems, state.growthProgress, state.growthSaveMessage, state.inventoryEntries, state.availableCatalogItems, state.activeInventoryItems, state.inventoryMessage, viewModel::saveGrowthProgress, viewModel::activateInventoryItem, viewModel::grantCatalogItem, viewModel::onProfileClosed, modifier)
         return
     }
 
@@ -635,13 +641,23 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
             }
             inventoryMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
         }
-        ProfileSection("کارنامه", "گزارش رشد در بازه زمانی") {
-            Text("برای رسم نمودار، ابتدا باید داده‌های مأموریت، خوانی کتاب و نقشه کمال ثبت شوند.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            ProfileValue("XP ثبت‌شده", member.totalXp.toString())
-            ProfileValue("سطح فعلی", level.toString())
+        MemberReportCard(
+            member = member,
+            transactions = transactions,
+            growthItems = growthItems,
+            growthProgress = growthProgress,
+        )
+        val historyTransactions = transactions.filter { transaction ->
+            when (historyFilter) {
+                MemberHistoryFilter.ALL -> true
+                MemberHistoryFilter.XP -> transaction.currency == EconomyCurrency.XP
+                MemberHistoryFilter.POINTS -> transaction.currency == EconomyCurrency.POINTS
+                MemberHistoryFilter.DIAMONDS -> transaction.currency == EconomyCurrency.DIAMONDS
+                MemberHistoryFilter.ITEMS -> false
+            }
         }
         val receivedHistoryRows = buildList {
-            transactions.forEach { transaction ->
+            historyTransactions.forEach { transaction ->
                 val currencyLabel = when (transaction.currency) {
                     EconomyCurrency.XP -> "XP"
                     EconomyCurrency.POINTS -> "اعتبار"
@@ -718,6 +734,175 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
             }
         }
     }
+}
+
+@Composable
+private fun MemberReportCard(
+    member: Member,
+    transactions: List<EconomyTransaction>,
+    growthItems: List<GrowthItem>,
+    growthProgress: List<MemberGrowthProgress>,
+) {
+    var periodMode by rememberSaveable { mutableStateOf("MONTH") }
+    var selectedYear by rememberSaveable { mutableStateOf(YearMonth.now().year) }
+    var selectedMonth by rememberSaveable { mutableStateOf(YearMonth.now().monthValue) }
+    val month = YearMonth.of(selectedYear, selectedMonth)
+    val summary = remember(transactions, periodMode, selectedYear, selectedMonth) {
+        if (periodMode == "MONTH") MemberReportCalculator.forMonth(transactions, month)
+        else MemberReportCalculator.forYear(transactions, selectedYear)
+    }
+    val level = LevelProgression.levelFor(member.totalXp)
+    val levelStart = LevelProgression.minimumXpForLevel(level)
+    val nextLevelStart = LevelProgression.minimumXpForLevel(level + 1)
+    val levelProgress = ((member.totalXp - levelStart).coerceAtLeast(0L).toFloat() /
+        (nextLevelStart - levelStart).coerceAtLeast(1L).toFloat()).coerceIn(0f, 1f)
+    val growthProgressById = growthProgress.associateBy { it.growthItemId }
+    val growthAverage = if (growthItems.isEmpty()) null else
+        growthItems.map { growthProgressById[it.id]?.progressPercent ?: 0 }.average().toInt()
+
+    ProfileSection("کارنامه", "شش محور مستقل رشد عضو؛ بازه را ماهانه یا سالانه انتخاب کن") {
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            SegmentedButton(
+                selected = periodMode == "MONTH",
+                onClick = { periodMode = "MONTH" },
+                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+            ) { Text("ماهانه") }
+            SegmentedButton(
+                selected = periodMode == "YEAR",
+                onClick = { periodMode = "YEAR" },
+                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+            ) { Text("سالانه") }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TextButton(onClick = {
+                if (periodMode == "MONTH") {
+                    val previous = month.minusMonths(1)
+                    selectedYear = previous.year
+                    selectedMonth = previous.monthValue
+                } else selectedYear -= 1
+            }) { Text("قبلی") }
+            Text(
+                if (periodMode == "MONTH") "${month.year}/${month.monthValue.toString().padStart(2, '0')}"
+                else selectedYear.toString(),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            TextButton(onClick = {
+                if (periodMode == "MONTH") {
+                    val next = month.plusMonths(1)
+                    selectedYear = next.year
+                    selectedMonth = next.monthValue
+                } else selectedYear += 1
+            }) { Text("بعدی") }
+        }
+
+        MemberReportAxisCard(
+            title = "مأموریت",
+            value = "داده‌ای ثبت نشده",
+            detail = "ثبت مأموریت هنوز در این نسخه فعال نیست",
+        )
+        MemberReportAxisCard(
+            title = "امتیاز قابل‌خرج",
+            value = member.spendablePoints.toString(),
+            detail = "مانده فعلی • تغییر خالص بازه: ${formatReportDelta(summary.pointsDelta)}",
+            series = summary.pointsSeries,
+        )
+        MemberReportAxisCard(
+            title = "نقشه کمال",
+            value = growthAverage?.let { "$it٪" } ?: "بدون شاخص فعال",
+            detail = if (growthAverage == null) "برای این عضو شاخص فعالی تعریف نشده است"
+                else "میانگین وضعیت فعلی از ${growthItems.size} شاخص فعال؛ تاریخچه روند هنوز ذخیره نمی‌شود",
+            progress = growthAverage?.div(100f),
+        )
+        MemberReportAxisCard(
+            title = "کتاب‌خوانی",
+            value = "داده‌ای ثبت نشده",
+            detail = "ثبت فعالیت کتاب‌خوانی هنوز در این نسخه فعال نیست",
+        )
+        MemberReportAxisCard(
+            title = "سطح",
+            value = "سطح $level",
+            detail = "${member.totalXp} XP فعلی • تغییر XP در بازه: ${formatReportDelta(summary.xpDelta)}",
+            progress = levelProgress,
+            series = summary.xpSeries,
+        )
+        MemberReportAxisCard(
+            title = "الماس",
+            value = member.diamonds.toString(),
+            detail = "مانده فعلی • تغییر خالص بازه: ${formatReportDelta(summary.diamondsDelta)}",
+            series = summary.diamondsSeries,
+        )
+    }
+}
+
+@Composable
+private fun MemberReportAxisCard(
+    title: String,
+    value: String,
+    detail: String,
+    progress: Float? = null,
+    series: List<Long>? = null,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(title, style = MaterialTheme.typography.titleSmall)
+                Text(value, style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary)
+            }
+            Text(detail, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            progress?.let {
+                LinearProgressIndicator(progress = { it.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
+            }
+            series?.let {
+                if (it.any { value -> value != 0L }) ReportSparkline(it, Modifier.fillMaxWidth())
+                else Text("در این بازه تراکنشی ثبت نشده است", style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReportSparkline(values: List<Long>, modifier: Modifier = Modifier) {
+    val lineColor = MaterialTheme.colorScheme.primary
+    Canvas(modifier = modifier.height(42.dp)) {
+        if (values.size < 2) return@Canvas
+        val minimum = values.minOrNull() ?: 0L
+        val maximum = values.maxOrNull() ?: 0L
+        val range = (maximum - minimum).coerceAtLeast(1L).toFloat()
+        val points = values.mapIndexed { index, value ->
+            Offset(
+                x = size.width * index / (values.size - 1).toFloat(),
+                y = size.height - ((value - minimum).toFloat() / range * size.height),
+            )
+        }
+        points.zipWithNext().forEach { (start, end) ->
+            drawLine(
+                color = lineColor,
+                start = start,
+                end = end,
+                strokeWidth = 3.dp.toPx(),
+                cap = StrokeCap.Round,
+            )
+        }
+    }
+}
+
+private fun formatReportDelta(value: Long): String = when {
+    value > 0L -> "+$value"
+    else -> value.toString()
 }
 
 private data class ReceivedHistoryRow(
