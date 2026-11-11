@@ -25,7 +25,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kichikan.negah.domain.attendance.AttendanceStatus
 import com.kichikan.negah.domain.session.Session
-import com.kichikan.negah.domain.mission.Mission
 import com.kichikan.negah.domain.economy.EconomyCurrency
 import com.kichikan.negah.domain.economy.EconomyTransaction
 import com.kichikan.negah.domain.settings.DailyQuote
@@ -41,7 +40,9 @@ import com.kichikan.negah.feature.members.MembersViewModel
 import com.kichikan.negah.feature.refinery.RefineryScreen
 import com.kichikan.negah.feature.refinery.RefineryViewModel
 import java.time.LocalDate
-import android.icu.util.PersianCalendar
+import android.icu.text.SimpleDateFormat
+import android.icu.util.ULocale
+import java.util.Date
 import java.util.Locale
 
 private enum class MainDestination(val title: String) {
@@ -73,18 +74,15 @@ fun NegahRoot(
     var openDailyQuotes by rememberSaveable { mutableStateOf(false) }
     val membersState by membersViewModel.state.collectAsStateWithLifecycle()
     val sessionsState by sessionsViewModel.uiState.collectAsStateWithLifecycle()
-    val progressState by progressViewModel.state.collectAsStateWithLifecycle()
     val homeAssets by homeDashboardViewModel.state.collectAsStateWithLifecycle()
     val dailyQuotesState by dailyQuotesViewModel.state.collectAsStateWithLifecycle()
     val homeShortcuts by homeShortcutsViewModel.uiState.collectAsStateWithLifecycle()
     val ringProfile by ringProfileViewModel.uiState.collectAsStateWithLifecycle()
-    val dashboard = remember(membersState.members, sessionsState.sessions, sessionsState.attendanceRecords, progressState.missions, homeAssets.avatars, homeAssets.transactions, dailyQuotesState.quotes) {
+    val dashboard = remember(membersState.members, sessionsState.sessions, sessionsState.attendanceRecords, homeAssets.transactions, dailyQuotesState.quotes) {
         buildHomeDashboard(
             members = membersState.members,
             sessions = sessionsState.sessions,
             attendance = sessionsState.attendanceRecords,
-            missions = progressState.missions,
-            avatarBytes = homeAssets.avatars,
             transactions = homeAssets.transactions,
             quotes = dailyQuotesState.quotes,
         )
@@ -245,10 +243,8 @@ fun NegahRoot(
     }
 }
 
-private fun formatSolarHijriDate(epochMillis: Long): String {
-    val calendar = PersianCalendar().apply { timeInMillis = epochMillis }
-    return String.format(Locale("fa"), "%04d/%02d/%02d", calendar.get(PersianCalendar.YEAR), calendar.get(PersianCalendar.MONTH) + 1, calendar.get(PersianCalendar.DAY_OF_MONTH))
-}
+private fun formatSolarHijriDate(epochMillis: Long): String =
+    SimpleDateFormat("yyyy/MM/dd", ULocale("fa_IR@calendar=persian")).format(Date(epochMillis))
 
 private data class TimedHomeEvent(val title: String, val detail: String, val timestampEpochMillis: Long)
 
@@ -256,8 +252,6 @@ private fun buildHomeDashboard(
     members: List<com.kichikan.negah.domain.member.Member>,
     sessions: List<Session>,
     attendance: List<com.kichikan.negah.domain.attendance.AttendanceRecord>,
-    missions: List<Mission>,
-    avatarBytes: Map<String, ByteArray>,
     transactions: List<EconomyTransaction>,
     quotes: List<DailyQuote>,
 ): HomeDashboardState {
@@ -311,26 +305,19 @@ private fun buildHomeDashboard(
             val amount = if (transaction.amountDelta > 0) "+" + transaction.amountDelta else transaction.amountDelta.toString()
             add(TimedHomeEvent("تغییر موجودی " + currency, (memberNames[transaction.memberId] ?: "عضو") + " · " + amount, transaction.createdAtEpochMillis))
         }
-        missions.forEach { mission -> add(TimedHomeEvent("مأموریت تعریف شد", mission.title, mission.createdAtEpochMillis)) }
     }.sortedByDescending { it.timestampEpochMillis }.take(20)
     val activeQuotes = quotes.filter { it.isActive }.sortedBy { it.createdAtEpochMillis }
-    val dailyQuote = if (activeQuotes.isEmpty()) "" else activeQuotes[Math.floorMod(today.toEpochDay(), activeQuotes.size.toLong()).toInt()].text
-    val memberPreviews = members.sortedBy { it.fullName }.map { member ->
-        com.kichikan.negah.feature.home.HomeMemberPreview(member.id, member.fullName, avatarBytes[member.id])
-    }
+    val dailyQuote = if (activeQuotes.isEmpty()) "" else activeQuotes[kotlin.random.Random(today.toEpochDay()).nextInt(activeQuotes.size)].text
     return HomeDashboardState(
         dailyQuote = dailyQuote,
         recentEvents = timedEvents.map { event ->
             com.kichikan.negah.feature.home.HomeRecentEvent(event.title, event.detail,
                 formatSolarHijriDate(event.timestampEpochMillis))
         },
-        memberPreviews = memberPreviews,
         activeMemberCount = members.size,
         totalXp = members.sumOf { it.totalXp },
         totalPoints = members.sumOf { it.spendablePoints },
         totalDiamonds = members.sumOf { it.diamonds },
-        activeMissionCount = missions.count { it.isActive },
-        activeMissionTitles = missions.filter { it.isActive }.map { it.title },
         weekSessionCount = currentWeekSessions.size,
         weekRecordedAttendanceCount = currentWeekAttendance.size,
         attendanceDays = days,
