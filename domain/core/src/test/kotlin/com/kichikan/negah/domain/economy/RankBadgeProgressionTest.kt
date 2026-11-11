@@ -15,6 +15,11 @@ class RankBadgeProgressionTest {
     fun eachLevelUnlocksExactlyItsMatchingRank() {
         assertEquals("سرباز", RankBadgeProgression.currentForLevel(1)?.title)
         assertEquals("سرباز دوم", RankBadgeProgression.currentForLevel(2)?.title)
+        assertEquals("رزمیار", RankBadgeProgression.currentForLevel(4)?.title)
+        assertEquals("رزم‌آور سوم", RankBadgeProgression.currentForLevel(5)?.title)
+        assertEquals("رزم‌دار دوم", RankBadgeProgression.currentForLevel(8)?.title)
+        assertEquals("ستوان سوم", RankBadgeProgression.currentForLevel(10)?.title)
+        assertEquals("سرتیپ دوم", RankBadgeProgression.currentForLevel(17)?.title)
         assertEquals(10, RankBadgeProgression.earnedForLevel(10).size)
     }
 

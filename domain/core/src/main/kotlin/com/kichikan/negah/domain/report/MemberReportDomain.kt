@@ -35,7 +35,7 @@ object MemberReportCalculator {
         year: Int,
         zoneId: ZoneId = ZoneId.systemDefault(),
     ): MemberReportSummary {
-        require(year in 1..9999) { "Year must be in the supported calendar range" }
+        require(year in 1..9998) { "Year must be in the supported calendar range" }
         return calculate(
             transactions = transactions,
             start = LocalDate.of(year, 1, 1),
