@@ -8,13 +8,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,6 +42,8 @@ data class HomeDashboardState(
     val totalXp: Long = 0,
     val totalPoints: Long = 0,
     val totalDiamonds: Long = 0,
+    val weekSessionCount: Int = 0,
+    val weekRecordedAttendanceCount: Int = 0,
     val attendanceDays: List<HomeAttendanceDay> = emptyList(),
     val recentSessions: List<HomeRecentSession> = emptyList(),
 )
@@ -50,16 +53,15 @@ fun HomeScreen(
     dashboard: HomeDashboardState,
     shortcuts: List<HomeShortcut>,
     onOpenShortcut: (HomeShortcut) -> Unit,
+    onOpenWeeklyPulse: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState())
+            .padding(horizontal = 18.dp, vertical = 22.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Text("نگاه مربی", style = MaterialTheme.typography.headlineMedium)
             Text(
                 "دیدن مسیر رشد، همراهی با هر عضو",
@@ -69,46 +71,68 @@ fun HomeScreen(
         }
 
         Card(modifier = Modifier.fillMaxWidth()) {
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth().padding(18.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("اعضای فعال", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        "اعضای ثبت‌شده در حلقه",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                Text("نبض هفتگی حلقه", style = MaterialTheme.typography.titleLarge)
                 Text(
-                    dashboard.activeMemberCount.toString(),
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.primary,
+                    "${dashboard.weekSessionCount} جلسه در هفته جاری  •  ${dashboard.weekRecordedAttendanceCount} وضعیت حضور ثبت‌شده",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                TextButton(onClick = onOpenWeeklyPulse) {
+                    Text("مشاهده جزئیات نبض هفتگی")
+                }
             }
         }
+
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("دسترسی سریع", style = MaterialTheme.typography.titleMedium)
+            if (shortcuts.isEmpty()) {
+                Text(
+                    "میان‌بری انتخاب نشده است. از تنظیمات، میان‌برهای خانه را مشخص کنید.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                shortcuts.forEach { shortcut ->
+                    Button(
+                        onClick = { onOpenShortcut(shortcut) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(shortcut.label)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun HomeWeeklyPulseScreen(
+    dashboard: HomeDashboardState,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        TextButton(onClick = onBack) { Text("بازگشت به خانه") }
+        Text("نبض هفتگی حلقه", style = MaterialTheme.typography.headlineSmall)
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text("موجودی جمع اعضا", style = MaterialTheme.typography.titleMedium)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    WalletValue("XP", dashboard.totalXp)
-                    WalletValue("امتیاز", dashboard.totalPoints)
-                    WalletValue("الماس", dashboard.totalDiamonds)
-                }
-                Text(
-                    "سه موجودی مستقل از یکدیگر محاسبه می‌شوند.",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Text("نمای کلی حلقه", style = MaterialTheme.typography.titleMedium)
+                SummaryValue("اعضای فعال", dashboard.activeMemberCount.toString())
+                SummaryValue("XP", dashboard.totalXp.toString())
+                SummaryValue("امتیاز قابل‌خرج", dashboard.totalPoints.toString())
+                SummaryValue("الماس", dashboard.totalDiamonds.toString())
             }
         }
 
@@ -118,9 +142,9 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Text("روند حضور در ۷ روز اخیر", style = MaterialTheme.typography.titleMedium)
-                if (dashboard.attendanceDays.isEmpty()) {
+                if (dashboard.attendanceDays.none { it.recordedCount > 0 }) {
                     Text(
-                        "هنوز داده‌ای برای نمایش وجود ندارد.",
+                        "در این بازه هنوز وضعیت حضوری ثبت نشده است.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -133,36 +157,25 @@ fun HomeScreen(
                         ) {
                             Text(day.label, style = MaterialTheme.typography.labelMedium)
                             Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .background(
-                                        MaterialTheme.colorScheme.surfaceVariant,
-                                        RoundedCornerShape(8.dp),
-                                    )
+                                modifier = Modifier.weight(1f)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
                                     .padding(2.dp),
                             ) {
                                 Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth(day.presentRatio.coerceIn(0f, 1f))
-                                        .background(
-                                            MaterialTheme.colorScheme.primary,
-                                            RoundedCornerShape(6.dp),
-                                        )
+                                    modifier = Modifier.fillMaxWidth(day.presentRatio.coerceIn(0f, 1f))
+                                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(6.dp))
                                         .padding(vertical = 5.dp),
                                 )
                             }
-                            Text(
-                                "${day.presentCount} از ${day.recordedCount}",
-                                style = MaterialTheme.typography.labelSmall,
-                            )
+                            Text("${day.presentCount} از ${day.recordedCount}", style = MaterialTheme.typography.labelSmall)
                         }
                     }
-                    Text(
-                        "تعداد حاضرها از کل وضعیت‌های ثبت‌شده در جلسات هر روز",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
+                Text(
+                    "حاضرها از مجموع وضعیت‌های ثبت‌شده؛ وضعیت «بدون ثبت» نیز در مخرج شمارش می‌شود.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
 
@@ -171,10 +184,10 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Text("جلسات اخیر", style = MaterialTheme.typography.titleMedium)
+                Text("رویدادهای اخیر", style = MaterialTheme.typography.titleMedium)
                 if (dashboard.recentSessions.isEmpty()) {
                     Text(
-                        "هنوز جلسه‌ای ثبت نشده است.",
+                        "هنوز رویدادی از جلسه‌ها برای نمایش وجود ندارد.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -204,33 +217,17 @@ fun HomeScreen(
                 }
             }
         }
-
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("دسترسی سریع", style = MaterialTheme.typography.titleMedium)
-            if (shortcuts.isEmpty()) {
-                Text(
-                    "میان‌بری انتخاب نشده است. از تنظیمات، میان‌برهای خانه را مشخص کنید.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else {
-                shortcuts.forEach { shortcut ->
-                    Button(
-                        onClick = { onOpenShortcut(shortcut) },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(shortcut.label)
-                    }
-                }
-            }
-        }
     }
 }
 
 @Composable
-private fun WalletValue(label: String, value: Long) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(value.toString(), style = MaterialTheme.typography.titleLarge)
-        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun SummaryValue(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+        Text(value, style = MaterialTheme.typography.titleMedium)
     }
 }

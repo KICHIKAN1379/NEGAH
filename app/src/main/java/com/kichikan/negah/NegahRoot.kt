@@ -30,6 +30,7 @@ import com.kichikan.negah.feature.home.HomeAttendanceDay
 import com.kichikan.negah.feature.home.HomeDashboardState
 import com.kichikan.negah.feature.home.HomeRecentSession
 import com.kichikan.negah.feature.home.HomeScreen
+import com.kichikan.negah.feature.home.HomeWeeklyPulseScreen
 import com.kichikan.negah.feature.members.MembersScreen
 import com.kichikan.negah.feature.members.MembersViewModel
 import com.kichikan.negah.feature.refinery.RefineryScreen
@@ -57,6 +58,7 @@ fun NegahRoot(
     var openClassDays by rememberSaveable { mutableStateOf(false) }
     var openHomeShortcuts by rememberSaveable { mutableStateOf(false) }
     var openSessions by rememberSaveable { mutableStateOf(false) }
+    var openWeeklyPulse by rememberSaveable { mutableStateOf(false) }
     val membersState by membersViewModel.state.collectAsStateWithLifecycle()
     val sessionsState by sessionsViewModel.uiState.collectAsStateWithLifecycle()
     val homeShortcuts by homeShortcutsViewModel.uiState.collectAsStateWithLifecycle()
@@ -81,6 +83,7 @@ fun NegahRoot(
                             openClassDays = false
                             openHomeShortcuts = false
                             openSessions = false
+                            openWeeklyPulse = false
                         },
                         icon = { Text(destination.title.take(1)) },
                         label = { Text(destination.title) },
@@ -89,37 +92,46 @@ fun NegahRoot(
             }
         }) { padding ->
             when (MainDestination.valueOf(selected)) {
-                MainDestination.HOME -> HomeScreen(
-                    dashboard = dashboard,
-                    shortcuts = homeShortcuts.selected,
-                    onOpenShortcut = { shortcut ->
-                        openRefinery = false
-                        openClassDays = false
-                        openHomeShortcuts = false
-                        openSessions = false
-                        when (shortcut) {
-                            HomeShortcut.MEMBERS -> selected = MainDestination.MEMBERS.name
-                            HomeShortcut.PROGRESS -> {
-                                selected = MainDestination.PROGRESS.name
+                MainDestination.HOME -> {
+                    if (openWeeklyPulse) {
+                        HomeWeeklyPulseScreen(
+                            dashboard = dashboard,
+                            onBack = { openWeeklyPulse = false },
+                            modifier = Modifier.padding(padding),
+                        )
+                    } else {
+                        HomeScreen(
+                            dashboard = dashboard,
+                            shortcuts = homeShortcuts.selected,
+                            onOpenShortcut = { shortcut ->
+                                openRefinery = false
+                                openClassDays = false
+                                openHomeShortcuts = false
                                 openSessions = false
-                            }
-                            HomeShortcut.SESSIONS -> {
-                                selected = MainDestination.PROGRESS.name
-                                openSessions = true
-                            }
-                            HomeShortcut.SHOP -> selected = MainDestination.SHOP.name
-                            HomeShortcut.REFINERY -> {
-                                selected = MainDestination.SETTINGS.name
-                                openRefinery = true
-                            }
-                            HomeShortcut.CLASS_DAYS -> {
-                                selected = MainDestination.SETTINGS.name
-                                openClassDays = true
-                            }
-                        }
-                    },
-                    modifier = Modifier.padding(padding),
-                )
+                                openWeeklyPulse = false
+                                when (shortcut) {
+                                    HomeShortcut.MEMBERS -> selected = MainDestination.MEMBERS.name
+                                    HomeShortcut.PROGRESS -> selected = MainDestination.PROGRESS.name
+                                    HomeShortcut.SESSIONS -> {
+                                        selected = MainDestination.PROGRESS.name
+                                        openSessions = true
+                                    }
+                                    HomeShortcut.SHOP -> selected = MainDestination.SHOP.name
+                                    HomeShortcut.REFINERY -> {
+                                        selected = MainDestination.SETTINGS.name
+                                        openRefinery = true
+                                    }
+                                    HomeShortcut.CLASS_DAYS -> {
+                                        selected = MainDestination.SETTINGS.name
+                                        openClassDays = true
+                                    }
+                                }
+                            },
+                            onOpenWeeklyPulse = { openWeeklyPulse = true },
+                            modifier = Modifier.padding(padding),
+                        )
+                    }
+                }
                 MainDestination.MEMBERS -> MembersScreen(membersViewModel, Modifier.padding(padding))
                 MainDestination.PROGRESS -> {
                     if (openSessions) {
@@ -200,6 +212,12 @@ private fun buildHomeDashboard(
             recordedCount = records.size,
         )
     }
+    val weekOffset = (today.dayOfWeek.value + 1) % 7
+    val weekStart = today.minusDays(weekOffset.toLong()).toEpochDay()
+    val weekEnd = weekStart + 6
+    val currentWeekSessions = sessions.filter { it.sessionDateEpochDay in weekStart..weekEnd }
+    val currentWeekSessionIds = currentWeekSessions.map(Session::id).toSet()
+    val currentWeekAttendance = attendance.filter { it.sessionId in currentWeekSessionIds }
     val dateFormatter = DateTimeFormatter.ofPattern("yyyy/MM/dd", Locale("fa"))
     val recent = sessions.sortedByDescending(Session::sessionDateEpochDay).take(3).map { session ->
         HomeRecentSession(
@@ -213,6 +231,8 @@ private fun buildHomeDashboard(
         totalXp = members.sumOf { it.totalXp },
         totalPoints = members.sumOf { it.spendablePoints },
         totalDiamonds = members.sumOf { it.diamonds },
+        weekSessionCount = currentWeekSessions.size,
+        weekRecordedAttendanceCount = currentWeekAttendance.size,
         attendanceDays = days,
         recentSessions = recent,
     )
