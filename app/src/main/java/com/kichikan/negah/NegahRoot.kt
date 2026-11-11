@@ -135,8 +135,8 @@ fun NegahRoot(
                         HomeScreen(
                             dashboard = dashboard,
                             shortcuts = homeShortcuts.selected,
-                            ringName = ringProfile.name,
-                            ringUsername = ringProfile.username,
+                            ringName = ringProfile.profile.name,
+                            ringUsername = ringProfile.profile.username,
                             ringImageBytes = ringProfile.ringImageBytes,
                             bannerBytes = ringProfile.bannerBytes,
                             onOpenShortcut = { shortcut ->
