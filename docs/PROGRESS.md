@@ -53,7 +53,7 @@ Last updated: 2026-11-11
 - Settings is currently a minimal entry point to Refinery and class-day settings; most of the nine approved settings options are missing.
 - Sessions/attendance now include a month-navigable report with separate counts for all five attendance states, selected-month CSV export, and a live revision-history view; a group filter waits for the group data model.
 - The Sessions screen now supports previous/next week navigation; its seven-day window starts on Saturday and day chips remain limited to configured class days.
-- Member profile now includes growth/economy/inventory sections, four Ganjine tabs, automatic level badges, received-history filters, a six-axis report card, and active/archive switching with restore. Image assets and visual avatar/frame rendering remain unsupported.
+- Member profile now includes growth/economy/inventory sections, four Ganjine tabs, automatic level badges, received-history filters, a six-axis report card, and active/archive switching with restore. Member profile avatar selection and display now use app-private image storage; catalog and ring image flows and frame rendering remain unsupported.
 - Encrypted backup/restore, MRT retention of at most two versions, and first-run file-access flow are not implemented.
 - WorkManager is mentioned in README architecture text, but no WorkManager implementation/dependency was found in the audited files.
 - DAO tests now cover class-day persistence and session/attendance persistence, update revisions and deletion restrictions. The 5→6 database migration has not yet been exercised by a dedicated migration test.
@@ -197,7 +197,7 @@ The available host has GitHub repository read/write integration but no local And
 - Added app-private binary storage for JPEG, PNG and WebP imports. The storage layer copies bytes out of temporary picker URIs, uses generated filenames (not user-supplied paths), records byte size and SHA-256, and validates paths before opening/deleting.
 - Added an injectable manager to import, replace, open and remove an asset associated with a member, ring or catalog item.
 - Added JVM tests for byte round-trip, metadata, deletion, empty input, unsupported MIME types and path traversal rejection.
-- This is infrastructure only: no screen currently invokes it; member/catalog records are not yet wired to the stored asset IDs, and portable backup/restore is not implemented.
+- The member profile now invokes this storage for avatar selection and display through a domain repository boundary. Catalog and ring image screens are not yet connected, and portable backup/restore is not implemented.
 - CI must verify Room schema generation, migration wiring, Hilt construction and tests before this slice is considered validated.
 
 
@@ -206,3 +206,11 @@ The available host has GitHub repository read/write integration but no local And
 - Registered `MediaAssetDao` with the database and Hilt provider, and added the 8→9 migration to the production Room builder. Without these registrations, the previously added entity/DAO were not part of the live database and the manager could not be constructed.
 - Owner decision: backup encryption and portable key/recovery design are deferred until online-service work. No encryption implementation is in scope for the offline MVP.
 - Member-profile image selection/display is still not connected to the UI; this commit closes the database/DI gap only. CI verification is required before considering it validated.
+
+
+## Latest continuation — member profile avatar flow (2026-11-12)
+- Added a domain-level `MemberAvatarRepository` contract so the Members feature does not depend directly on the data/local implementation.
+- Bound the Room-backed media manager through Hilt. The profile's Android content picker copies the selected image into app-private storage; it does not retain the temporary picker URI.
+- The profile loads and displays the saved avatar and supports replacing it. The UI decodes a downsampled preview to limit display memory use.
+- Added ViewModel tests for loading an existing avatar and saving/reloading a newly selected avatar. CI has not yet completed for this change.
+- Ring image/banner and catalog image selection/display remain future work. No image bytes are included in backup yet.
