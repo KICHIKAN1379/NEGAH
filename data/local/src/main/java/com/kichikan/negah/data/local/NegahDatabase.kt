@@ -16,7 +16,7 @@ import com.kichikan.negah.data.local.settings.HomeShortcutSettingsEntity
 import com.kichikan.negah.data.local.settings.HomeShortcutsDao
 import com.kichikan.negah.data.local.media.MediaAssetEntity
 import com.kichikan.negah.data.local.media.MediaAssetDao
-@Database(entities = [MemberEntity::class, SessionEntity::class, AttendanceEntity::class, AttendanceRevisionEntity::class, CommitmentEntity::class, CommitmentRevisionEntity::class, EconomyTransactionEntity::class, GrowthItemEntity::class, MemberGrowthProgressEntity::class, CatalogItemEntity::class, MemberInventoryEntity::class, MemberActiveItemEntity::class, ClassDayEntity::class, HomeShortcutEntity::class, HomeShortcutSettingsEntity::class], version = 8, exportSchema = true)
+@Database(entities = [MemberEntity::class, SessionEntity::class, AttendanceEntity::class, AttendanceRevisionEntity::class, CommitmentEntity::class, CommitmentRevisionEntity::class, EconomyTransactionEntity::class, GrowthItemEntity::class, MemberGrowthProgressEntity::class, CatalogItemEntity::class, MemberInventoryEntity::class, MemberActiveItemEntity::class, ClassDayEntity::class, HomeShortcutEntity::class, HomeShortcutSettingsEntity::class, MediaAssetEntity::class], version = 9, exportSchema = true)
 @TypeConverters(AttendanceStatusConverter::class)
 abstract class NegahDatabase : RoomDatabase() {
  abstract fun memberDao(): MemberDao

@@ -280,7 +280,7 @@ The Growth Map configuration screen has no direct image in the primary UX PDF; u
 
 ## 13. Open decisions / not to guess
 
-- Backup encryption format and portable recovery-key mechanism.
+- Deferred until online-service phase by owner decision (2026-11-12): backup encryption format and portable recovery-key mechanism.
 - Automatic backup cadence and exact trigger conditions.
 - Detailed mission lifecycle/reward formulas where not explicit in approved product rules.
 - Reading scoring units/rewards.
