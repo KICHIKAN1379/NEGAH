@@ -290,3 +290,5 @@ The Growth Map configuration screen has no direct image in the primary UX PDF; u
 - Any behavior that conflicts between the product guide, UX/UX2 and the latest explicit owner instruction.
 
 Resolve material conflicts with the owner before implementation. Do not silently promote illustrative mockup values or inferred rules to product requirements.
+
+- Birthday reward is 30 spendable credits (POINTS), issued automatically once per member per Solar Hijri year on their recorded Solar Hijri birthday. The birthday date is optional and stored in YYYY/MM/DD format. A deterministic ledger transaction ID prevents duplicate credits when the app is reopened or member data is re-emitted.

@@ -1,5 +1,7 @@
 package com.kichikan.negah.feature.members
 
+import android.icu.util.PersianCalendar
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.compose.foundation.background
@@ -88,6 +90,7 @@ data class MembersUiState(
     val showingArchived: Boolean = false,
     val fullName: String = "",
     val nickname: String = "",
+    val birthDateJalali: String = "",
     val searchQuery: String = "",
     val sortOption: MemberSortOption = MemberSortOption.NAME,
     val selectedMemberId: String? = null,
@@ -160,6 +163,7 @@ class MembersViewModel @Inject constructor(
         viewModelScope.launch {
             repository.observeActiveMembers().collect { members ->
                 mutableState.update { it.copy(members = members) }
+                grantBirthdayCredits(members)
             }
         }
         viewModelScope.launch {
@@ -169,10 +173,39 @@ class MembersViewModel @Inject constructor(
         }
     }
 
+    private fun grantBirthdayCredits(members: List<Member>) {
+        val today = PersianCalendar()
+        val currentYear = today.get(PersianCalendar.YEAR)
+        val currentMonth = today.get(PersianCalendar.MONTH) + 1
+        val currentDay = today.get(PersianCalendar.DATE)
+        val now = System.currentTimeMillis()
+        members.forEach { member ->
+            val parts = member.birthDateJalali?.split("/") ?: return@forEach
+            if (parts.size != 3) return@forEach
+            val month = parts[1].toIntOrNull() ?: return@forEach
+            val day = parts[2].toIntOrNull() ?: return@forEach
+            if (month != currentMonth || day != currentDay) return@forEach
+            val transaction = EconomyTransaction(
+                id = "birthday-${member.id}-$currentYear",
+                memberId = member.id,
+                currency = EconomyCurrency.POINTS,
+                amountDelta = 30L,
+                kind = EconomyTransactionKind.EARN,
+                sourceType = "BIRTHDAY_REWARD",
+                sourceId = currentYear.toString(),
+                createdAtEpochMillis = now,
+            )
+            viewModelScope.launch {
+                runCatching { economyRepository.appendAtomically(transaction) }
+            }
+        }
+    }
+
     fun onFullNameChanged(value: String) = mutableState.update {
         it.copy(fullName = value, validationMessage = null, savedMessage = null)
     }
     fun onNicknameChanged(value: String) = mutableState.update { it.copy(nickname = value, savedMessage = null) }
+    fun onBirthDateChanged(value: String) = mutableState.update { it.copy(birthDateJalali = value, validationMessage = null, savedMessage = null) }
     fun onSearchChanged(value: String) = mutableState.update { it.copy(searchQuery = value) }
     fun onSortChanged(value: MemberSortOption) = mutableState.update { it.copy(sortOption = value) }
     fun onHistoryFilterChanged(value: MemberHistoryFilter) = mutableState.update { it.copy(historyFilter = value) }
@@ -334,12 +367,12 @@ class MembersViewModel @Inject constructor(
         viewModelScope.launch {
             mutableState.update { it.copy(isSaving = true, validationMessage = null, savedMessage = null) }
             try {
-                when (registerMember(snapshot.fullName, snapshot.nickname, System.currentTimeMillis())) {
+                when (registerMember(snapshot.fullName, snapshot.nickname, System.currentTimeMillis(), snapshot.birthDateJalali.takeIf(String::isNotBlank)?.let(::normalizeJalaliDate))) {
                     RegisterMemberResult.InvalidName -> mutableState.update {
                         it.copy(isSaving = false, validationMessage = "نام و نام خانوادگی را وارد کنید")
                     }
                     is RegisterMemberResult.Saved -> mutableState.update {
-                        it.copy(fullName = "", nickname = "", isSaving = false, savedMessage = "عضو جدید ثبت شد")
+                        it.copy(fullName = "", nickname = "", birthDateJalali = "", isSaving = false, savedMessage = "عضو جدید ثبت شد")
                     }
                 }
             } catch (_: Exception) {
@@ -349,6 +382,23 @@ class MembersViewModel @Inject constructor(
             }
         }
     }
+}
+
+private fun normalizeJalaliDate(value: String): String {
+    val digits = value.map { char ->
+        when (char) {
+            in '۰'..'۹' -> '0' + (char - '۰')
+            in '٠'..'٩' -> '0' + (char - '٠')
+            else -> char
+        }
+    }.joinToString("")
+    val parts = digits.split("/", "-")
+    require(parts.size == 3) { "تاریخ تولد باید به شکل سال/ماه/روز باشد" }
+    val year = parts[0].toIntOrNull() ?: error("سال تولد نامعتبر است")
+    val month = parts[1].toIntOrNull() ?: error("ماه تولد نامعتبر است")
+    val day = parts[2].toIntOrNull() ?: error("روز تولد نامعتبر است")
+    require(year in 1200..1600 && month in 1..12 && day in 1..31) { "تاریخ تولد شمسی معتبر نیست" }
+    return "%04d/%02d/%02d".format(year, month, day)
 }
 
 @Composable
@@ -498,6 +548,10 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
                         label = { Text("نام و نام خانوادگی") }, singleLine = true)
                     OutlinedTextField(value = state.nickname, onValueChange = viewModel::onNicknameChanged,
                         label = { Text("نام نمایشی (اختیاری)") }, singleLine = true)
+                    OutlinedTextField(value = state.birthDateJalali, onValueChange = viewModel::onBirthDateChanged,
+                        label = { Text("تاریخ تولد شمسی (اختیاری)") },
+                        placeholder = { Text("۱۴۰۰/۰۵/۲۱") }, singleLine = true,
+                        supportingText = { Text("سال/ماه/روز؛ پاداش تولد سالانه ۳۰ اعتبار است") })
                     state.validationMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 }
             },

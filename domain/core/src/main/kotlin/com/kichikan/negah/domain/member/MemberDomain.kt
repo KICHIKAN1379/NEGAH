@@ -8,6 +8,7 @@ data class Member(
     val id: String, val fullName: String, val nickname: String?,
     val totalXp: Long, val spendablePoints: Long, val diamonds: Long,
     val createdAtEpochMillis: Long, val updatedAtEpochMillis: Long, val isArchived: Boolean,
+    val birthDateJalali: String? = null,
 )
 
 interface MemberRepository {
@@ -25,7 +26,7 @@ sealed interface RegisterMemberResult {
 }
 
 class RegisterMember @Inject constructor(private val repository: MemberRepository) {
-    suspend operator fun invoke(fullName: String, nickname: String?, nowEpochMillis: Long): RegisterMemberResult {
+    suspend operator fun invoke(fullName: String, nickname: String?, nowEpochMillis: Long, birthDateJalali: String? = null): RegisterMemberResult {
         val name = fullName.trim()
         if (name.isBlank()) return RegisterMemberResult.InvalidName
         val member = Member(
@@ -33,6 +34,7 @@ class RegisterMember @Inject constructor(private val repository: MemberRepositor
             nickname = nickname?.trim()?.takeIf(String::isNotEmpty),
             totalXp = 0L, spendablePoints = 0L, diamonds = 0L,
             createdAtEpochMillis = nowEpochMillis, updatedAtEpochMillis = nowEpochMillis,
+            birthDateJalali = birthDateJalali,
             isArchived = false,
         )
         repository.create(member)

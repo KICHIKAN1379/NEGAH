@@ -23,7 +23,7 @@ import javax.inject.Singleton
 object DatabaseModule {
  @Provides @Singleton fun provideNegahDatabase(@ApplicationContext context: Context): NegahDatabase =
   Room.databaseBuilder(context, NegahDatabase::class.java, "negah_coach.db")
-   .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7).build()
+   .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8).build()
  @Provides fun provideMemberDao(database: NegahDatabase): MemberDao = database.memberDao()
  @Provides fun provideSessionDao(database: NegahDatabase): SessionDao = database.sessionDao()
  @Provides fun provideAttendanceDao(database: NegahDatabase): AttendanceDao = database.attendanceDao()
