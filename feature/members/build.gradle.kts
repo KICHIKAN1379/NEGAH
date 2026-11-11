@@ -20,6 +20,7 @@ kapt { correctErrorTypes = true }
 dependencies {
     implementation(project(":domain:core"))
     implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.lifecycle.runtime.compose)

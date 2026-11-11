@@ -5,6 +5,13 @@ import android.icu.util.ULocale
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.graphics.BitmapFactory
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
@@ -58,6 +65,7 @@ import com.kichikan.negah.domain.economy.RankBadgeProgression
 import com.kichikan.negah.domain.report.MemberReportCalculator
 import com.kichikan.negah.domain.member.Member
 import com.kichikan.negah.domain.member.MemberRepository
+import com.kichikan.negah.domain.member.MemberAvatarRepository
 import com.kichikan.negah.domain.member.RegisterMember
 import com.kichikan.negah.domain.member.RegisterMemberResult
 import com.kichikan.negah.domain.growth.GrowthItem
@@ -81,6 +89,7 @@ import java.text.DateFormat
 import java.util.Date
 import java.time.YearMonth
 import kotlinx.coroutines.launch
+import java.io.InputStream
 
 enum class MemberSortOption { NAME, LEVEL, POINTS }
 enum class MemberHistoryFilter { ALL, XP, POINTS, DIAMONDS, ITEMS }
@@ -108,6 +117,8 @@ data class MembersUiState(
     val validationMessage: String? = null,
     val savedMessage: String? = null,
     val profileMessage: String? = null,
+    val avatarBytes: ByteArray? = null,
+    val avatarMessage: String? = null,
 ) {
     val visibleEconomyTransactions: List<EconomyTransaction>
         get() = economyTransactions.filter { transaction ->
@@ -152,6 +163,7 @@ class MembersViewModel @Inject constructor(
     private val growthMapRepository: GrowthMapRepository,
     private val updateGrowthProgress: UpdateGrowthProgress,
     private val inventoryRepository: InventoryRepository,
+    private val avatarRepository: MemberAvatarRepository,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(MembersUiState())
     val state = mutableState.asStateFlow()
@@ -160,6 +172,7 @@ class MembersViewModel @Inject constructor(
     private var growthProgressJob: Job? = null
     private var inventoryJob: Job? = null
     private var catalogJob: Job? = null
+    private var avatarJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -248,7 +261,14 @@ class MembersViewModel @Inject constructor(
         growthProgressJob?.cancel()
         inventoryJob?.cancel()
         catalogJob?.cancel()
-        mutableState.update { it.copy(selectedMemberId = memberId, economyTransactions = emptyList(), growthItems = emptyList(), growthProgress = emptyList(), growthSaveMessage = null, inventoryEntries = emptyList(), availableCatalogItems = emptyList(), activeInventoryItems = emptyList(), inventoryMessage = null) }
+        avatarJob?.cancel()
+        mutableState.update { it.copy(selectedMemberId = memberId, economyTransactions = emptyList(), growthItems = emptyList(), growthProgress = emptyList(), growthSaveMessage = null, inventoryEntries = emptyList(), availableCatalogItems = emptyList(), activeInventoryItems = emptyList(), inventoryMessage = null, avatarBytes = null, avatarMessage = null) }
+        avatarJob = viewModelScope.launch {
+            val bytes = runCatching { avatarRepository.loadAvatar(memberId) }.getOrNull()
+            mutableState.update { current ->
+                if (current.selectedMemberId == memberId) current.copy(avatarBytes = bytes) else current
+            }
+        }
         economyHistoryJob = viewModelScope.launch {
             economyRepository.observeForMember(memberId).collect { transactions ->
                 mutableState.update { current ->
@@ -306,7 +326,37 @@ class MembersViewModel @Inject constructor(
         }
     }
 
+
+    fun updateMemberAvatar(input: InputStream, mimeType: String) {
+        val memberId = mutableState.value.selectedMemberId
+        if (memberId == null) {
+            input.close()
+            return
+        }
+        avatarJob?.cancel()
+        avatarJob = viewModelScope.launch {
+            try {
+                avatarRepository.saveAvatar(memberId, input, mimeType)
+                val bytes = avatarRepository.loadAvatar(memberId)
+                mutableState.update { current ->
+                    if (current.selectedMemberId == memberId) current.copy(
+                        avatarBytes = bytes,
+                        avatarMessage = "تصویر پروفایل ذخیره شد",
+                    ) else current
+                }
+            } catch (_: Exception) {
+                runCatching { input.close() }
+                mutableState.update { current ->
+                    if (current.selectedMemberId == memberId) current.copy(
+                        avatarMessage = "ذخیره تصویر انجام نشد؛ فایل دیگری انتخاب کنید",
+                    ) else current
+                }
+            }
+        }
+    }
+
     fun onProfileClosed() {
+        avatarJob?.cancel()
         economyHistoryJob?.cancel()
         growthItemsJob?.cancel()
         growthProgressJob?.cancel()
@@ -317,7 +367,8 @@ class MembersViewModel @Inject constructor(
         growthProgressJob = null
         inventoryJob = null
         catalogJob = null
-        mutableState.update { it.copy(selectedMemberId = null, economyTransactions = emptyList(), growthItems = emptyList(), growthProgress = emptyList(), growthSaveMessage = null, inventoryEntries = emptyList(), availableCatalogItems = emptyList(), activeInventoryItems = emptyList(), inventoryMessage = null) }
+        avatarJob = null
+        mutableState.update { it.copy(selectedMemberId = null, economyTransactions = emptyList(), growthItems = emptyList(), growthProgress = emptyList(), growthSaveMessage = null, inventoryEntries = emptyList(), availableCatalogItems = emptyList(), activeInventoryItems = emptyList(), inventoryMessage = null, avatarBytes = null, avatarMessage = null) }
     }
 
     fun saveGrowthProgress(item: GrowthItem, progressPercent: Int, note: String?) {
@@ -429,7 +480,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val selectedMember = state.members.firstOrNull { it.id == state.selectedMemberId }
     if (selectedMember != null) {
-        MemberProfileScreen(selectedMember, state.economyTransactions, state.historyFilter, viewModel::onHistoryFilterChanged, state.growthItems, state.growthProgress, state.growthSaveMessage, state.inventoryEntries, state.availableCatalogItems, state.activeInventoryItems, state.inventoryMessage, state.profileMessage, viewModel::updateSelectedMemberBirthDate, viewModel::saveGrowthProgress, viewModel::activateInventoryItem, viewModel::grantCatalogItem, viewModel::onProfileClosed, modifier)
+        MemberProfileScreen(selectedMember, state.economyTransactions, state.historyFilter, viewModel::onHistoryFilterChanged, state.growthItems, state.growthProgress, state.growthSaveMessage, state.inventoryEntries, state.availableCatalogItems, state.activeInventoryItems, state.inventoryMessage, state.profileMessage, state.avatarBytes, state.avatarMessage, viewModel::updateSelectedMemberBirthDate, viewModel::updateMemberAvatar, viewModel::saveGrowthProgress, viewModel::activateInventoryItem, viewModel::grantCatalogItem, viewModel::onProfileClosed, modifier)
         return
     }
 
@@ -589,11 +640,32 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, historyFilter: MemberHistoryFilter, onHistoryFilterChanged: (MemberHistoryFilter) -> Unit, growthItems: List<GrowthItem>, growthProgress: List<MemberGrowthProgress>, growthSaveMessage: String?, inventoryEntries: List<MemberInventoryEntry>, availableCatalogItems: List<CatalogItem>, activeInventoryItems: List<ActiveInventoryItem>, inventoryMessage: String?, profileMessage: String?, onUpdateBirthDate: (String) -> Unit, onSaveGrowthProgress: (GrowthItem, Int, String?) -> Unit, onActivateInventoryItem: (MemberInventoryEntry) -> Unit, onGrantCatalogItem: (CatalogItem) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
+private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, historyFilter: MemberHistoryFilter, onHistoryFilterChanged: (MemberHistoryFilter) -> Unit, growthItems: List<GrowthItem>, growthProgress: List<MemberGrowthProgress>, growthSaveMessage: String?, inventoryEntries: List<MemberInventoryEntry>, availableCatalogItems: List<CatalogItem>, activeInventoryItems: List<ActiveInventoryItem>, inventoryMessage: String?, profileMessage: String?, avatarBytes: ByteArray?, avatarMessage: String?, onUpdateBirthDate: (String) -> Unit, onUpdateAvatar: (InputStream, String) -> Unit, onSaveGrowthProgress: (GrowthItem, Int, String?) -> Unit, onActivateInventoryItem: (MemberInventoryEntry) -> Unit, onGrantCatalogItem: (CatalogItem) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
     var inventoryTab by rememberSaveable { mutableStateOf("آواتار") }
     var showAllReceivedHistory by rememberSaveable { mutableStateOf(false) }
     var showBirthDateDialog by rememberSaveable { mutableStateOf(false) }
     var birthDateDraft by rememberSaveable(member.id) { mutableStateOf(member.birthDateJalali.orEmpty()) }
+    val context = LocalContext.current
+    val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            val mimeType = context.contentResolver.getType(uri)
+            val input = context.contentResolver.openInputStream(uri)
+            if (mimeType != null && input != null) onUpdateAvatar(input, mimeType)
+            else input?.close()
+        }
+    }
+    val avatarBitmap = remember(avatarBytes) {
+        avatarBytes?.let { bytes ->
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+            var sampleSize = 1
+            while (bounds.outWidth / sampleSize > 512 || bounds.outHeight / sampleSize > 512) sampleSize *= 2
+            BitmapFactory.decodeByteArray(
+                bytes, 0, bytes.size,
+                BitmapFactory.Options().apply { inSampleSize = sampleSize },
+            )?.asImageBitmap()
+        }
+    }
     val level = LevelProgression.levelFor(member.totalXp)
     val currentLevelXp = LevelProgression.minimumXpForLevel(level)
     val nextLevelXp = LevelProgression.minimumXpForLevel(level + 1)
@@ -609,6 +681,27 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
             TextButton(onClick = onBack) { Text("بازگشت") }
         }
         ProfileSection("اطلاعات عضو", "مشخصات پایه") {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (avatarBitmap != null) {
+                    Image(
+                        bitmap = avatarBitmap,
+                        contentDescription = "تصویر پروفایل ${member.fullName}",
+                        modifier = Modifier.size(76.dp),
+                        contentScale = ContentScale.Crop,
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier.size(76.dp).background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) { Text("تصویر ندارد", style = MaterialTheme.typography.labelSmall) }
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    TextButton(onClick = { avatarPicker.launch("image/*") }) { Text("انتخاب تصویر") }
+                    avatarMessage?.let {
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
             Text("تاریخ تولد شمسی: ${member.birthDateJalali ?: "ثبت نشده"}", style = MaterialTheme.typography.bodyMedium)
             TextButton(onClick = { birthDateDraft = member.birthDateJalali.orEmpty(); showBirthDateDialog = true }) { Text("ویرایش تاریخ تولد") }
             profileMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }

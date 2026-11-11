@@ -6,6 +6,7 @@ import com.kichikan.negah.domain.economy.EconomyTransaction
 import com.kichikan.negah.domain.economy.EconomyTransactionKind
 import com.kichikan.negah.domain.member.Member
 import com.kichikan.negah.domain.member.MemberRepository
+import com.kichikan.negah.domain.member.MemberAvatarRepository
 import com.kichikan.negah.domain.member.RegisterMember
 import com.kichikan.negah.domain.growth.GrowthItem
 import com.kichikan.negah.domain.growth.GrowthMapRepository
@@ -27,6 +28,9 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import java.io.ByteArrayInputStream
+import java.io.InputStream
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
@@ -39,6 +43,7 @@ class MembersViewModelTest {
     private lateinit var economy: FakeEconomyRepository
     private lateinit var growth: FakeGrowthMapRepository
     private lateinit var inventory: FakeInventoryRepository
+    private lateinit var avatars: FakeMemberAvatarRepository
     private lateinit var viewModel: MembersViewModel
 
     @Before
@@ -48,6 +53,7 @@ class MembersViewModelTest {
         economy = FakeEconomyRepository()
         growth = FakeGrowthMapRepository()
         inventory = FakeInventoryRepository()
+        avatars = FakeMemberAvatarRepository()
         viewModel = MembersViewModel(
             members,
             RegisterMember(members),
@@ -55,6 +61,7 @@ class MembersViewModelTest {
             growth,
             UpdateGrowthProgress(growth),
             inventory,
+            avatars,
         )
     }
 
@@ -62,6 +69,22 @@ class MembersViewModelTest {
     fun tearDown() {
         viewModel.onProfileClosed()
         Dispatchers.resetMain()
+    }
+
+    @Test
+    fun selectedMemberLoadsPersistedAvatarBytes() = runTest {
+        avatars.images["member-1"] = byteArrayOf(1, 2, 3)
+        viewModel.onMemberSelected("member-1")
+        assertArrayEquals(byteArrayOf(1, 2, 3), viewModel.state.value.avatarBytes)
+    }
+
+    @Test
+    fun selectingNewAvatarPersistsAndRefreshesProfileState() = runTest {
+        viewModel.onMemberSelected("member-1")
+        viewModel.updateMemberAvatar(ByteArrayInputStream(byteArrayOf(9, 8, 7)), "image/png")
+        assertArrayEquals(byteArrayOf(9, 8, 7), avatars.images["member-1"])
+        assertArrayEquals(byteArrayOf(9, 8, 7), viewModel.state.value.avatarBytes)
+        assertEquals("تصویر پروفایل ذخیره شد", viewModel.state.value.avatarMessage)
     }
 
     @Test
@@ -218,6 +241,15 @@ class MembersViewModelTest {
         sourceId = null,
         createdAtEpochMillis = 1,
     )
+}
+
+private class FakeMemberAvatarRepository : MemberAvatarRepository {
+    val images = mutableMapOf<String, ByteArray>()
+    override suspend fun saveAvatar(memberId: String, input: InputStream, mimeType: String) {
+        require(mimeType in setOf("image/jpeg", "image/png", "image/webp"))
+        images[memberId] = input.use { it.readBytes() }
+    }
+    override suspend fun loadAvatar(memberId: String): ByteArray? = images[memberId]
 }
 
 private class FakeMemberRepository : MemberRepository {
