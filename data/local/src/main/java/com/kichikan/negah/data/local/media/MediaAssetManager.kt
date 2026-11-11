@@ -79,6 +79,9 @@ class MediaAssetManager @Inject constructor(
         previous?.let { fileStore.delete(it.relativePath) }
     }
 
+    override suspend fun removeAvatar(memberId: String): Boolean =
+        removeImage(MediaAssetOwnerType.MEMBER, memberId, MediaAssetRole.AVATAR)
+
     override suspend fun loadAvatar(memberId: String): ByteArray? {
         val asset = mediaAssetDao.findByOwner(
             MediaAssetOwnerType.MEMBER.name,

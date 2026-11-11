@@ -229,3 +229,10 @@ The available host has GitHub repository read/write integration but no local And
 - Added the missing Hilt binding from the domain-level `MemberAvatarRepository` contract to the Room/private-file-backed `MediaAssetManager`.
 - This closes the runtime graph gap between the MembersViewModel and local media persistence. The feature module remains dependent only on the domain contract.
 - Avatar picker, private-file persistence, profile preview, and ViewModel regression tests are present; CI is still queued, so compilation and test execution are not yet confirmed.
+
+
+## Member avatar management completion (2026-11-12)
+- Added an explicit remove-avatar operation to the domain contract and local media manager.
+- Added a profile action to remove the currently displayed avatar, clear the persisted media asset, and immediately clear the in-memory preview.
+- Added a ViewModel regression test for persisted and visible avatar removal.
+- Replacing, loading, and removing a member avatar now have explicit profile-level flows; ring and catalog images remain separate future integrations.

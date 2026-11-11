@@ -329,6 +329,28 @@ class MembersViewModel @Inject constructor(
     }
 
 
+    fun removeMemberAvatar() {
+        val memberId = mutableState.value.selectedMemberId ?: return
+        avatarJob?.cancel()
+        avatarJob = viewModelScope.launch {
+            try {
+                avatarRepository.removeAvatar(memberId)
+                mutableState.update { current ->
+                    if (current.selectedMemberId == memberId) current.copy(
+                        avatarBytes = null,
+                        avatarMessage = "تصویر پروفایل حذف شد",
+                    ) else current
+                }
+            } catch (_: Exception) {
+                mutableState.update { current ->
+                    if (current.selectedMemberId == memberId) current.copy(
+                        avatarMessage = "حذف تصویر انجام نشد",
+                    ) else current
+                }
+            }
+        }
+    }
+
     fun updateMemberAvatar(input: InputStream, mimeType: String) {
         val memberId = mutableState.value.selectedMemberId
         if (memberId == null) {
@@ -485,7 +507,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val selectedMember = state.members.firstOrNull { it.id == state.selectedMemberId }
     if (selectedMember != null) {
-        MemberProfileScreen(selectedMember, state.economyTransactions, state.historyFilter, viewModel::onHistoryFilterChanged, state.growthItems, state.growthProgress, state.growthSaveMessage, state.inventoryEntries, state.availableCatalogItems, state.activeInventoryItems, state.inventoryMessage, state.profileMessage, state.avatarBytes, state.avatarMessage, viewModel::updateSelectedMemberBirthDate, viewModel::updateMemberAvatar, viewModel::saveGrowthProgress, viewModel::activateInventoryItem, viewModel::grantCatalogItem, viewModel::onProfileClosed, modifier)
+        MemberProfileScreen(selectedMember, state.economyTransactions, state.historyFilter, viewModel::onHistoryFilterChanged, state.growthItems, state.growthProgress, state.growthSaveMessage, state.inventoryEntries, state.availableCatalogItems, state.activeInventoryItems, state.inventoryMessage, state.profileMessage, state.avatarBytes, state.avatarMessage, viewModel::updateSelectedMemberBirthDate, viewModel::updateMemberAvatar, viewModel::removeMemberAvatar, viewModel::saveGrowthProgress, viewModel::activateInventoryItem, viewModel::grantCatalogItem, viewModel::onProfileClosed, modifier)
         return
     }
 
@@ -645,7 +667,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, historyFilter: MemberHistoryFilter, onHistoryFilterChanged: (MemberHistoryFilter) -> Unit, growthItems: List<GrowthItem>, growthProgress: List<MemberGrowthProgress>, growthSaveMessage: String?, inventoryEntries: List<MemberInventoryEntry>, availableCatalogItems: List<CatalogItem>, activeInventoryItems: List<ActiveInventoryItem>, inventoryMessage: String?, profileMessage: String?, avatarBytes: ByteArray?, avatarMessage: String?, onUpdateBirthDate: (String) -> Unit, onUpdateAvatar: (InputStream, String) -> Unit, onSaveGrowthProgress: (GrowthItem, Int, String?) -> Unit, onActivateInventoryItem: (MemberInventoryEntry) -> Unit, onGrantCatalogItem: (CatalogItem) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
+private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, historyFilter: MemberHistoryFilter, onHistoryFilterChanged: (MemberHistoryFilter) -> Unit, growthItems: List<GrowthItem>, growthProgress: List<MemberGrowthProgress>, growthSaveMessage: String?, inventoryEntries: List<MemberInventoryEntry>, availableCatalogItems: List<CatalogItem>, activeInventoryItems: List<ActiveInventoryItem>, inventoryMessage: String?, profileMessage: String?, avatarBytes: ByteArray?, avatarMessage: String?, onUpdateBirthDate: (String) -> Unit, onUpdateAvatar: (InputStream, String) -> Unit, onRemoveAvatar: () -> Unit, onSaveGrowthProgress: (GrowthItem, Int, String?) -> Unit, onActivateInventoryItem: (MemberInventoryEntry) -> Unit, onGrantCatalogItem: (CatalogItem) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
     var inventoryTab by rememberSaveable { mutableStateOf("آواتار") }
     var showAllReceivedHistory by rememberSaveable { mutableStateOf(false) }
     var showBirthDateDialog by rememberSaveable { mutableStateOf(false) }
@@ -702,6 +724,9 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     TextButton(onClick = { avatarPicker.launch("image/*") }) { Text("انتخاب تصویر") }
+                    if (avatarBitmap != null) {
+                        TextButton(onClick = onRemoveAvatar) { Text("حذف تصویر") }
+                    }
                     avatarMessage?.let {
                         Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }

@@ -99,6 +99,19 @@ class MembersViewModelTest {
     }
 
     @Test
+    fun removingAvatarClearsPersistedAndVisibleProfileImage() = runTest {
+        avatars.images["member-1"] = byteArrayOf(1, 2, 3)
+        viewModel.onMemberSelected("member-1")
+        assertArrayEquals(byteArrayOf(1, 2, 3), viewModel.state.value.avatarBytes)
+
+        viewModel.removeMemberAvatar()
+
+        assertNull(avatars.images["member-1"])
+        assertNull(viewModel.state.value.avatarBytes)
+        assertEquals("تصویر پروفایل حذف شد", viewModel.state.value.avatarMessage)
+    }
+
+    @Test
     fun visibleMembers_filtersByFullNameAndNickname_caseInsensitively() = runTest {
         members.emit(listOf(member("1", "آرمان رضایی", "آرمانک"), member("2", "سارا احمدی", null)))
         viewModel.onSearchChanged("  آرمانک  ")
@@ -261,6 +274,7 @@ private class FakeMemberAvatarRepository : MemberAvatarRepository {
         images[memberId] = input.use { it.readBytes() }
     }
     override suspend fun loadAvatar(memberId: String): ByteArray? = images[memberId]
+    override suspend fun removeAvatar(memberId: String): Boolean = images.remove(memberId) != null
 }
 
 private class FakeMemberRepository : MemberRepository {
