@@ -41,7 +41,7 @@ import com.kichikan.negah.feature.members.MembersViewModel
 import com.kichikan.negah.feature.refinery.RefineryScreen
 import com.kichikan.negah.feature.refinery.RefineryViewModel
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
+import android.icu.util.PersianCalendar
 import java.util.Locale
 
 private enum class MainDestination(val title: String) {
@@ -245,6 +245,11 @@ fun NegahRoot(
     }
 }
 
+private fun formatSolarHijriDate(epochMillis: Long): String {
+    val calendar = PersianCalendar().apply { timeInMillis = epochMillis }
+    return String.format(Locale("fa"), "%04d/%02d/%02d", calendar.get(PersianCalendar.YEAR), calendar.get(PersianCalendar.MONTH) + 1, calendar.get(PersianCalendar.DAY_OF_MONTH))
+}
+
 private data class TimedHomeEvent(val title: String, val detail: String, val timestampEpochMillis: Long)
 
 private fun buildHomeDashboard(
@@ -277,11 +282,10 @@ private fun buildHomeDashboard(
     val currentWeekSessions = sessions.filter { it.sessionDateEpochDay in weekStart..weekEnd }
     val currentWeekSessionIds = currentWeekSessions.map(Session::id).toSet()
     val currentWeekAttendance = attendance.filter { it.sessionId in currentWeekSessionIds }
-    val dateFormatter = DateTimeFormatter.ofPattern("yyyy/MM/dd", Locale("fa"))
     val recent = sessions.sortedByDescending(Session::sessionDateEpochDay).take(3).map { session ->
         HomeRecentSession(
             title = session.title,
-            dateLabel = LocalDate.ofEpochDay(session.sessionDateEpochDay).format(dateFormatter),
+            dateLabel = formatSolarHijriDate(LocalDate.ofEpochDay(session.sessionDateEpochDay).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()),
             completed = session.isCompleted,
         )
     }
@@ -318,7 +322,7 @@ private fun buildHomeDashboard(
         dailyQuote = dailyQuote,
         recentEvents = timedEvents.map { event ->
             com.kichikan.negah.feature.home.HomeRecentEvent(event.title, event.detail,
-                java.time.Instant.ofEpochMilli(event.timestampEpochMillis).atZone(java.time.ZoneId.systemDefault()).toLocalDate().format(dateFormatter))
+                formatSolarHijriDate(event.timestampEpochMillis))
         },
         memberPreviews = memberPreviews,
         activeMemberCount = members.size,
