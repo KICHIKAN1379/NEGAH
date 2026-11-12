@@ -14,6 +14,10 @@ class RoomMemberRepository @Inject constructor(private val memberDao: MemberDao)
     override suspend fun create(member: Member) = memberDao.insert(MemberEntity.fromDomain(member))
     override suspend fun updateBirthDate(memberId: String, birthDateJalali: String?, updatedAtEpochMillis: Long) =
         memberDao.updateBirthDate(memberId, birthDateJalali, updatedAtEpochMillis)
+    override suspend fun updateProfile(memberId: String, fullName: String, nickname: String?, birthDateJalali: String?, updatedAtEpochMillis: Long) =
+        memberDao.updateProfile(memberId, fullName, nickname, birthDateJalali, updatedAtEpochMillis)
+    override suspend fun updateActiveBadgeLevel(memberId: String, level: Int?, updatedAtEpochMillis: Long) =
+        memberDao.updateActiveBadgeLevel(memberId, level, updatedAtEpochMillis)
     override suspend fun archive(memberId: String) = memberDao.archive(memberId, System.currentTimeMillis())
     override suspend fun restore(memberId: String) = memberDao.restore(memberId, System.currentTimeMillis())
 }

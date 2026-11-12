@@ -71,3 +71,9 @@ val MIGRATION_11_12 = object : Migration(11, 12) {
   database.execSQL("""CREATE TABLE IF NOT EXISTS daily_quotes (id TEXT NOT NULL, text TEXT NOT NULL, isActive INTEGER NOT NULL, createdAtEpochMillis INTEGER NOT NULL, PRIMARY KEY(id))""")
  }
 }
+
+val MIGRATION_12_13 = object : Migration(12, 13) {
+ override fun migrate(database: SupportSQLiteDatabase) {
+  database.execSQL("ALTER TABLE members ADD COLUMN activeBadgeLevel INTEGER")
+ }
+}
