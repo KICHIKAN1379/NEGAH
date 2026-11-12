@@ -1096,8 +1096,22 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                 },
                 confirmButton = {
                     Button(onClick = {
+                        val reportCalendar = Calendar.getInstance(ULocale("fa_IR@calendar=persian"))
+                        val reportYear = reportCalendar.get(Calendar.YEAR)
+                        val reportMonth = reportCalendar.get(Calendar.MONTH) + 1
+                        val reportAssignments = missionAssignments.filter { assignment ->
+                            val date = Calendar.getInstance(ULocale("fa_IR@calendar=persian")).apply { timeInMillis = assignment.updatedAtEpochMillis }
+                            assignment.memberId == member.id && date.get(Calendar.YEAR) == reportYear && date.get(Calendar.MONTH) + 1 == reportMonth
+                        }
+                        val reportCompletedMissions = reportAssignments.count { it.status == MissionAssignmentStatus.COMPLETED || it.status == MissionAssignmentStatus.APPROVED }
+                        val reportApprovedMissions = reportAssignments.count { it.status == MissionAssignmentStatus.APPROVED }
+                        val reportGrowthAverage = if (growthItems.isEmpty()) null else growthItems.map { item ->
+                            growthProgress.firstOrNull { it.growthItemId == item.id }?.progressPercent ?: 0
+                        }.average().toInt()
+                        val reportSummary = calculateJalaliMemberReport(transactions, reportYear, reportMonth, true)
+                        val reportLevel = LevelProgression.levelFor(member.totalXp)
                         pendingPdfSections = buildList {
-                            if (exportIdentity) add("اطلاعات هویتی" to "نام: ${member.fullName}\nنام نمایشی: ${member.nickname ?: "ثبت نشده"}\nتاریخ تولد: ${member.birthDateJalali ?: "ثبت نشده"}\nسطح: $level\nXP: ${member.totalXp}\nامتیاز قابل خرج: ${member.spendablePoints}\nالماس: ${member.diamonds}")
+                            if (exportIdentity) add("اطلاعات هویتی" to "نام: ${member.fullName}\nنام نمایشی: ${member.nickname ?: "ثبت نشده"}\nتاریخ تولد: ${member.birthDateJalali ?: "ثبت نشده"}\nسطح: $level\nنشان فعال: ${member.activeBadgeLevel?.let { RankBadgeProgression.all.getOrNull(it - 1)?.title } ?: RankBadgeProgression.currentForLevel(level)?.title ?: "ندارد"}\nXP: ${member.totalXp}\nامتیاز قابل خرج: ${member.spendablePoints}\nالماس: ${member.diamonds}")
                             if (exportTreasure) add("گنجینه" to (inventoryEntries.joinToString("\n") { entry ->
                                 val active = activeInventoryItems.any { it.category == entry.category && it.catalogItemId == entry.catalogItemId }
                                 "${entry.title} · ${entry.category} · ${if (active) "فعال" else "دریافت‌شده"}"
@@ -1106,7 +1120,7 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                                 val saved = growthProgress.firstOrNull { it.growthItemId == item.id }
                                 "${item.title}: ${saved?.progressPercent ?: 0}٪ · ${saved?.note.orEmpty()}"
                             }.ifBlank { "شاخص فعالی ثبت نشده است" })
-                            if (exportReport) add("کارنامه" to "XP: ${member.totalXp} · امتیاز: ${member.spendablePoints} · الماس: ${member.diamonds}\nبرای مأموریت و کتاب‌خوانی هنوز دادهٔ گزارش‌پذیر ثبت نشده است.")
+                            if (exportReport) add("کارنامه · ${reportYear}/${reportMonth.toString().padStart(2, '0')}" to "مأموریت: $reportCompletedMissions از ${reportAssignments.size} تکمیل‌شده، $reportApprovedMissions تأییدشده\nامتیاز قابل خرج: ${member.spendablePoints} · تغییر بازه: ${formatReportDelta(reportSummary.pointsDelta)}\nنقشه کمال: ${reportGrowthAverage?.let { "$it٪ وضعیت فعلی" } ?: "بدون شاخص فعال"} · روند تاریخی ذخیره نشده\nکتاب‌خوانی: داده‌ای ثبت نشده\nسطح: $reportLevel · ${member.totalXp} XP · تغییر بازه: ${formatReportDelta(reportSummary.xpDelta)}\nالماس: ${member.diamonds} · تغییر بازه: ${formatReportDelta(reportSummary.diamondsDelta)}")
                             if (exportHistory) add("سوابق دریافتی" to receivedHistoryRows.joinToString("\n\n") { row ->
                                 "${row.title} · ${row.detail} · ${DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, Locale("fa", "IR")).format(Date(row.timestamp))} · ${row.amount.orEmpty()}"
                             }.ifBlank { "سابقه‌ای ثبت نشده است" })
