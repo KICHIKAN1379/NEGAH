@@ -63,6 +63,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -243,6 +244,7 @@ class MembersViewModel @Inject constructor(
         val memberId = mutableState.value.selectedMemberId ?: return
         val name = fullName.trim()
         if (name.isBlank()) { mutableState.update { it.copy(profileMessage = "نام و نام خانوادگی الزامی است") }; return }
+        mutableState.update { it.copy(profileMessage = null) }
         val normalizedDate = try { birthDate.trim().takeIf(String::isNotEmpty)?.let(::normalizeJalaliDate) }
         catch (_: Exception) { mutableState.update { it.copy(profileMessage = "تاریخ تولد شمسی معتبر نیست") }; return }
         viewModelScope.launch {
@@ -580,6 +582,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
 
     var showAddDialog by rememberSaveable { mutableStateOf(false) }
     var memberPendingArchive by rememberSaveable { mutableStateOf<Member?>(null) }
+    LaunchedEffect(state.savedMessage) { if (state.savedMessage == "عضو جدید ثبت شد") showAddDialog = false }
     val totalXp = state.members.sumOf { it.totalXp }
 
     Column(
@@ -717,7 +720,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
                 }
             },
             confirmButton = {
-                Button(onClick = { viewModel.addMember(); showAddDialog = false }, enabled = !state.isSaving) {
+                Button(onClick = { viewModel.addMember() }, enabled = !state.isSaving) {
                     Text(if (state.isSaving) "در حال ثبت..." else "ثبت عضو")
                 }
             },
@@ -745,6 +748,7 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
     var exportReport by rememberSaveable { mutableStateOf(true) }
     var exportHistory by rememberSaveable { mutableStateOf(true) }
     var pendingPdfSections by remember { mutableStateOf(emptyList<Pair<String, String>>()) }
+    LaunchedEffect(profileMessage) { if (profileMessage == "مشخصات عضو ذخیره شد") showProfileEditDialog = false }
     val pdfLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
         if (uri != null) {
             val pdf = createMemberPdf(member.fullName, pendingPdfSections, avatarBytes)
@@ -1040,7 +1044,10 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                     Button(onClick = {
                         pendingPdfSections = buildList {
                             if (exportIdentity) add("اطلاعات هویتی" to "نام: ${member.fullName}\nنام نمایشی: ${member.nickname ?: "ثبت نشده"}\nتاریخ تولد: ${member.birthDateJalali ?: "ثبت نشده"}\nسطح: $level\nXP: ${member.totalXp}\nامتیاز قابل خرج: ${member.spendablePoints}\nالماس: ${member.diamonds}")
-                            if (exportTreasure) add("گنجینه" to (inventoryEntries.joinToString("\n") { "${it.title} · ${it.category}" }.ifBlank { "آیتمی ثبت نشده است" } + "\nنشان‌های بازشده: " + RankBadgeProgression.earnedForLevel(level).joinToString("، ") { it.title }))
+                            if (exportTreasure) add("گنجینه" to (inventoryEntries.joinToString("\n") { entry ->
+                                val active = activeInventoryItems.any { it.category == entry.category && it.catalogItemId == entry.catalogItemId }
+                                "${entry.title} · ${entry.category} · ${if (active) "فعال" else "دریافت‌شده"}"
+                            }.ifBlank { "آیتمی ثبت نشده است" } + "\nنشان‌های بازشده: " + RankBadgeProgression.earnedForLevel(level).joinToString("، ") { it.title }))
                             if (exportGrowth) add("نقشه کمال" to growthItems.joinToString("\n") { item ->
                                 val saved = growthProgress.firstOrNull { it.growthItemId == item.id }
                                 "${item.title}: ${saved?.progressPercent ?: 0}٪ · ${saved?.note.orEmpty()}"
@@ -1136,7 +1143,7 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                         OutlinedTextField(value = birthDateDraft, onValueChange = { birthDateDraft = it }, label = { Text("تاریخ تولد شمسی (اختیاری)") }, placeholder = { Text("۱۴۰۰/۰۵/۲۱") }, singleLine = true)
                     }
                 },
-                confirmButton = { Button(onClick = { onUpdateProfile(profileNameDraft, profileNicknameDraft, birthDateDraft); showProfileEditDialog = false }) { Text("ذخیره") } },
+                confirmButton = { Button(onClick = { onUpdateProfile(profileNameDraft, profileNicknameDraft, birthDateDraft) }) { Text("ذخیره") } },
                 dismissButton = { TextButton(onClick = { showProfileEditDialog = false }) { Text("انصراف") } },
             )
         }
