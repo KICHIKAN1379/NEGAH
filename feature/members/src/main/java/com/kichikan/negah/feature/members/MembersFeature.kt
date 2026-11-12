@@ -979,10 +979,11 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                             entry.description?.takeIf { it.isNotBlank() }?.let {
                                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            if (isActive) {
-                                Text("فعال", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                            } else {
-                                TextButton(onClick = { onActivateInventoryItem(entry) }) { Text("انتخاب به‌عنوان فعال") }
+                            when {
+                                category == InventoryCategory.REWARD -> Text("دریافت‌شده", style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                isActive -> Text("فعال", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                                else -> TextButton(onClick = { onActivateInventoryItem(entry) }) { Text("انتخاب به‌عنوان فعال") }
                             }
                         }
                     }
