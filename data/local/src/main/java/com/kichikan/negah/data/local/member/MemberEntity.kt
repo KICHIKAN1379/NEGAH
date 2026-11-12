@@ -16,13 +16,14 @@ data class MemberEntity(
     val updatedAtEpochMillis: Long,
     val isArchived: Boolean = false,
     val birthDateJalali: String? = null,
+    val activeBadgeLevel: Int? = null,
 ) {
     fun toDomain() = Member(id, fullName, nickname, totalXp, spendablePoints, diamonds,
-        createdAtEpochMillis, updatedAtEpochMillis, isArchived, birthDateJalali)
+        createdAtEpochMillis, updatedAtEpochMillis, isArchived, birthDateJalali, activeBadgeLevel)
     companion object {
         fun fromDomain(member: Member) = MemberEntity(
             member.id, member.fullName, member.nickname, member.totalXp, member.spendablePoints,
-            member.diamonds, member.createdAtEpochMillis, member.updatedAtEpochMillis, member.isArchived, member.birthDateJalali,
+            member.diamonds, member.createdAtEpochMillis, member.updatedAtEpochMillis, member.isArchived, member.birthDateJalali, member.activeBadgeLevel,
         )
     }
 }

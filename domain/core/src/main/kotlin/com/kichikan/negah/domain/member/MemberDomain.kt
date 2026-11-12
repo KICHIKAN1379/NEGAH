@@ -9,6 +9,7 @@ data class Member(
     val totalXp: Long, val spendablePoints: Long, val diamonds: Long,
     val createdAtEpochMillis: Long, val updatedAtEpochMillis: Long, val isArchived: Boolean,
     val birthDateJalali: String? = null,
+    val activeBadgeLevel: Int? = null,
 )
 
 interface MemberRepository {
@@ -18,6 +19,12 @@ interface MemberRepository {
     suspend fun create(member: Member)
     suspend fun updateBirthDate(memberId: String, birthDateJalali: String?, updatedAtEpochMillis: Long) {
         throw UnsupportedOperationException("Birth date editing is not supported by this repository")
+    }
+    suspend fun updateProfile(memberId: String, fullName: String, nickname: String?, birthDateJalali: String?, updatedAtEpochMillis: Long) {
+        throw UnsupportedOperationException("Profile editing is not supported by this repository")
+    }
+    suspend fun updateActiveBadgeLevel(memberId: String, level: Int?, updatedAtEpochMillis: Long) {
+        throw UnsupportedOperationException("Badge selection is not supported by this repository")
     }
     suspend fun archive(memberId: String)
     suspend fun restore(memberId: String)
