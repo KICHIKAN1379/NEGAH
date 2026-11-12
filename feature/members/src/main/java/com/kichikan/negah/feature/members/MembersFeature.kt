@@ -96,6 +96,7 @@ import com.kichikan.negah.domain.inventory.MemberInventoryEntry
 import com.kichikan.negah.domain.mission.Mission
 import com.kichikan.negah.domain.mission.MissionAssignment
 import com.kichikan.negah.domain.mission.MissionAssignmentStatus
+import com.kichikan.negah.domain.mission.MissionKind
 import com.kichikan.negah.domain.mission.MissionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -1128,7 +1129,9 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                         val reportCalendar = Calendar.getInstance(ULocale("fa_IR@calendar=persian"))
                         val reportYear = reportCalendar.get(Calendar.YEAR)
                         val reportMonth = reportCalendar.get(Calendar.MONTH) + 1
+                        val reportableMissionIds = missions.filter { it.kind != MissionKind.GROUP_PUZZLE }.map { it.id }.toSet()
                         val reportAssignments = missionAssignments.filter { assignment ->
+                            if (assignment.missionId !in reportableMissionIds) return@filter false
                             val date = Calendar.getInstance(ULocale("fa_IR@calendar=persian")).apply { timeInMillis = assignment.updatedAtEpochMillis }
                             assignment.memberId == member.id && date.get(Calendar.YEAR) == reportYear && date.get(Calendar.MONTH) + 1 == reportMonth
                         }
@@ -1318,7 +1321,8 @@ private fun MemberReportCard(
             }) { Text("بعدی") }
         }
 
-        val memberMissionAssignments = missionAssignments.filter { it.memberId == member.id }
+        val reportableMissionIds = missions.filter { it.kind != MissionKind.GROUP_PUZZLE }.map { it.id }.toSet()
+        val memberMissionAssignments = missionAssignments.filter { it.memberId == member.id && it.missionId in reportableMissionIds }
         val missionBucketCount = if (periodMode == "MONTH") {
             Calendar.getInstance(ULocale("fa_IR@calendar=persian")).apply { clear(); set(selectedYear, selectedMonth - 1, 1) }.getActualMaximum(Calendar.DAY_OF_MONTH)
         } else 12
