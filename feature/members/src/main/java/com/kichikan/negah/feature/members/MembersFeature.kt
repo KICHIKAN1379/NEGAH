@@ -812,6 +812,12 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
             )?.asImageBitmap()
         }
     }
+    val activeAvatarBitmap = remember(activeAvatarBytes) {
+        activeAvatarBytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size)?.asImageBitmap() }
+    }
+    val activeFrameBitmap = remember(activeFrameBytes) {
+        activeFrameBytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size)?.asImageBitmap() }
+    }
     val level = LevelProgression.levelFor(member.totalXp)
     val currentLevelXp = LevelProgression.minimumXpForLevel(level)
     val nextLevelXp = LevelProgression.minimumXpForLevel(level + 1)
@@ -876,8 +882,19 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                             Text("درجه ${badge.title}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
                         }
                     }
-                    Box(modifier = Modifier.size(58.dp).background(MaterialTheme.colorScheme.primary, CircleShape), contentAlignment = Alignment.Center) {
-                        Text(level.toString(), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onPrimary)
+                    Box(modifier = Modifier.size(104.dp), contentAlignment = Alignment.Center) {
+                        if (activeAvatarBitmap != null) {
+                            Image(bitmap = activeAvatarBitmap, contentDescription = "آواتار فعال عضو",
+                                modifier = Modifier.size(76.dp).clip(CircleShape), contentScale = ContentScale.Crop)
+                        } else {
+                            Box(modifier = Modifier.size(76.dp).background(MaterialTheme.colorScheme.primary, CircleShape), contentAlignment = Alignment.Center) {
+                                Text(level.toString(), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onPrimary)
+                            }
+                        }
+                        activeFrameBitmap?.let {
+                            Image(bitmap = it, contentDescription = "قاب فعال عضو",
+                                modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+                        }
                     }
                 }
                 Text(member.totalXp.toString() + " XP", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
