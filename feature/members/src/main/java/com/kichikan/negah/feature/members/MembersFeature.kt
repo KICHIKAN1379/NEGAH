@@ -6,6 +6,16 @@ import android.icu.util.ULocale
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.graphics.BitmapFactory
+import android.graphics.Bitmap
+import android.graphics.Canvas as AndroidCanvas
+import android.graphics.Paint
+import android.graphics.RectF
+import android.graphics.Typeface
+import android.graphics.pdf.PdfDocument
+import android.text.Layout
+import android.text.StaticLayout
+import android.text.TextDirectionHeuristics
+import android.text.TextPaint
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -89,6 +99,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import java.text.DateFormat
 import java.util.Date
+import java.util.Locale
 import java.time.YearMonth
 import kotlinx.coroutines.launch
 import java.io.InputStream
@@ -733,6 +744,20 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
     var adjustmentCurrency by rememberSaveable { mutableStateOf(EconomyCurrency.XP) }
     var adjustmentAmountDraft by rememberSaveable { mutableStateOf("") }
     var adjustmentReasonDraft by rememberSaveable { mutableStateOf("") }
+    var showExportDialog by rememberSaveable { mutableStateOf(false) }
+    var exportIdentity by rememberSaveable { mutableStateOf(true) }
+    var exportTreasure by rememberSaveable { mutableStateOf(true) }
+    var exportGrowth by rememberSaveable { mutableStateOf(true) }
+    var exportReport by rememberSaveable { mutableStateOf(true) }
+    var exportHistory by rememberSaveable { mutableStateOf(true) }
+    var pendingPdfSections by remember { mutableStateOf(emptyList<Pair<String, String>>()) }
+    val pdfLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
+        if (uri != null) {
+            val pdf = createMemberPdf(member.fullName, pendingPdfSections, avatarBytes)
+            runCatching { context.contentResolver.openOutputStream(uri)?.use { pdf.writeTo(it) } }
+            pdf.close()
+        }
+    }
     val context = LocalContext.current
     val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
@@ -994,6 +1019,50 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                 }
             }
         }.sortedByDescending { it.timestamp }
+        Button(onClick = { showExportDialog = true }, modifier = Modifier.fillMaxWidth()) { Text("خروجی پرونده عضو (PDF)") }
+        if (showExportDialog) {
+            AlertDialog(
+                onDismissRequest = { showExportDialog = false },
+                title = { Text("انتخاب بخش‌های خروجی پرونده") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf("اطلاعات هویتی" to exportIdentity, "گنجینه" to exportTreasure, "نقشه کمال" to exportGrowth, "کارنامه" to exportReport, "سوابق دریافتی" to exportHistory).forEach { (label, checked) ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(checked = checked, onCheckedChange = { value ->
+                                    when (label) {
+                                        "اطلاعات هویتی" -> exportIdentity = value
+                                        "گنجینه" -> exportTreasure = value
+                                        "نقشه کمال" -> exportGrowth = value
+                                        "کارنامه" -> exportReport = value
+                                        "سوابق دریافتی" -> exportHistory = value
+                                    }
+                                })
+                                Text(label)
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        pendingPdfSections = buildList {
+                            if (exportIdentity) add("اطلاعات هویتی" to "نام: ${member.fullName}\nنام نمایشی: ${member.nickname ?: "ثبت نشده"}\nتاریخ تولد: ${member.birthDateJalali ?: "ثبت نشده"}\nسطح: $level\nXP: ${member.totalXp}\nامتیاز قابل خرج: ${member.spendablePoints}\nالماس: ${member.diamonds}")
+                            if (exportTreasure) add("گنجینه" to (inventoryEntries.joinToString("\n") { "${it.title} · ${it.category}" }.ifBlank { "آیتمی ثبت نشده است" } + "\nنشان‌های بازشده: " + RankBadgeProgression.earnedForLevel(level).joinToString("، ") { it.title }))
+                            if (exportGrowth) add("نقشه کمال" to growthItems.joinToString("\n") { item ->
+                                val saved = growthProgress.firstOrNull { it.growthItemId == item.id }
+                                "${item.title}: ${saved?.progressPercent ?: 0}٪ · ${saved?.note.orEmpty()}"
+                            }.ifBlank { "شاخص فعالی ثبت نشده است" })
+                            if (exportReport) add("کارنامه" to "XP: ${member.totalXp} · امتیاز: ${member.spendablePoints} · الماس: ${member.diamonds}\nبرای مأموریت و کتاب‌خوانی هنوز دادهٔ گزارش‌پذیر ثبت نشده است.")
+                            if (exportHistory) add("سوابق دریافتی" to receivedHistoryRows.joinToString("\n\n") { row ->
+                                "${row.title} · ${row.detail} · ${DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, Locale("fa", "IR")).format(Date(row.timestamp))} · ${row.amount.orEmpty()}"
+                            }.ifBlank { "سابقه‌ای ثبت نشده است" })
+                        }
+                        showExportDialog = false
+                        pdfLauncher.launch("پرونده-${member.fullName}.pdf")
+                    }, enabled = listOf(exportIdentity, exportTreasure, exportGrowth, exportReport, exportHistory).any { it }) { Text("ساخت PDF") }
+                },
+                dismissButton = { TextButton(onClick = { showExportDialog = false }) { Text("انصراف") } },
+            )
+        }
         ProfileSection("سوابق دریافتی", "پاداش‌ها، تراکنش‌ها و آیتم‌های دریافت‌شده") {
             Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 MemberHistoryFilter.entries.forEach { filter ->
@@ -1244,6 +1313,82 @@ private fun ReportSparkline(values: List<Long>, modifier: Modifier = Modifier) {
     }
 }
 
+private fun createMemberPdf(name: String, sections: List<Pair<String, String>>, avatarBytes: ByteArray?): PdfDocument {
+    val document = PdfDocument()
+    val pageWidth = 595
+    val pageHeight = 842
+    val margin = 38f
+    val bodyPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.rgb(45, 55, 68); textSize = 11f }
+    val headingPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.rgb(20, 65, 90); textSize = 17f; typeface = Typeface.create("sans-serif", Typeface.BOLD) }
+    val titlePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.rgb(15, 50, 75); textSize = 23f; typeface = Typeface.create("sans-serif", Typeface.BOLD) }
+    var pageNumber = 0
+    var page: PdfDocument.Page? = null
+    var canvas: AndroidCanvas? = null
+    var y = margin
+    fun startPage() {
+        pageNumber++
+        page = document.startPage(PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNumber).create())
+        canvas = page!!.canvas
+        canvas!!.drawColor(android.graphics.Color.WHITE)
+        y = margin
+        val header = "نگاه · پرونده عضو"
+        val headerLayout = StaticLayout.Builder.obtain(header, 0, header.length, headingPaint, (pageWidth - margin * 2).toInt())
+            .setAlignment(Layout.Alignment.ALIGN_NORMAL).setTextDirection(TextDirectionHeuristics.RTL).setIncludePad(false).build()
+        canvas!!.save()
+        canvas!!.translate(margin, y)
+        headerLayout.draw(canvas!!)
+        canvas!!.restore()
+        y += headerLayout.height + 18f
+    }
+    fun finishPage() { page?.let { document.finishPage(it) }; page = null; canvas = null }
+    fun drawLayout(layout: StaticLayout) {
+        var line = 0
+        while (line < layout.lineCount) {
+            if (page == null) startPage()
+            val available = pageHeight - margin - y
+            var endLine = line
+            while (endLine < layout.lineCount && layout.getLineBottom(endLine) - layout.getLineTop(line) <= available) endLine++
+            if (endLine == line) { finishPage(); startPage(); continue }
+            val top = layout.getLineTop(line)
+            val bottom = layout.getLineBottom(endLine - 1)
+            canvas!!.save()
+            canvas!!.translate(margin, y - top)
+            canvas!!.clipRect(0f, top.toFloat(), (pageWidth - margin * 2).toFloat(), bottom.toFloat())
+            layout.draw(canvas!!)
+            canvas!!.restore()
+            y += (bottom - top) + 10f
+            line = endLine
+            if (line < layout.lineCount) { finishPage(); startPage() }
+        }
+    }
+    startPage()
+    val titleLayout = StaticLayout.Builder.obtain(name, 0, name.length, titlePaint, (pageWidth - margin * 2).toInt())
+        .setAlignment(Layout.Alignment.ALIGN_NORMAL).setTextDirection(TextDirectionHeuristics.RTL).setIncludePad(false).build()
+    drawLayout(titleLayout)
+    avatarBytes?.let { bytes ->
+        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        if (bitmap != null) {
+            if (y + 112f > pageHeight - margin) { finishPage(); startPage() }
+            val side = 92f
+            canvas!!.drawBitmap(bitmap, null, RectF(pageWidth - margin - side, y, pageWidth - margin, y + side), Paint(Paint.ANTI_ALIAS_FLAG))
+            bitmap.recycle()
+            y += side + 16f
+        }
+    }
+    sections.forEach { (title, content) ->
+        val heading = StaticLayout.Builder.obtain(title, 0, title.length, headingPaint, (pageWidth - margin * 2).toInt())
+            .setAlignment(Layout.Alignment.ALIGN_NORMAL).setTextDirection(TextDirectionHeuristics.RTL).setIncludePad(false).build()
+        if (y + heading.height + 18f > pageHeight - margin) { finishPage(); startPage() }
+        drawLayout(heading)
+        val body = StaticLayout.Builder.obtain(content, 0, content.length, bodyPaint, (pageWidth - margin * 2).toInt())
+            .setAlignment(Layout.Alignment.ALIGN_NORMAL).setTextDirection(TextDirectionHeuristics.RTL).setIncludePad(false).setLineSpacing(4f, 1f).build()
+        drawLayout(body)
+        y += 8f
+    }
+    finishPage()
+    return document
+}
+
 private fun formatReportDelta(value: Long): String = when {
     value > 0L -> "+$value"
     else -> value.toString()
@@ -1260,7 +1405,7 @@ private data class ReceivedHistoryRow(
 
 @Composable
 private fun ReceivedHistoryRowCard(row: ReceivedHistoryRow) {
-    val timestamp = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
+    val timestamp = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, Locale("fa", "IR"))
         .format(Date(row.timestamp))
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -1360,7 +1505,7 @@ private fun EconomyTransactionRow(transaction: EconomyTransaction) {
     val signedAmount = if (transaction.amountDelta > 0) {
         "+${transaction.amountDelta}"
     } else transaction.amountDelta.toString()
-    val timestamp = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
+    val timestamp = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, Locale("fa", "IR"))
         .format(Date(transaction.createdAtEpochMillis))
 
     Card(modifier = Modifier.fillMaxWidth()) {
