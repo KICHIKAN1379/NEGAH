@@ -1185,7 +1185,11 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
                 receivedHistoryRows.take(if (showAllReceivedHistory) receivedHistoryRows.size else 3)
-                    .forEach { ReceivedHistoryRowCard(it) }
+                    .groupBy { receivedHistorySolarMonth(it.timestamp) }
+                    .forEach { (period, rows) ->
+                        Text(period, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        rows.forEach { ReceivedHistoryRowCard(it) }
+                    }
                 if (receivedHistoryRows.size > 3) {
                     TextButton(onClick = { showAllReceivedHistory = !showAllReceivedHistory }) {
                         Text(if (showAllReceivedHistory) "نمایش کمتر" else "همه")
@@ -1558,6 +1562,11 @@ private fun createMemberPdf(name: String, sections: List<Pair<String, String>>, 
     }
     finishPage()
     return document
+}
+
+private fun receivedHistorySolarMonth(timestamp: Long): String {
+    val calendar = Calendar.getInstance(ULocale("fa_IR@calendar=persian")).apply { timeInMillis = timestamp }
+    return "${calendar.get(Calendar.YEAR)}/${(calendar.get(Calendar.MONTH) + 1).toString().padStart(2, '0')}"
 }
 
 private fun formatReportDelta(value: Long): String = when {
