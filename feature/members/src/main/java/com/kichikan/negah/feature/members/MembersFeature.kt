@@ -784,6 +784,7 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
     var exportReport by rememberSaveable { mutableStateOf(true) }
     var exportHistory by rememberSaveable { mutableStateOf(true) }
     var pendingPdfSections by remember { mutableStateOf(emptyList<Pair<String, String>>()) }
+    val context = LocalContext.current
     val activeAvatarId = activeInventoryItems.firstOrNull { it.category == InventoryCategory.AVATAR }?.catalogItemId
     val activeFrameId = activeInventoryItems.firstOrNull { it.category == InventoryCategory.FRAME }?.catalogItemId
     val activeAvatarBytes = activeAvatarId?.let(catalogImageBytes::get)
@@ -796,7 +797,6 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
             pdf.close()
         }
     }
-    val context = LocalContext.current
     val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
             val mimeType = context.contentResolver.getType(uri)
