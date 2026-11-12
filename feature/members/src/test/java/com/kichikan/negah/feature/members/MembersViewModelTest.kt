@@ -242,6 +242,15 @@ class MembersViewModelTest {
     }
 
     @Test
+    fun coachCanActivateAnEarnedBadge() = runTest {
+        members.emit(listOf(member("member-1", "سارا", xp = 20)))
+        viewModel.onMemberSelected("member-1")
+        viewModel.activateBadge(1)
+        assertEquals(1, members.activeBadge)
+        assertEquals("نشان فعال عضو تغییر کرد", viewModel.state.value.profileMessage)
+    }
+
+    @Test
     fun coachCannotActivateBadgeAboveEarnedLevel() = runTest {
         members.emit(listOf(member("member-1", "سارا", xp = 19)))
         viewModel.onMemberSelected("member-1")
