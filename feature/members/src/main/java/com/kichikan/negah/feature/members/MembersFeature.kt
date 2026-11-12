@@ -1120,7 +1120,14 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                                 val saved = growthProgress.firstOrNull { it.growthItemId == item.id }
                                 "${item.title}: ${saved?.progressPercent ?: 0}٪ · ${saved?.note.orEmpty()}"
                             }.ifBlank { "شاخص فعالی ثبت نشده است" })
-                            if (exportReport) add("کارنامه · ${reportYear}/${reportMonth.toString().padStart(2, '0')}" to "مأموریت: $reportCompletedMissions از ${reportAssignments.size} تکمیل‌شده، $reportApprovedMissions تأییدشده\nامتیاز قابل خرج: ${member.spendablePoints} · تغییر بازه: ${formatReportDelta(reportSummary.pointsDelta)}\nنقشه کمال: ${reportGrowthAverage?.let { "$it٪ وضعیت فعلی" } ?: "بدون شاخص فعال"} · روند تاریخی ذخیره نشده\nکتاب‌خوانی: داده‌ای ثبت نشده\nسطح: $reportLevel · ${member.totalXp} XP · تغییر بازه: ${formatReportDelta(reportSummary.xpDelta)}\nالماس: ${member.diamonds} · تغییر بازه: ${formatReportDelta(reportSummary.diamondsDelta)}")
+                            if (exportReport) add("کارنامه · ${reportYear}/${reportMonth.toString().padStart(2, '0')}" to """
+مأموریت: $reportCompletedMissions از ${reportAssignments.size} تکمیل‌شده، $reportApprovedMissions تأییدشده
+امتیاز قابل خرج: ${member.spendablePoints} · تغییر بازه: ${formatReportDelta(reportSummary.pointsDelta)}
+نقشه کمال: ${reportGrowthAverage?.let { "$it٪ وضعیت فعلی" } ?: "بدون شاخص فعال"} · روند تاریخی ذخیره نشده
+کتاب‌خوانی: داده‌ای ثبت نشده
+سطح: $reportLevel · ${member.totalXp} XP · تغییر بازه: ${formatReportDelta(reportSummary.xpDelta)}
+الماس: ${member.diamonds} · تغییر بازه: ${formatReportDelta(reportSummary.diamondsDelta)}
+""")
                             if (exportHistory) add("سوابق دریافتی" to receivedHistoryRows.joinToString("\n\n") { row ->
                                 "${row.title} · ${row.detail} · ${DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, Locale("fa", "IR")).format(Date(row.timestamp))} · ${row.amount.orEmpty()}"
                             }.ifBlank { "سابقه‌ای ثبت نشده است" })
