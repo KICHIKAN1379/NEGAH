@@ -227,6 +227,31 @@ class MembersViewModel @Inject constructor(
     }
     fun onNicknameChanged(value: String) = mutableState.update { it.copy(nickname = value, savedMessage = null) }
     fun onBirthDateChanged(value: String) = mutableState.update { it.copy(birthDateJalali = value, validationMessage = null, savedMessage = null) }
+    fun updateSelectedMemberProfile(fullName: String, nickname: String, birthDate: String) {
+        val memberId = mutableState.value.selectedMemberId ?: return
+        val name = fullName.trim()
+        if (name.isBlank()) { mutableState.update { it.copy(profileMessage = "نام و نام خانوادگی الزامی است") }; return }
+        val normalizedDate = try { birthDate.trim().takeIf(String::isNotEmpty)?.let(::normalizeJalaliDate) }
+        catch (_: Exception) { mutableState.update { it.copy(profileMessage = "تاریخ تولد شمسی معتبر نیست") }; return }
+        viewModelScope.launch {
+            try {
+                repository.updateProfile(memberId, name, nickname.trim().takeIf(String::isNotEmpty), normalizedDate, System.currentTimeMillis())
+                mutableState.update { it.copy(profileMessage = "مشخصات عضو ذخیره شد") }
+            } catch (_: Exception) { mutableState.update { it.copy(profileMessage = "ذخیره مشخصات انجام نشد") } }
+        }
+    }
+
+    fun activateBadge(level: Int) {
+        val member = mutableState.value.members.firstOrNull { it.id == mutableState.value.selectedMemberId } ?: return
+        val maxEarned = LevelProgression.levelFor(member.totalXp).coerceAtMost(RankBadgeProgression.all.size)
+        if (level !in 1..maxEarned) { mutableState.update { it.copy(profileMessage = "این نشان هنوز با سطح عضو باز نشده است") }; return }
+        viewModelScope.launch {
+            runCatching { repository.updateActiveBadgeLevel(member.id, level, System.currentTimeMillis()) }
+                .onSuccess { mutableState.update { it.copy(profileMessage = "نشان فعال عضو تغییر کرد") } }
+                .onFailure { mutableState.update { it.copy(profileMessage = "تغییر نشان انجام نشد") } }
+        }
+    }
+
     fun updateSelectedMemberBirthDate(value: String) {
         val memberId = mutableState.value.selectedMemberId ?: return
         viewModelScope.launch {
@@ -537,7 +562,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val selectedMember = state.members.firstOrNull { it.id == state.selectedMemberId }
     if (selectedMember != null) {
-        MemberProfileScreen(selectedMember, state.economyTransactions, state.historyFilter, viewModel::onHistoryFilterChanged, state.growthItems, state.growthProgress, state.growthSaveMessage, state.inventoryEntries, state.availableCatalogItems, state.activeInventoryItems, state.inventoryMessage, state.profileMessage, state.avatarBytes, state.avatarMessage, viewModel::updateSelectedMemberBirthDate, viewModel::adjustEconomyBalance, viewModel::updateMemberAvatar, viewModel::removeMemberAvatar, viewModel::saveGrowthProgress, viewModel::activateInventoryItem, viewModel::grantCatalogItem, viewModel::onProfileClosed, modifier)
+        MemberProfileScreen(selectedMember, state.economyTransactions, state.historyFilter, viewModel::onHistoryFilterChanged, state.growthItems, state.growthProgress, state.growthSaveMessage, state.inventoryEntries, state.availableCatalogItems, state.activeInventoryItems, state.inventoryMessage, state.profileMessage, state.avatarBytes, state.avatarMessage, viewModel::updateSelectedMemberProfile, viewModel::activateBadge, viewModel::adjustEconomyBalance, viewModel::updateMemberAvatar, viewModel::removeMemberAvatar, viewModel::saveGrowthProgress, viewModel::activateInventoryItem, viewModel::grantCatalogItem, viewModel::onProfileClosed, modifier)
         return
     }
 
@@ -697,10 +722,12 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, historyFilter: MemberHistoryFilter, onHistoryFilterChanged: (MemberHistoryFilter) -> Unit, growthItems: List<GrowthItem>, growthProgress: List<MemberGrowthProgress>, growthSaveMessage: String?, inventoryEntries: List<MemberInventoryEntry>, availableCatalogItems: List<CatalogItem>, activeInventoryItems: List<ActiveInventoryItem>, inventoryMessage: String?, profileMessage: String?, avatarBytes: ByteArray?, avatarMessage: String?, onUpdateBirthDate: (String) -> Unit, onAdjustEconomy: (EconomyCurrency, Long, String) -> Unit, onUpdateAvatar: (InputStream, String) -> Unit, onRemoveAvatar: () -> Unit, onSaveGrowthProgress: (GrowthItem, Int, String?) -> Unit, onActivateInventoryItem: (MemberInventoryEntry) -> Unit, onGrantCatalogItem: (CatalogItem) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
+private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, historyFilter: MemberHistoryFilter, onHistoryFilterChanged: (MemberHistoryFilter) -> Unit, growthItems: List<GrowthItem>, growthProgress: List<MemberGrowthProgress>, growthSaveMessage: String?, inventoryEntries: List<MemberInventoryEntry>, availableCatalogItems: List<CatalogItem>, activeInventoryItems: List<ActiveInventoryItem>, inventoryMessage: String?, profileMessage: String?, avatarBytes: ByteArray?, avatarMessage: String?, onUpdateProfile: (String, String, String) -> Unit, onActivateBadge: (Int) -> Unit, onAdjustEconomy: (EconomyCurrency, Long, String) -> Unit, onUpdateAvatar: (InputStream, String) -> Unit, onRemoveAvatar: () -> Unit, onSaveGrowthProgress: (GrowthItem, Int, String?) -> Unit, onActivateInventoryItem: (MemberInventoryEntry) -> Unit, onGrantCatalogItem: (CatalogItem) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
     var inventoryTab by rememberSaveable { mutableStateOf("آواتار") }
     var showAllReceivedHistory by rememberSaveable { mutableStateOf(false) }
-    var showBirthDateDialog by rememberSaveable { mutableStateOf(false) }
+    var showProfileEditDialog by rememberSaveable { mutableStateOf(false) }
+    var profileNameDraft by rememberSaveable(member.id) { mutableStateOf(member.fullName) }
+    var profileNicknameDraft by rememberSaveable(member.id) { mutableStateOf(member.nickname.orEmpty()) }
     var birthDateDraft by rememberSaveable(member.id) { mutableStateOf(member.birthDateJalali.orEmpty()) }
     var showEconomyAdjustmentDialog by rememberSaveable { mutableStateOf(false) }
     var adjustmentCurrency by rememberSaveable { mutableStateOf(EconomyCurrency.XP) }
@@ -775,8 +802,9 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                     }
                 }
             }
+            Text("نام نمایشی: ${member.nickname ?: "ثبت نشده"}", style = MaterialTheme.typography.bodyMedium)
             Text("تاریخ تولد شمسی: ${member.birthDateJalali ?: "ثبت نشده"}", style = MaterialTheme.typography.bodyMedium)
-            TextButton(onClick = { birthDateDraft = member.birthDateJalali.orEmpty(); showBirthDateDialog = true }) { Text("ویرایش تاریخ تولد") }
+            TextButton(onClick = { profileNameDraft = member.fullName; profileNicknameDraft = member.nickname.orEmpty(); birthDateDraft = member.birthDateJalali.orEmpty(); showProfileEditDialog = true }) { Text("ویرایش مشخصات عضو") }
             profileMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
         }
         Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
@@ -845,12 +873,16 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                                 Text("سطح ${badge.level}", style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Text(when {
-                                !earned -> "قفل"
-                                badge.level == level.coerceAtMost(RankBadgeProgression.all.size) -> "درجه فعلی"
-                                else -> "دریافت‌شده"
-                            }, style = MaterialTheme.typography.labelSmall,
-                                color = if (earned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                            val activeBadge = member.activeBadgeLevel ?: level.coerceAtMost(RankBadgeProgression.all.size).takeIf { it > 0 }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(when {
+                                    !earned -> "قفل"
+                                    badge.level == activeBadge -> "نشان فعال"
+                                    else -> "دریافت‌شده"
+                                }, style = MaterialTheme.typography.labelSmall,
+                                    color = if (earned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                                if (earned && badge.level != activeBadge) TextButton(onClick = { onActivateBadge(badge.level) }) { Text("فعال‌سازی") }
+                            }
                         }
                     }
                 }
@@ -1030,24 +1062,19 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                 dismissButton = { TextButton(onClick = { showEconomyAdjustmentDialog = false }) { Text("انصراف") } },
             )
         }
-        if (showBirthDateDialog) {
+        if (showProfileEditDialog) {
             AlertDialog(
-                onDismissRequest = { showBirthDateDialog = false },
-                title = { Text("ویرایش تاریخ تولد شمسی") },
+                onDismissRequest = { showProfileEditDialog = false },
+                title = { Text("ویرایش مشخصات عضو") },
                 text = {
-                    OutlinedTextField(
-                        value = birthDateDraft,
-                        onValueChange = { birthDateDraft = it },
-                        label = { Text("سال/ماه/روز") },
-                        placeholder = { Text("۱۴۰۰/۰۵/۲۱") },
-                        singleLine = true,
-                        supportingText = { Text("برای حذف تاریخ تولد، فیلد را خالی بگذارید") },
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedTextField(value = profileNameDraft, onValueChange = { profileNameDraft = it }, label = { Text("نام و نام خانوادگی") }, singleLine = true)
+                        OutlinedTextField(value = profileNicknameDraft, onValueChange = { profileNicknameDraft = it }, label = { Text("نام نمایشی (اختیاری)") }, singleLine = true)
+                        OutlinedTextField(value = birthDateDraft, onValueChange = { birthDateDraft = it }, label = { Text("تاریخ تولد شمسی (اختیاری)") }, placeholder = { Text("۱۴۰۰/۰۵/۲۱") }, singleLine = true)
+                    }
                 },
-                confirmButton = {
-                    Button(onClick = { onUpdateBirthDate(birthDateDraft); showBirthDateDialog = false }) { Text("ذخیره") }
-                },
-                dismissButton = { TextButton(onClick = { showBirthDateDialog = false }) { Text("انصراف") } },
+                confirmButton = { Button(onClick = { onUpdateProfile(profileNameDraft, profileNicknameDraft, birthDateDraft); showProfileEditDialog = false }) { Text("ذخیره") } },
+                dismissButton = { TextButton(onClick = { showProfileEditDialog = false }) { Text("انصراف") } },
             )
         }
     }

@@ -226,6 +226,23 @@ class MembersViewModelTest {
     }
 
     @Test
+    fun coachCanEditMemberIdentityAndPersianBirthDate() = runTest {
+        viewModel.onMemberSelected("member-1")
+        viewModel.updateSelectedMemberProfile(" سارا رضایی ", " سارا ", "۱۴۰۰/۰۵/۲۱")
+        assertEquals(Triple("سارا رضایی", "سارا", "1400/05/21"), members.updatedProfile)
+        assertEquals("مشخصات عضو ذخیره شد", viewModel.state.value.profileMessage)
+    }
+
+    @Test
+    fun coachCannotActivateBadgeAboveEarnedLevel() = runTest {
+        members.emit(listOf(member("member-1", "سارا", xp = 19)))
+        viewModel.onMemberSelected("member-1")
+        viewModel.activateBadge(1)
+        assertNull(members.activeBadge)
+        assertEquals("این نشان هنوز با سطح عضو باز نشده است", viewModel.state.value.profileMessage)
+    }
+
+    @Test
     fun coachCanIncreaseAndDecreaseXpOnlyAsCorrectionsWithReason() = runTest {
         viewModel.onMemberSelected("member-1")
         viewModel.adjustEconomyBalance(EconomyCurrency.XP, 25L, "اصلاح ثبت اولیه")
@@ -310,6 +327,12 @@ private class FakeMemberRepository : MemberRepository {
         updatedBirthDateMemberId = memberId
         updatedBirthDate = birthDateJalali
     }
+    var updatedProfile: Triple<String, String?, String?>? = null
+    override suspend fun updateProfile(memberId: String, fullName: String, nickname: String?, birthDateJalali: String?, updatedAtEpochMillis: Long) {
+        updatedProfile = Triple(fullName, nickname, birthDateJalali)
+    }
+    var activeBadge: Int? = null
+    override suspend fun updateActiveBadgeLevel(memberId: String, level: Int?, updatedAtEpochMillis: Long) { activeBadge = level }
     override suspend fun archive(memberId: String) = Unit
     override suspend fun restore(memberId: String) = Unit
 }
