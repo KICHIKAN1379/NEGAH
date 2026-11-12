@@ -89,6 +89,7 @@ import com.kichikan.negah.domain.growth.UpdateGrowthProgress
 import com.kichikan.negah.domain.growth.UpdateGrowthProgressResult
 import com.kichikan.negah.domain.inventory.ActiveInventoryItem
 import com.kichikan.negah.domain.inventory.CatalogItem
+import com.kichikan.negah.domain.inventory.CatalogItemMediaRepository
 import com.kichikan.negah.domain.inventory.InventoryCategory
 import com.kichikan.negah.domain.inventory.InventoryRepository
 import com.kichikan.negah.domain.inventory.MemberInventoryEntry
@@ -132,6 +133,7 @@ data class MembersUiState(
     val activeInventoryItems: List<ActiveInventoryItem> = emptyList(),
     val missions: List<Mission> = emptyList(),
     val missionAssignments: List<MissionAssignment> = emptyList(),
+    val catalogImageBytes: Map<String, ByteArray> = emptyMap(),
     val inventoryMessage: String? = null,
     val isSaving: Boolean = false,
     val validationMessage: String? = null,
@@ -184,6 +186,7 @@ class MembersViewModel @Inject constructor(
     private val updateGrowthProgress: UpdateGrowthProgress,
     private val inventoryRepository: InventoryRepository,
     private val missionRepository: MissionRepository,
+    private val catalogItemMediaRepository: CatalogItemMediaRepository,
     private val avatarRepository: MemberAvatarRepository,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(MembersUiState())
@@ -354,7 +357,7 @@ class MembersViewModel @Inject constructor(
         inventoryJob?.cancel()
         catalogJob?.cancel()
         avatarJob?.cancel()
-        mutableState.update { it.copy(selectedMemberId = memberId, economyTransactions = emptyList(), growthItems = emptyList(), growthProgress = emptyList(), growthSaveMessage = null, inventoryEntries = emptyList(), availableCatalogItems = emptyList(), activeInventoryItems = emptyList(), inventoryMessage = null, avatarBytes = null, avatarMessage = null) }
+        mutableState.update { it.copy(selectedMemberId = memberId, economyTransactions = emptyList(), growthItems = emptyList(), growthProgress = emptyList(), growthSaveMessage = null, inventoryEntries = emptyList(), availableCatalogItems = emptyList(), activeInventoryItems = emptyList(), inventoryMessage = null, avatarBytes = null, avatarMessage = null, catalogImageBytes = emptyMap()) }
         avatarJob = viewModelScope.launch {
             val bytes = runCatching { avatarRepository.loadAvatar(memberId) }.getOrNull()
             mutableState.update { current ->
@@ -394,10 +397,17 @@ class MembersViewModel @Inject constructor(
             ) { avatars, frames, rewards, active ->
                 (avatars + frames + rewards) to active
             }.collect { (entries, active) ->
+                val catalogImages = buildMap {
+                    active.filter { it.category == InventoryCategory.AVATAR || it.category == InventoryCategory.FRAME }
+                        .distinctBy { it.catalogItemId }.forEach { item ->
+                            runCatching { catalogItemMediaRepository.loadCatalogImage(item.catalogItemId) }.getOrNull()?.let { put(item.catalogItemId, it) }
+                        }
+                }
                 mutableState.update { current ->
                     if (current.selectedMemberId == memberId) current.copy(
                         inventoryEntries = entries,
                         activeInventoryItems = active,
+                        catalogImageBytes = catalogImages,
                     ) else current
                 }
             }
@@ -485,7 +495,7 @@ class MembersViewModel @Inject constructor(
         inventoryJob = null
         catalogJob = null
         avatarJob = null
-        mutableState.update { it.copy(selectedMemberId = null, economyTransactions = emptyList(), growthItems = emptyList(), growthProgress = emptyList(), growthSaveMessage = null, inventoryEntries = emptyList(), availableCatalogItems = emptyList(), activeInventoryItems = emptyList(), inventoryMessage = null, avatarBytes = null, avatarMessage = null) }
+        mutableState.update { it.copy(selectedMemberId = null, economyTransactions = emptyList(), growthItems = emptyList(), growthProgress = emptyList(), growthSaveMessage = null, inventoryEntries = emptyList(), availableCatalogItems = emptyList(), activeInventoryItems = emptyList(), inventoryMessage = null, avatarBytes = null, avatarMessage = null, catalogImageBytes = emptyMap()) }
     }
 
     fun saveGrowthProgress(item: GrowthItem, progressPercent: Int, note: String?) {
@@ -597,7 +607,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val selectedMember = state.members.firstOrNull { it.id == state.selectedMemberId }
     if (selectedMember != null) {
-        MemberProfileScreen(selectedMember, state.economyTransactions, state.historyFilter, viewModel::onHistoryFilterChanged, state.growthItems, state.growthProgress, state.growthSaveMessage, state.inventoryEntries, state.availableCatalogItems, state.activeInventoryItems, state.inventoryMessage, state.profileMessage, state.avatarBytes, state.avatarMessage, state.missions, state.missionAssignments, viewModel::updateSelectedMemberProfile, viewModel::activateBadge, viewModel::adjustEconomyBalance, viewModel::updateMemberAvatar, viewModel::removeMemberAvatar, viewModel::saveGrowthProgress, viewModel::activateInventoryItem, viewModel::grantCatalogItem, viewModel::onProfileClosed, modifier)
+        MemberProfileScreen(selectedMember, state.economyTransactions, state.historyFilter, viewModel::onHistoryFilterChanged, state.growthItems, state.growthProgress, state.growthSaveMessage, state.inventoryEntries, state.availableCatalogItems, state.activeInventoryItems, state.inventoryMessage, state.profileMessage, state.avatarBytes, state.avatarMessage, state.catalogImageBytes, state.missions, state.missionAssignments, viewModel::updateSelectedMemberProfile, viewModel::activateBadge, viewModel::adjustEconomyBalance, viewModel::updateMemberAvatar, viewModel::removeMemberAvatar, viewModel::saveGrowthProgress, viewModel::activateInventoryItem, viewModel::grantCatalogItem, viewModel::onProfileClosed, modifier)
         return
     }
 
@@ -751,7 +761,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, historyFilter: MemberHistoryFilter, onHistoryFilterChanged: (MemberHistoryFilter) -> Unit, growthItems: List<GrowthItem>, growthProgress: List<MemberGrowthProgress>, growthSaveMessage: String?, inventoryEntries: List<MemberInventoryEntry>, availableCatalogItems: List<CatalogItem>, activeInventoryItems: List<ActiveInventoryItem>, inventoryMessage: String?, profileMessage: String?, avatarBytes: ByteArray?, avatarMessage: String?, missions: List<Mission>, missionAssignments: List<MissionAssignment>, onUpdateProfile: (String, String, String) -> Unit, onActivateBadge: (Int) -> Unit, onAdjustEconomy: (EconomyCurrency, Long, String) -> Unit, onUpdateAvatar: (InputStream, String) -> Unit, onRemoveAvatar: () -> Unit, onSaveGrowthProgress: (GrowthItem, Int, String?) -> Unit, onActivateInventoryItem: (MemberInventoryEntry) -> Unit, onGrantCatalogItem: (CatalogItem) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
+private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, historyFilter: MemberHistoryFilter, onHistoryFilterChanged: (MemberHistoryFilter) -> Unit, growthItems: List<GrowthItem>, growthProgress: List<MemberGrowthProgress>, growthSaveMessage: String?, inventoryEntries: List<MemberInventoryEntry>, availableCatalogItems: List<CatalogItem>, activeInventoryItems: List<ActiveInventoryItem>, inventoryMessage: String?, profileMessage: String?, avatarBytes: ByteArray?, avatarMessage: String?, catalogImageBytes: Map<String, ByteArray>, missions: List<Mission>, missionAssignments: List<MissionAssignment>, onUpdateProfile: (String, String, String) -> Unit, onActivateBadge: (Int) -> Unit, onAdjustEconomy: (EconomyCurrency, Long, String) -> Unit, onUpdateAvatar: (InputStream, String) -> Unit, onRemoveAvatar: () -> Unit, onSaveGrowthProgress: (GrowthItem, Int, String?) -> Unit, onActivateInventoryItem: (MemberInventoryEntry) -> Unit, onGrantCatalogItem: (CatalogItem) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
     var inventoryTab by rememberSaveable { mutableStateOf("آواتار") }
     var showAllReceivedHistory by rememberSaveable { mutableStateOf(false) }
     var showProfileEditDialog by rememberSaveable { mutableStateOf(false) }
@@ -769,10 +779,14 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
     var exportReport by rememberSaveable { mutableStateOf(true) }
     var exportHistory by rememberSaveable { mutableStateOf(true) }
     var pendingPdfSections by remember { mutableStateOf(emptyList<Pair<String, String>>()) }
+    val activeAvatarId = activeInventoryItems.firstOrNull { it.category == InventoryCategory.AVATAR }?.catalogItemId
+    val activeFrameId = activeInventoryItems.firstOrNull { it.category == InventoryCategory.FRAME }?.catalogItemId
+    val activeAvatarBytes = activeAvatarId?.let(catalogImageBytes::get)
+    val activeFrameBytes = activeFrameId?.let(catalogImageBytes::get)
     LaunchedEffect(profileMessage) { if (profileMessage == "مشخصات عضو ذخیره شد") showProfileEditDialog = false }
     val pdfLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
         if (uri != null) {
-            val pdf = createMemberPdf(member.fullName, pendingPdfSections, avatarBytes)
+            val pdf = createMemberPdf(member.fullName, pendingPdfSections, avatarBytes, activeAvatarBytes, activeFrameBytes)
             runCatching { context.contentResolver.openOutputStream(uri)?.use { pdf.writeTo(it) } }
             pdf.close()
         }
@@ -1398,7 +1412,7 @@ private fun calculateJalaliMemberReport(
     )
 }
 
-private fun createMemberPdf(name: String, sections: List<Pair<String, String>>, avatarBytes: ByteArray?): PdfDocument {
+private fun createMemberPdf(name: String, sections: List<Pair<String, String>>, avatarBytes: ByteArray?, activeAvatarBytes: ByteArray?, activeFrameBytes: ByteArray?): PdfDocument {
     val document = PdfDocument()
     val pageWidth = 595
     val pageHeight = 842
@@ -1459,6 +1473,15 @@ private fun createMemberPdf(name: String, sections: List<Pair<String, String>>, 
             bitmap.recycle()
             y += side + 16f
         }
+    }
+    val activeAvatar = activeAvatarBytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
+    val activeFrame = activeFrameBytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
+    if (activeAvatar != null || activeFrame != null) {
+        if (y + 112f > pageHeight - margin) { finishPage(); startPage() }
+        val side = 92f
+        activeAvatar?.let { canvas!!.drawBitmap(it, null, RectF(margin, y, margin + side, y + side), Paint(Paint.ANTI_ALIAS_FLAG)); it.recycle() }
+        activeFrame?.let { canvas!!.drawBitmap(it, null, RectF(margin, y, margin + side, y + side), Paint(Paint.ANTI_ALIAS_FLAG)); it.recycle() }
+        y += side + 16f
     }
     sections.forEach { (title, content) ->
         val heading = StaticLayout.Builder.obtain(title, 0, title.length, headingPaint, (pageWidth - margin * 2).toInt())

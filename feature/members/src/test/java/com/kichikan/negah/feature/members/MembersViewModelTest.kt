@@ -15,6 +15,7 @@ import com.kichikan.negah.domain.growth.MemberGrowthProgress
 import com.kichikan.negah.domain.growth.UpdateGrowthProgress
 import com.kichikan.negah.domain.inventory.ActiveInventoryItem
 import com.kichikan.negah.domain.inventory.CatalogItem
+import com.kichikan.negah.domain.inventory.CatalogItemMediaRepository
 import com.kichikan.negah.domain.inventory.InventoryCategory
 import com.kichikan.negah.domain.inventory.InventoryRepository
 import com.kichikan.negah.domain.inventory.MemberInventoryEntry
@@ -67,6 +68,7 @@ class MembersViewModelTest {
             UpdateGrowthProgress(growth),
             inventory,
             missions,
+            FakeCatalogItemMediaRepository(),
             avatars,
         )
     }
@@ -410,4 +412,10 @@ private class FakeMissionRepository : MissionRepository {
     override suspend fun assignMember(assignment: MissionAssignment) = Unit
     override suspend fun updateProgress(assignmentId: String, note: String?, completed: Boolean, updatedAt: Long) = Unit
     override suspend fun approveAndReward(assignmentId: String, approvedAt: Long): Boolean = false
+}
+
+private class FakeCatalogItemMediaRepository : CatalogItemMediaRepository {
+    override suspend fun saveCatalogImage(itemId: String, input: InputStream, mimeType: String) = Unit
+    override suspend fun loadCatalogImage(itemId: String): ByteArray? = null
+    override suspend fun removeCatalogImage(itemId: String): Boolean = false
 }
