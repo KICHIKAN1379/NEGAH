@@ -948,7 +948,7 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                                 Text("سطح ${badge.level}", style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            val activeBadge = member.activeBadgeLevel ?: level.coerceAtMost(RankBadgeProgression.all.size).takeIf { it > 0 }
+                            val activeBadge = effectiveActiveBadgeLevel(member, level)
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(when {
                                     !earned -> "قفل"
@@ -1136,7 +1136,7 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                         val reportSummary = calculateJalaliMemberReport(transactions, reportYear, reportMonth, true)
                         val reportLevel = LevelProgression.levelFor(member.totalXp)
                         pendingPdfSections = buildList {
-                            if (exportIdentity) add("اطلاعات هویتی" to "نام: ${member.fullName}\nنام نمایشی: ${member.nickname ?: "ثبت نشده"}\nتاریخ تولد: ${member.birthDateJalali ?: "ثبت نشده"}\nسطح: $level\nنشان فعال: ${member.activeBadgeLevel?.let { RankBadgeProgression.all.getOrNull(it - 1)?.title } ?: RankBadgeProgression.currentForLevel(level)?.title ?: "ندارد"}\nXP: ${member.totalXp}\nامتیاز قابل خرج: ${member.spendablePoints}\nالماس: ${member.diamonds}")
+                            if (exportIdentity) add("اطلاعات هویتی" to "نام: ${member.fullName}\nنام نمایشی: ${member.nickname ?: "ثبت نشده"}\nتاریخ تولد: ${member.birthDateJalali ?: "ثبت نشده"}\nسطح: $level\nنشان فعال: ${effectiveActiveBadgeLevel(member, level)?.let { RankBadgeProgression.all.getOrNull(it - 1)?.title } ?: "ندارد"}\nXP: ${member.totalXp}\nامتیاز قابل خرج: ${member.spendablePoints}\nالماس: ${member.diamonds}")
                             if (exportTreasure) add("گنجینه" to (inventoryEntries.joinToString("\n") { entry ->
                                 val active = activeInventoryItems.any { it.category == entry.category && it.catalogItemId == entry.catalogItemId }
                                 "${entry.title} · ${entry.category} · ${if (active) "فعال" else "دریافت‌شده"}"
@@ -1562,6 +1562,12 @@ private fun createMemberPdf(name: String, sections: List<Pair<String, String>>, 
     }
     finishPage()
     return document
+}
+
+private fun effectiveActiveBadgeLevel(member: Member, level: Int): Int? {
+    val maxEarned = level.coerceIn(0, RankBadgeProgression.all.size)
+    return member.activeBadgeLevel?.takeIf { it in 1..maxEarned }
+        ?: maxEarned.takeIf { it > 0 }
 }
 
 private fun receivedHistorySolarMonth(timestamp: Long): String {
