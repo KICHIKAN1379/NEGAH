@@ -696,7 +696,11 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
                                     color = MaterialTheme.colorScheme.onPrimaryContainer)
                             }
                             Column(modifier = Modifier.weight(1f).clickable { if (!state.showingArchived) viewModel.onMemberSelected(member.id) }, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                Text(member.fullName, style = MaterialTheme.typography.titleSmall)
+                                Text(
+                                    buildString { append(member.fullName); member.nickname?.takeIf { it.isNotBlank() }?.let { append(" · ").append(it) } },
+                                    style = MaterialTheme.typography.titleSmall,
+                                    maxLines = 1,
+                                )
                                 Text(
                                     "سطح ${LevelProgression.levelFor(member.totalXp)} · ${member.totalXp} XP · ${member.spendablePoints} امتیاز · ${member.diamonds} الماس",
                                     style = MaterialTheme.typography.labelSmall,
