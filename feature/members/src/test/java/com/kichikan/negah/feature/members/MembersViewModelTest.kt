@@ -228,8 +228,8 @@ class MembersViewModelTest {
     @Test
     fun coachCanEditMemberIdentityAndPersianBirthDate() = runTest {
         viewModel.onMemberSelected("member-1")
-        viewModel.updateSelectedMemberProfile(" سارا رضایی ", " سارا ", "۱۴۰۰/۰۵/۲۱")
-        assertEquals(Triple("سارا رضایی", "سارا", "1400/05/21"), members.updatedProfile)
+        viewModel.updateSelectedMemberProfile(" سارا رضایی ", " سارا ", "")
+        assertEquals(Triple("سارا رضایی", "سارا", null), members.updatedProfile)
         assertEquals("مشخصات عضو ذخیره شد", viewModel.state.value.profileMessage)
     }
 

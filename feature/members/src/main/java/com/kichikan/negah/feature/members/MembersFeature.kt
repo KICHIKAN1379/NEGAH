@@ -712,7 +712,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
                     OutlinedTextField(value = state.birthDateJalali, onValueChange = viewModel::onBirthDateChanged,
                         label = { Text("تاریخ تولد شمسی (اختیاری)") },
                         placeholder = { Text("۱۴۰۰/۰۵/۲۱") }, singleLine = true,
-                        supportingText = { Text("سال/ماه/روز؛ پاداش تولد سالانه ۳۰ اعتبار است") })
+                        supportingText = { Text("سال/ماه/روز؛ پاداش تولد سالانه ۳۰ الماس است") })
                     state.validationMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 }
             },
