@@ -1,8 +1,11 @@
 package com.kichikan.negah
 
+import android.Manifest
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.material3.Surface
 import com.kichikan.negah.core.designsystem.NegahTheme
@@ -23,8 +26,17 @@ class MainActivity : ComponentActivity() {
     private val homeDashboardViewModel: HomeDashboardViewModel by viewModels()
     private val dailyQuotesViewModel: DailyQuotesViewModel by viewModels()
 
+    private val notificationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            // Re-run the check right after the coach grants notifications.
+            if (granted) BirthdayReminderWorker.schedule(applicationContext)
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !BirthdayReminderWorker.canNotify(this)) {
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
         setContent {
             NegahTheme {
                 Surface {

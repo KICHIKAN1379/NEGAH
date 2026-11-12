@@ -31,6 +31,7 @@ dependencies {
     implementation(project(":feature:refinery"))
     implementation(project(":data:local"))
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
