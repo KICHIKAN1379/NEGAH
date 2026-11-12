@@ -652,29 +652,22 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
             LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 items(state.visibleMembers, key = { it.id }) { member ->
                     Card(modifier = Modifier.fillMaxWidth()) {
-                        Row(modifier = Modifier.fillMaxWidth().padding(14.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.size(48.dp)
+                        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(modifier = Modifier.size(40.dp)
                                 .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                                 contentAlignment = Alignment.Center) {
                                 Text(member.fullName.trim().firstOrNull()?.toString() ?: "؟",
                                     style = MaterialTheme.typography.titleLarge,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer)
                             }
-                            Column(modifier = Modifier.weight(1f).clickable { if (!state.showingArchived) viewModel.onMemberSelected(member.id) }, verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                Text(member.fullName, style = MaterialTheme.typography.titleMedium)
-                                member.nickname?.takeIf { it.isNotBlank() }?.let {
-                                    Text(it, style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                                Text("سطح ${LevelProgression.levelFor(member.totalXp)}  •  ${member.totalXp} XP",
-                                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    Text("${member.spendablePoints} امتیاز", style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.secondary)
-                                    Text("${member.diamonds} الماس", style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.tertiary)
-                                }
+                            Column(modifier = Modifier.weight(1f).clickable { if (!state.showingArchived) viewModel.onMemberSelected(member.id) }, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text(member.fullName, style = MaterialTheme.typography.titleSmall)
+                                Text(
+                                    "سطح ${LevelProgression.levelFor(member.totalXp)} · ${member.totalXp} XP · ${member.spendablePoints} امتیاز · ${member.diamonds} الماس",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                             if (state.showingArchived) {
                                 TextButton(onClick = { viewModel.restoreMember(member.id) }) { Text("بازیابی") }
