@@ -92,6 +92,10 @@ import com.kichikan.negah.domain.inventory.CatalogItem
 import com.kichikan.negah.domain.inventory.InventoryCategory
 import com.kichikan.negah.domain.inventory.InventoryRepository
 import com.kichikan.negah.domain.inventory.MemberInventoryEntry
+import com.kichikan.negah.domain.mission.Mission
+import com.kichikan.negah.domain.mission.MissionAssignment
+import com.kichikan.negah.domain.mission.MissionAssignmentStatus
+import com.kichikan.negah.domain.mission.MissionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -126,6 +130,8 @@ data class MembersUiState(
     val inventoryEntries: List<MemberInventoryEntry> = emptyList(),
     val availableCatalogItems: List<CatalogItem> = emptyList(),
     val activeInventoryItems: List<ActiveInventoryItem> = emptyList(),
+    val missions: List<Mission> = emptyList(),
+    val missionAssignments: List<MissionAssignment> = emptyList(),
     val inventoryMessage: String? = null,
     val isSaving: Boolean = false,
     val validationMessage: String? = null,
@@ -177,6 +183,7 @@ class MembersViewModel @Inject constructor(
     private val growthMapRepository: GrowthMapRepository,
     private val updateGrowthProgress: UpdateGrowthProgress,
     private val inventoryRepository: InventoryRepository,
+    private val missionRepository: MissionRepository,
     private val avatarRepository: MemberAvatarRepository,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(MembersUiState())
@@ -187,6 +194,7 @@ class MembersViewModel @Inject constructor(
     private var inventoryJob: Job? = null
     private var catalogJob: Job? = null
     private var avatarJob: Job? = null
+    private var missionAssignmentsJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -198,6 +206,20 @@ class MembersViewModel @Inject constructor(
         viewModelScope.launch {
             repository.observeArchivedMembers().collect { members ->
                 mutableState.update { it.copy(archivedMembers = members) }
+            }
+        }
+        viewModelScope.launch {
+            missionRepository.observeMissions().collect { missions ->
+                mutableState.update { it.copy(missions = missions) }
+                missionAssignmentsJob?.cancel()
+                missionAssignmentsJob = viewModelScope.launch {
+                    if (missions.isEmpty()) {
+                        mutableState.update { it.copy(missionAssignments = emptyList()) }
+                    } else {
+                        kotlinx.coroutines.flow.combine(missions.map { missionRepository.observeAssignments(it.id) }) { rows -> rows.flatMap { it } }
+                            .collect { assignments -> mutableState.update { it.copy(missionAssignments = assignments) } }
+                    }
+                }
             }
         }
     }
@@ -575,7 +597,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val selectedMember = state.members.firstOrNull { it.id == state.selectedMemberId }
     if (selectedMember != null) {
-        MemberProfileScreen(selectedMember, state.economyTransactions, state.historyFilter, viewModel::onHistoryFilterChanged, state.growthItems, state.growthProgress, state.growthSaveMessage, state.inventoryEntries, state.availableCatalogItems, state.activeInventoryItems, state.inventoryMessage, state.profileMessage, state.avatarBytes, state.avatarMessage, viewModel::updateSelectedMemberProfile, viewModel::activateBadge, viewModel::adjustEconomyBalance, viewModel::updateMemberAvatar, viewModel::removeMemberAvatar, viewModel::saveGrowthProgress, viewModel::activateInventoryItem, viewModel::grantCatalogItem, viewModel::onProfileClosed, modifier)
+        MemberProfileScreen(selectedMember, state.economyTransactions, state.historyFilter, viewModel::onHistoryFilterChanged, state.growthItems, state.growthProgress, state.growthSaveMessage, state.inventoryEntries, state.availableCatalogItems, state.activeInventoryItems, state.inventoryMessage, state.profileMessage, state.avatarBytes, state.avatarMessage, state.missions, state.missionAssignments, viewModel::updateSelectedMemberProfile, viewModel::activateBadge, viewModel::adjustEconomyBalance, viewModel::updateMemberAvatar, viewModel::removeMemberAvatar, viewModel::saveGrowthProgress, viewModel::activateInventoryItem, viewModel::grantCatalogItem, viewModel::onProfileClosed, modifier)
         return
     }
 
@@ -729,7 +751,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, historyFilter: MemberHistoryFilter, onHistoryFilterChanged: (MemberHistoryFilter) -> Unit, growthItems: List<GrowthItem>, growthProgress: List<MemberGrowthProgress>, growthSaveMessage: String?, inventoryEntries: List<MemberInventoryEntry>, availableCatalogItems: List<CatalogItem>, activeInventoryItems: List<ActiveInventoryItem>, inventoryMessage: String?, profileMessage: String?, avatarBytes: ByteArray?, avatarMessage: String?, onUpdateProfile: (String, String, String) -> Unit, onActivateBadge: (Int) -> Unit, onAdjustEconomy: (EconomyCurrency, Long, String) -> Unit, onUpdateAvatar: (InputStream, String) -> Unit, onRemoveAvatar: () -> Unit, onSaveGrowthProgress: (GrowthItem, Int, String?) -> Unit, onActivateInventoryItem: (MemberInventoryEntry) -> Unit, onGrantCatalogItem: (CatalogItem) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
+private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, historyFilter: MemberHistoryFilter, onHistoryFilterChanged: (MemberHistoryFilter) -> Unit, growthItems: List<GrowthItem>, growthProgress: List<MemberGrowthProgress>, growthSaveMessage: String?, inventoryEntries: List<MemberInventoryEntry>, availableCatalogItems: List<CatalogItem>, activeInventoryItems: List<ActiveInventoryItem>, inventoryMessage: String?, profileMessage: String?, avatarBytes: ByteArray?, avatarMessage: String?, missions: List<Mission>, missionAssignments: List<MissionAssignment>, onUpdateProfile: (String, String, String) -> Unit, onActivateBadge: (Int) -> Unit, onAdjustEconomy: (EconomyCurrency, Long, String) -> Unit, onUpdateAvatar: (InputStream, String) -> Unit, onRemoveAvatar: () -> Unit, onSaveGrowthProgress: (GrowthItem, Int, String?) -> Unit, onActivateInventoryItem: (MemberInventoryEntry) -> Unit, onGrantCatalogItem: (CatalogItem) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
     var inventoryTab by rememberSaveable { mutableStateOf("آواتار") }
     var showAllReceivedHistory by rememberSaveable { mutableStateOf(false) }
     var showProfileEditDialog by rememberSaveable { mutableStateOf(false) }
@@ -957,6 +979,8 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
             transactions = transactions,
             growthItems = growthItems,
             growthProgress = growthProgress,
+            missions = missions,
+            missionAssignments = missionAssignments,
         )
         val historyTransactions = transactions.filter { transaction ->
             when (historyFilter) {
@@ -1155,6 +1179,8 @@ private fun MemberReportCard(
     transactions: List<EconomyTransaction>,
     growthItems: List<GrowthItem>,
     growthProgress: List<MemberGrowthProgress>,
+    missions: List<Mission>,
+    missionAssignments: List<MissionAssignment>,
 ) {
     var periodMode by rememberSaveable { mutableStateOf("MONTH") }
     val currentPersianDate = remember { Calendar.getInstance(ULocale("fa_IR@calendar=persian")) }
@@ -1207,10 +1233,37 @@ private fun MemberReportCard(
             }) { Text("بعدی") }
         }
 
+        val memberMissionAssignments = missionAssignments.filter { it.memberId == member.id }
+        val missionBucketCount = if (periodMode == "MONTH") {
+            Calendar.getInstance(ULocale("fa_IR@calendar=persian")).apply { clear(); set(selectedYear, selectedMonth - 1, 1) }.getActualMaximum(Calendar.DAY_OF_MONTH)
+        } else 12
+        val missionSeries = remember(memberMissionAssignments, periodMode, selectedYear, selectedMonth, missionBucketCount) {
+            val buckets = MutableList(missionBucketCount) { 0L }
+            memberMissionAssignments.forEach { assignment ->
+                val date = Calendar.getInstance(ULocale("fa_IR@calendar=persian")).apply { timeInMillis = assignment.updatedAtEpochMillis }
+                if (date.get(Calendar.YEAR) != selectedYear) return@forEach
+                val assignmentMonth = date.get(Calendar.MONTH) + 1
+                if (periodMode == "MONTH" && assignmentMonth != selectedMonth) return@forEach
+                if (assignment.status == MissionAssignmentStatus.COMPLETED || assignment.status == MissionAssignmentStatus.APPROVED) {
+                    val index = if (periodMode == "MONTH") date.get(Calendar.DATE) - 1 else assignmentMonth - 1
+                    buckets[index] += 1L
+                }
+            }
+            buckets
+        }
+        val missionPeriodAssignments = memberMissionAssignments.filter { assignment ->
+            val date = Calendar.getInstance(ULocale("fa_IR@calendar=persian")).apply { timeInMillis = assignment.updatedAtEpochMillis }
+            date.get(Calendar.YEAR) == selectedYear && (periodMode != "MONTH" || date.get(Calendar.MONTH) + 1 == selectedMonth)
+        }
+        val missionCompletedCount = missionPeriodAssignments.count { it.status == MissionAssignmentStatus.COMPLETED || it.status == MissionAssignmentStatus.APPROVED }
+        val missionApprovedCount = missionPeriodAssignments.count { it.status == MissionAssignmentStatus.APPROVED }
         MemberReportAxisCard(
             title = "مأموریت",
-            value = "داده‌ای ثبت نشده",
-            detail = "ثبت مأموریت هنوز در این نسخه فعال نیست",
+            value = "$missionCompletedCount / ${missionPeriodAssignments.size}",
+            detail = if (missionPeriodAssignments.isEmpty()) "در این بازه مأموریتی به عضو اختصاص داده نشده است"
+                else "$missionApprovedCount مأموریت تأیید و پاداش‌دهی شده از ${missionPeriodAssignments.size} مأموریت اختصاص‌یافته",
+            progress = if (missionPeriodAssignments.isEmpty()) null else missionCompletedCount.toFloat() / missionPeriodAssignments.size,
+            series = missionSeries,
         )
         MemberReportAxisCard(
             title = "امتیاز قابل‌خرج",

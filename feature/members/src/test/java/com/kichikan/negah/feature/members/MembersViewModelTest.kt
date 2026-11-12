@@ -18,6 +18,9 @@ import com.kichikan.negah.domain.inventory.CatalogItem
 import com.kichikan.negah.domain.inventory.InventoryCategory
 import com.kichikan.negah.domain.inventory.InventoryRepository
 import com.kichikan.negah.domain.inventory.MemberInventoryEntry
+import com.kichikan.negah.domain.mission.Mission
+import com.kichikan.negah.domain.mission.MissionAssignment
+import com.kichikan.negah.domain.mission.MissionRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -44,6 +47,7 @@ class MembersViewModelTest {
     private lateinit var growth: FakeGrowthMapRepository
     private lateinit var inventory: FakeInventoryRepository
     private lateinit var avatars: FakeMemberAvatarRepository
+    private lateinit var missions: FakeMissionRepository
     private lateinit var viewModel: MembersViewModel
 
     @Before
@@ -54,6 +58,7 @@ class MembersViewModelTest {
         growth = FakeGrowthMapRepository()
         inventory = FakeInventoryRepository()
         avatars = FakeMemberAvatarRepository()
+        missions = FakeMissionRepository()
         viewModel = MembersViewModel(
             members,
             RegisterMember(members),
@@ -61,6 +66,7 @@ class MembersViewModelTest {
             growth,
             UpdateGrowthProgress(growth),
             inventory,
+            missions,
             avatars,
         )
     }
@@ -395,4 +401,13 @@ private class FakeInventoryRepository : InventoryRepository {
         transactionId: String,
         nowEpochMillis: Long,
     ) = com.kichikan.negah.domain.inventory.ShopPurchaseResult.ITEM_UNAVAILABLE
+}
+
+private class FakeMissionRepository : MissionRepository {
+    override fun observeMissions(): Flow<List<Mission>> = MutableStateFlow(emptyList<Mission>()).asStateFlow()
+    override fun observeAssignments(missionId: String): Flow<List<MissionAssignment>> = MutableStateFlow(emptyList<MissionAssignment>()).asStateFlow()
+    override suspend fun saveMission(mission: Mission) = Unit
+    override suspend fun assignMember(assignment: MissionAssignment) = Unit
+    override suspend fun updateProgress(assignmentId: String, note: String?, completed: Boolean, updatedAt: Long) = Unit
+    override suspend fun approveAndReward(assignmentId: String, approvedAt: Long): Boolean = false
 }
