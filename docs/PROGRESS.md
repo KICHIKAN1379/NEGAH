@@ -26,11 +26,11 @@ Last updated: 2026-11-11
 
 ## Confirmed repository facts
 
-- develop is 119 commits ahead of main; main currently contains only README.md.
+- PR #1 was merged into main on 2026-11-12; main now contains the full MVP tree (develop kept for CI history).
 - Audited base: develop at 8bf6828e1d8f574b60440b5930c6a64261748fb0.
 - The audited tree contains 80 files, including 60 Kotlin files, Gradle multi-module configuration, Room persistence, Compose UI, and unit/DAO tests.
 - The mission branch contains the reconciled product documentation plus class-day configuration and a session/attendance vertical slice.
-- Draft PR #1 targets develop. It is not merged; main remains untouched.
+- PR #1 (mission/coach-mvp) is merged. Latest green CI: run 43294662278 on 77f5de8.
 - No local build/test/emulator/device run was performed in this host; the verified builds were executed by GitHub Actions.
 
 ## Existing implementation observed

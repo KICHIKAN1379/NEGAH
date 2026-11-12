@@ -296,3 +296,11 @@ The Growth Map configuration screen has no direct image in the primary UX PDF; u
 Resolve material conflicts with the owner before implementation. Do not silently promote illustrative mockup values or inferred rules to product requirements.
 
 - Birthday reward is 30 diamonds (DIAMONDS), issued automatically once per member per Solar Hijri year on their recorded Solar Hijri birthday. The birthday date is optional and stored in YYYY/MM/DD format. A deterministic ledger transaction ID prevents duplicate awards when the app is reopened or member data is re-emitted.
+
+## Owner decisions — 2026-11-13
+- Weekly pulse and home never show missions (owner removed them); older UX2 slides showing "active mission today" in the pulse details are outdated.
+- The management area under Settings is named «پالایشگاه» (not «تراشکاری»). It has five entries: mission editing, shop prizes, avatar & frame, wheel settings, maturity-map settings.
+- Exports (member PDF, ZIP) and backups live in a folder named MRT in the phone's personal files. On first launch the app explains why and asks the user for access through the system folder picker, then saves there.
+- Backups are not encrypted (offline app) — consistent with the 2026-11-12 deferral.
+- Names, numbers and amounts in the UX screenshots are sample data only and must never be hard-coded.
+- Birthday reminder: the coach is notified 3 days before a member's birthday, after install and first launch; it has no fixed place in the menu.

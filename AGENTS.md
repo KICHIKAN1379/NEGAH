@@ -9,8 +9,8 @@ This file is the entry point for AI coding agents and contributors.
 
 ## Repository workflow
 - Repository: `KICHIKAN1379/NEGAH`.
-- Active development branch before final promotion: `mission/coach-mvp`.
-- `main` is the handoff branch intended to show the complete current project state.
+- PR #1 (`mission/coach-mvp`) was merged into `main` on 2026-11-12. `main` is the handoff branch and shows the complete current project state.
+- New work goes on short-lived `mission/*` branches and reaches `main` through a reviewed PR with a green CI run on the exact head commit.
 - Fetch the latest branch head before editing. Never overwrite a newer remote commit.
 - Use small, focused commits and preserve Room data through explicit migrations.
 - Run GitHub Actions CI and report the exact commit and run URL. Never claim a build, APK, device test, or UI test succeeded unless its evidence exists.
