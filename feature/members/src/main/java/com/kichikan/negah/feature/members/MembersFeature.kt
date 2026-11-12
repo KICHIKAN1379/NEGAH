@@ -75,7 +75,7 @@ import com.kichikan.negah.domain.economy.EconomyTransaction
 import com.kichikan.negah.domain.economy.EconomyTransactionKind
 import com.kichikan.negah.domain.economy.LevelProgression
 import com.kichikan.negah.domain.economy.RankBadgeProgression
-import com.kichikan.negah.domain.report.MemberReportCalculator
+import com.kichikan.negah.domain.report.MemberReportSummary
 import com.kichikan.negah.domain.member.Member
 import com.kichikan.negah.domain.member.MemberRepository
 import com.kichikan.negah.domain.member.MemberAvatarRepository
@@ -102,7 +102,6 @@ import kotlinx.coroutines.Job
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
-import java.time.YearMonth
 import kotlinx.coroutines.launch
 import java.io.InputStream
 
@@ -1158,12 +1157,11 @@ private fun MemberReportCard(
     growthProgress: List<MemberGrowthProgress>,
 ) {
     var periodMode by rememberSaveable { mutableStateOf("MONTH") }
-    var selectedYear by rememberSaveable { mutableStateOf(YearMonth.now().year) }
-    var selectedMonth by rememberSaveable { mutableStateOf(YearMonth.now().monthValue) }
-    val month = YearMonth.of(selectedYear, selectedMonth)
+    val currentPersianDate = remember { Calendar.getInstance(ULocale("fa_IR@calendar=persian")) }
+    var selectedYear by rememberSaveable { mutableStateOf(currentPersianDate.get(Calendar.YEAR)) }
+    var selectedMonth by rememberSaveable { mutableStateOf(currentPersianDate.get(Calendar.MONTH) + 1) }
     val summary = remember(transactions, periodMode, selectedYear, selectedMonth) {
-        if (periodMode == "MONTH") MemberReportCalculator.forMonth(transactions, month)
-        else MemberReportCalculator.forYear(transactions, selectedYear)
+        calculateJalaliMemberReport(transactions, selectedYear, selectedMonth, periodMode == "MONTH")
     }
     val level = LevelProgression.levelFor(member.totalXp)
     val levelStart = LevelProgression.minimumXpForLevel(level)
@@ -1194,21 +1192,17 @@ private fun MemberReportCard(
         ) {
             TextButton(onClick = {
                 if (periodMode == "MONTH") {
-                    val previous = month.minusMonths(1)
-                    selectedYear = previous.year
-                    selectedMonth = previous.monthValue
+                    if (selectedMonth == 1) { selectedYear -= 1; selectedMonth = 12 } else selectedMonth -= 1
                 } else selectedYear -= 1
             }) { Text("قبلی") }
             Text(
-                if (periodMode == "MONTH") "${month.year}/${month.monthValue.toString().padStart(2, '0')}"
+                if (periodMode == "MONTH") "${selectedYear}/${selectedMonth.toString().padStart(2, '0')}"
                 else selectedYear.toString(),
                 style = MaterialTheme.typography.titleSmall,
             )
             TextButton(onClick = {
                 if (periodMode == "MONTH") {
-                    val next = month.plusMonths(1)
-                    selectedYear = next.year
-                    selectedMonth = next.monthValue
+                    if (selectedMonth == 12) { selectedYear += 1; selectedMonth = 1 } else selectedMonth += 1
                 } else selectedYear += 1
             }) { Text("بعدی") }
         }
@@ -1312,6 +1306,43 @@ private fun ReportSparkline(values: List<Long>, modifier: Modifier = Modifier) {
             )
         }
     }
+}
+
+private fun calculateJalaliMemberReport(
+    transactions: List<EconomyTransaction>,
+    year: Int,
+    month: Int,
+    monthly: Boolean,
+): MemberReportSummary {
+    val locale = ULocale("fa_IR@calendar=persian")
+    val monthCalendar = Calendar.getInstance(locale).apply {
+        clear()
+        set(year, month - 1, 1, 0, 0, 0)
+    }
+    val bucketCount = if (monthly) monthCalendar.getActualMaximum(Calendar.DAY_OF_MONTH) else 12
+    val xp = MutableList(bucketCount) { 0L }
+    val points = MutableList(bucketCount) { 0L }
+    val diamonds = MutableList(bucketCount) { 0L }
+    transactions.forEach { transaction ->
+        val date = Calendar.getInstance(locale).apply { timeInMillis = transaction.createdAtEpochMillis }
+        if (date.get(Calendar.YEAR) != year) return@forEach
+        val transactionMonth = date.get(Calendar.MONTH) + 1
+        if (monthly && transactionMonth != month) return@forEach
+        val index = if (monthly) date.get(Calendar.DATE) - 1 else transactionMonth - 1
+        when (transaction.currency) {
+            EconomyCurrency.XP -> xp[index] = Math.addExact(xp[index], transaction.amountDelta)
+            EconomyCurrency.POINTS -> points[index] = Math.addExact(points[index], transaction.amountDelta)
+            EconomyCurrency.DIAMONDS -> diamonds[index] = Math.addExact(diamonds[index], transaction.amountDelta)
+        }
+    }
+    return MemberReportSummary(
+        xpDelta = xp.sum(),
+        pointsDelta = points.sum(),
+        diamondsDelta = diamonds.sum(),
+        xpSeries = xp,
+        pointsSeries = points,
+        diamondsSeries = diamonds,
+    )
 }
 
 private fun createMemberPdf(name: String, sections: List<Pair<String, String>>, avatarBytes: ByteArray?): PdfDocument {
