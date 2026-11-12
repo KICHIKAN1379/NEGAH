@@ -14,8 +14,4 @@ abstract class MemberAvatarRepositoryModule {
     @Binds
     @Singleton
     abstract fun bindRingProfileMediaRepository(implementation: MediaAssetManager): RingProfileMediaRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindCatalogItemMediaRepository(implementation: MediaAssetManager): CatalogItemMediaRepository
 }
