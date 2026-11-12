@@ -1069,6 +1069,30 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                         }}",
                     ))
                 }
+                val earnedBadgeTimes = mutableMapOf<Int, Long>()
+                var xpBalanceAtTime = 0L
+                transactions.filter { it.currency == EconomyCurrency.XP }
+                    .sortedBy { it.createdAtEpochMillis }
+                    .forEach { transaction ->
+                        val previousXp = xpBalanceAtTime
+                        xpBalanceAtTime = Math.addExact(xpBalanceAtTime, transaction.amountDelta).coerceAtLeast(0L)
+                        RankBadgeProgression.all.forEach { badge ->
+                            val threshold = LevelProgression.minimumXpForLevel(badge.level)
+                            if (previousXp < threshold && xpBalanceAtTime >= threshold) {
+                                earnedBadgeTimes.putIfAbsent(badge.level, transaction.createdAtEpochMillis)
+                            }
+                        }
+                    }
+                RankBadgeProgression.earnedForLevel(level).forEach { badge ->
+                    earnedBadgeTimes[badge.level]?.let { earnedAt ->
+                        add(ReceivedHistoryRow(
+                            id = "rank-badge:${badge.level}",
+                            timestamp = earnedAt,
+                            title = badge.title,
+                            detail = "نشان خودکار سطح ${badge.level}",
+                        ))
+                    }
+                }
             }
         }.sortedByDescending { it.timestamp }
         Button(onClick = { showExportDialog = true }, modifier = Modifier.fillMaxWidth()) { Text("خروجی پرونده عضو (PDF)") }
