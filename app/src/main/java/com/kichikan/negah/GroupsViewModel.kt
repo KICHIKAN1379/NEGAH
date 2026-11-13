@@ -2,6 +2,9 @@ package com.kichikan.negah
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kichikan.negah.domain.group.AdjustGroupEconomy
+import com.kichikan.negah.domain.group.AdjustGroupEconomyResult
+import com.kichikan.negah.domain.group.GroupEconomyTransaction
 import com.kichikan.negah.domain.group.GroupRepository
 import com.kichikan.negah.domain.group.GroupWithMembers
 import com.kichikan.negah.domain.group.SaveGroup
@@ -13,12 +16,14 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 data class GroupsUiState(
     val members: List<Member> = emptyList(),
     val groups: List<GroupWithMembers> = emptyList(),
     val message: String? = null,
+    val economyHistory: List<GroupEconomyTransaction> = emptyList(),
 ) {
     val activeGroups: List<GroupWithMembers> get() = groups.filter { it.group.isActive }
 }
@@ -28,6 +33,7 @@ class GroupsViewModel @Inject constructor(
     memberRepository: MemberRepository,
     private val groupRepository: GroupRepository,
     private val saveGroup: SaveGroup,
+    private val adjustGroupEconomy: AdjustGroupEconomy,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(GroupsUiState())
     val state = mutableState.asStateFlow()
@@ -66,6 +72,39 @@ class GroupsViewModel @Inject constructor(
         mutableState.update { it.copy(message = message) }
         return result is SaveGroupResult.Saved
     }
+
+    suspend fun adjustEconomy(
+        groupId: String,
+        pointsDelta: Long,
+        diamondsDelta: Long,
+        reason: String,
+    ): Boolean {
+        val result = adjustGroupEconomy(
+            groupId = groupId,
+            pointsDelta = pointsDelta,
+            diamondsDelta = diamondsDelta,
+            reason = reason,
+            nowEpochMillis = System.currentTimeMillis(),
+        )
+        val message = when (result) {
+            AdjustGroupEconomyResult.InvalidAdjustment -> "مقدار تغییر یا دلیل معتبر نیست"
+            AdjustGroupEconomyResult.Appended -> "تغییر موجودی گروه ثبت شد"
+            AdjustGroupEconomyResult.GroupNotFound -> "گروه پیدا نشد"
+            AdjustGroupEconomyResult.InsufficientBalance -> "موجودی گروه برای این کاهش کافی نیست"
+            AdjustGroupEconomyResult.BalanceOverflow -> "مقدار موجودی از محدوده مجاز خارج می‌شود"
+        }
+        mutableState.update { it.copy(message = message) }
+        return result is AdjustGroupEconomyResult.Appended
+    }
+
+    fun loadEconomyHistory(groupId: String) {
+        viewModelScope.launch {
+            val history = groupRepository.observeEconomyTransactions(groupId).first()
+            mutableState.update { it.copy(economyHistory = history) }
+        }
+    }
+
+    fun clearEconomyHistory() = mutableState.update { it.copy(economyHistory = emptyList()) }
 
     fun archive(groupId: String) {
         viewModelScope.launch {
