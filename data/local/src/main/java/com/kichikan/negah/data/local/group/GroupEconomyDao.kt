@@ -55,15 +55,17 @@ interface GroupEconomyDao {
 
         val groupId = transactions.first().groupId
         val current = balanceFor(groupId) ?: return GroupEconomyAppendResult.GROUP_NOT_FOUND
-        val pointsDelta = transactions.filter { it.currency == "POINTS" }.sumOf { it.amountDelta }
-        val diamondsDelta = transactions.filter { it.currency == "DIAMONDS" }.sumOf { it.amountDelta }
-        val nextPoints = try {
-            Math.addExact(current.spendablePoints, pointsDelta)
-        } catch (_: ArithmeticException) {
-            return GroupEconomyAppendResult.BALANCE_OVERFLOW
-        }
-        val nextDiamonds = try {
-            Math.addExact(current.diamonds, diamondsDelta)
+        val pointsDelta: Long
+        val diamondsDelta: Long
+        val nextPoints: Long
+        val nextDiamonds: Long
+        try {
+            pointsDelta = transactions.filter { it.currency == "POINTS" }
+                .fold(0L) { total, row -> Math.addExact(total, row.amountDelta) }
+            diamondsDelta = transactions.filter { it.currency == "DIAMONDS" }
+                .fold(0L) { total, row -> Math.addExact(total, row.amountDelta) }
+            nextPoints = Math.addExact(current.spendablePoints, pointsDelta)
+            nextDiamonds = Math.addExact(current.diamonds, diamondsDelta)
         } catch (_: ArithmeticException) {
             return GroupEconomyAppendResult.BALANCE_OVERFLOW
         }
