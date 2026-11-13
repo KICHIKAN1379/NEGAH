@@ -51,6 +51,7 @@ fun GroupsScreen(
     var pointsDelta by remember { mutableStateOf("") }
     var diamondsDelta by remember { mutableStateOf("") }
     var economyReason by remember { mutableStateOf("") }
+    var economyInputError by remember { mutableStateOf<String?>(null) }
 
     val displayNames = remember(state.members) {
         state.members.associate { it.id to (it.nickname?.takeIf(String::isNotBlank) ?: it.fullName) }
@@ -152,6 +153,7 @@ fun GroupsScreen(
                         pointsDelta = ""
                         diamondsDelta = ""
                         economyReason = ""
+                        economyInputError = null
                         viewModel.clearMessage()
                     },
                     onShowHistory = {
@@ -174,13 +176,13 @@ fun GroupsScreen(
                     Text("موجودی فعلی: ${group?.spendablePoints ?: 0L} امتیاز · ${group?.diamonds ?: 0L} الماس")
                     OutlinedTextField(
                         value = pointsDelta,
-                        onValueChange = { pointsDelta = it.filter { ch -> ch == '-' || ch.isDigit() } },
+                        onValueChange = { pointsDelta = it.filter { ch -> ch == '-' || ch.isDigit() }; economyInputError = null },
                         label = { Text("تغییر امتیاز گروه (+ یا -)") },
                         singleLine = true,
                     )
                     OutlinedTextField(
                         value = diamondsDelta,
-                        onValueChange = { diamondsDelta = it.filter { ch -> ch == '-' || ch.isDigit() } },
+                        onValueChange = { diamondsDelta = it.filter { ch -> ch == '-' || ch.isDigit() }; economyInputError = null },
                         label = { Text("تغییر الماس گروه (+ یا -)") },
                         singleLine = true,
                     )
@@ -190,19 +192,25 @@ fun GroupsScreen(
                         label = { Text("دلیل تغییر (الزامی)") },
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    economyInputError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                     state.message?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val points = pointsDelta.toLongOrNull() ?: 0L
-                    val diamonds = diamondsDelta.toLongOrNull() ?: 0L
-                    scope.launch {
-                        if (viewModel.adjustEconomy(groupId, points, diamonds, economyReason)) {
-                            economyGroupId = null
-                            pointsDelta = ""
-                            diamondsDelta = ""
-                            economyReason = ""
+                    val points = if (pointsDelta.isBlank()) 0L else pointsDelta.toLongOrNull()
+                    val diamonds = if (diamondsDelta.isBlank()) 0L else diamondsDelta.toLongOrNull()
+                    if (points == null || diamonds == null) {
+                        economyInputError = "عدد واردشده معتبر نیست"
+                    } else {
+                        scope.launch {
+                            if (viewModel.adjustEconomy(groupId, points, diamonds, economyReason)) {
+                                economyGroupId = null
+                                pointsDelta = ""
+                                diamondsDelta = ""
+                                economyReason = ""
+                                economyInputError = null
+                            }
                         }
                     }
                 }) { Text("ثبت تغییر") }
@@ -262,7 +270,10 @@ private fun GroupCard(
                 "زیرگروه: " + entry.subMemberIds.joinToString("، ") { names[it] ?: "عضو بایگانی‌شده" },
                 style = MaterialTheme.typography.bodySmall,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 TextButton(onClick = onEdit) { Text("ویرایش") }
                 TextButton(onClick = onAdjustEconomy) { Text("تغییر موجودی") }
                 TextButton(onClick = onShowHistory) { Text("سوابق") }
