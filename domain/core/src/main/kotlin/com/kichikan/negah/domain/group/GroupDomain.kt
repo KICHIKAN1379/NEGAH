@@ -132,6 +132,8 @@ class SaveGroup @Inject constructor(
         subMemberIds: Collection<String>,
         nowEpochMillis: Long,
         createdAtEpochMillis: Long = nowEpochMillis,
+        spendablePoints: Long = 0L,
+        diamonds: Long = 0L,
     ): SaveGroupResult {
         val cleanName = name.trim()
         if (cleanName.isEmpty()) return SaveGroupResult.InvalidName
@@ -145,6 +147,8 @@ class SaveGroup @Inject constructor(
             isActive = true,
             createdAtEpochMillis = createdAtEpochMillis,
             updatedAtEpochMillis = nowEpochMillis,
+            spendablePoints = spendablePoints,
+            diamonds = diamonds,
         )
         return if (repository.saveGroup(group, subs)) SaveGroupResult.Saved(group)
         else SaveGroupResult.MemberAlreadyInAnotherGroup
@@ -159,9 +163,9 @@ data class GroupRankEntry(
 )
 
 /**
- * Group ranking uses the summed XP (permanent progress) of the group's registered members;
- * ties fall back to member count and then name for a stable order. Archived or unknown
- * members contribute nothing.
+ * AK1 ranks by each active group's own spendable-point balance. Member balances,
+ * member XP, and group diamonds do not affect the ranking. Archived members only
+ * affect the displayed active-member count.
  */
 object GroupRankCalculator {
     fun rank(groups: List<GroupWithMembers>, members: List<Member>): List<GroupRankEntry> {
@@ -175,9 +179,7 @@ object GroupRankCalculator {
                 totalDiamonds = entry.group.diamonds,
             )
         }.sortedWith(
-            compareByDescending<GroupRankEntry> { it.totalXp }
-                .thenByDescending { it.memberCount }
-                .thenBy { it.group.name },
+            compareByDescending<GroupRankEntry> { it.totalSpendablePoints },
         )
     }
 }
