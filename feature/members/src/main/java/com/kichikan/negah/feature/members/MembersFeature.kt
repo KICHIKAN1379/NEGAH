@@ -794,6 +794,7 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
     var exportReport by rememberSaveable { mutableStateOf(true) }
     var exportHistory by rememberSaveable { mutableStateOf(true) }
     var pendingPdfSections by remember { mutableStateOf(emptyList<Pair<String, String>>()) }
+    var pendingPdfCharts by remember { mutableStateOf(emptyList<PdfChartSeries>()) }
     val context = LocalContext.current
     val activeAvatarId = activeInventoryItems.firstOrNull { it.category == InventoryCategory.AVATAR }?.catalogItemId
     val activeFrameId = activeInventoryItems.firstOrNull { it.category == InventoryCategory.FRAME }?.catalogItemId
@@ -802,7 +803,7 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
     LaunchedEffect(profileMessage) { if (profileMessage == "مشخصات عضو ذخیره شد") showProfileEditDialog = false }
     val pdfLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
         if (uri != null) {
-            val pdf = createMemberPdf(member.fullName, pendingPdfSections, avatarBytes, activeAvatarBytes, activeFrameBytes)
+            val pdf = createMemberPdf(member.fullName, pendingPdfSections, pendingPdfCharts, avatarBytes, activeAvatarBytes, activeFrameBytes)
             runCatching { context.contentResolver.openOutputStream(uri)?.use { pdf.writeTo(it) } }
             pdf.close()
         }
@@ -1160,6 +1161,17 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                         val reportReadingText = if (reportMemberReadings.isEmpty()) "داده‌ای ثبت نشده"
                             else "${reportMonthReadings.size} کتاب در این ماه · امتیاز مطالعه کل ${ReadingScoreCalculator.score(reportMemberReadings, member.id)}"
                         val reportLevel = LevelProgression.levelFor(member.totalXp)
+                        pendingPdfCharts = if (!exportReport) emptyList() else buildList {
+                            add(PdfChartSeries("XP", reportSummary.xpSeries))
+                            add(PdfChartSeries("امتیاز قابل‌خرج", reportSummary.pointsSeries))
+                            add(PdfChartSeries("الماس", reportSummary.diamondsSeries))
+                            val readingDaily = MutableList(reportSummary.xpSeries.size) { 0L }
+                            reportMonthReadings.forEach { reading ->
+                                val day = Calendar.getInstance(ULocale("fa_IR@calendar=persian")).apply { timeInMillis = reading.readAtEpochMillis }.get(Calendar.DATE) - 1
+                                if (day in readingDaily.indices) readingDaily[day] += reading.level.toLong()
+                            }
+                            add(PdfChartSeries("کتاب‌خوانی (مجموع سطح)", readingDaily))
+                        }
                         pendingPdfSections = buildList {
                             if (exportIdentity) add("اطلاعات هویتی" to "نام: ${member.fullName}\nنام نمایشی: ${member.nickname ?: "ثبت نشده"}\nتاریخ تولد: ${member.birthDateJalali ?: "ثبت نشده"}\nسطح: $level\nنشان فعال: ${effectiveActiveBadgeLevel(member, level)?.let { RankBadgeProgression.all.getOrNull(it - 1)?.title } ?: "ندارد"}\nXP: ${member.totalXp}\nامتیاز قابل خرج: ${member.spendablePoints}\nالماس: ${member.diamonds}")
                             if (exportTreasure) add("گنجینه" to (inventoryEntries.joinToString("\n") { entry ->
@@ -1522,7 +1534,9 @@ private fun calculateJalaliMemberReport(
     )
 }
 
-private fun createMemberPdf(name: String, sections: List<Pair<String, String>>, avatarBytes: ByteArray?, activeAvatarBytes: ByteArray?, activeFrameBytes: ByteArray?): PdfDocument {
+private class PdfChartSeries(val title: String, val values: List<Long>)
+
+private fun createMemberPdf(name: String, sections: List<Pair<String, String>>, charts: List<PdfChartSeries>, avatarBytes: ByteArray?, activeAvatarBytes: ByteArray?, activeFrameBytes: ByteArray?): PdfDocument {
     val document = PdfDocument()
     val pageWidth = 595
     val pageHeight = 842
@@ -1602,6 +1616,43 @@ private fun createMemberPdf(name: String, sections: List<Pair<String, String>>, 
             .setAlignment(Layout.Alignment.ALIGN_NORMAL).setTextDirection(TextDirectionHeuristics.RTL).setIncludePad(false).setLineSpacing(4f, 1f).build()
         drawLayout(body)
         y += 8f
+    }
+    val chartsToDraw = charts.filter { chart -> chart.values.any { it != 0L } }
+    if (chartsToDraw.isNotEmpty()) {
+        val chartHeadingText = "نمودار روند ماهانه"
+        val chartHeading = StaticLayout.Builder.obtain(chartHeadingText, 0, chartHeadingText.length, headingPaint, (pageWidth - margin * 2).toInt())
+            .setAlignment(Layout.Alignment.ALIGN_NORMAL).setTextDirection(TextDirectionHeuristics.RTL).setIncludePad(false).build()
+        if (page == null) startPage()
+        if (y + chartHeading.height + 120f > pageHeight - margin) { finishPage(); startPage() }
+        drawLayout(chartHeading)
+        val chartHeight = 80f
+        val framePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 0.8f; color = android.graphics.Color.rgb(180, 190, 200) }
+        val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1.6f; color = android.graphics.Color.rgb(0, 150, 120) }
+        chartsToDraw.forEach { chart ->
+            val label = StaticLayout.Builder.obtain(chart.title, 0, chart.title.length, bodyPaint, (pageWidth - margin * 2).toInt())
+                .setAlignment(Layout.Alignment.ALIGN_NORMAL).setTextDirection(TextDirectionHeuristics.RTL).setIncludePad(false).build()
+            if (page == null) startPage()
+            if (y + label.height + chartHeight + 28f > pageHeight - margin) { finishPage(); startPage() }
+            drawLayout(label)
+            val left = margin
+            val right = pageWidth - margin
+            val top = y
+            val bottom = y + chartHeight
+            canvas!!.drawRect(left, top, right, bottom, framePaint)
+            val maxValue = maxOf(chart.values.maxOrNull() ?: 0L, 0L)
+            val minValue = minOf(chart.values.minOrNull() ?: 0L, 0L)
+            val span = (maxValue - minValue).coerceAtLeast(1L).toFloat()
+            val step = if (chart.values.size > 1) (right - left - 16f) / (chart.values.size - 1) else 0f
+            val path = android.graphics.Path()
+            chart.values.forEachIndexed { index, value ->
+                // Day/month 1 sits on the right edge to follow the RTL reading direction.
+                val px = right - 8f - index * step
+                val py = bottom - 8f - (value - minValue) / span * (chartHeight - 16f)
+                if (index == 0) path.moveTo(px, py) else path.lineTo(px, py)
+            }
+            canvas!!.drawPath(path, linePaint)
+            y += chartHeight + 14f
+        }
     }
     finishPage()
     return document
