@@ -49,7 +49,12 @@ interface GroupEconomyDao {
         transactions: List<GroupEconomyTransactionEntity>,
     ): GroupEconomyAppendResult {
         if (transactions.isEmpty() ||
-            transactions.any { it.groupId != transactions.first().groupId || it.amountDelta == 0L || it.reason.isBlank() } ||
+            transactions.any {
+                it.groupId != transactions.first().groupId ||
+                    it.amountDelta == 0L ||
+                    it.reason.isBlank() ||
+                    it.currency !in setOf("POINTS", "DIAMONDS")
+            } ||
             transactions.map { it.currency }.distinct().size != transactions.size
         ) return GroupEconomyAppendResult.INVALID_BATCH
 
