@@ -116,3 +116,15 @@ val MIGRATION_15_16 = object : Migration(15, 16) {
   database.execSQL("CREATE INDEX IF NOT EXISTS index_group_economy_transactions_createdAtEpochMillis ON group_economy_transactions(createdAtEpochMillis)")
  }
 }
+
+val MIGRATION_16_17 = object : Migration(16, 17) {
+ override fun migrate(database: SupportSQLiteDatabase) {
+  database.execSQL("CREATE TABLE IF NOT EXISTS wheel_prizes (id TEXT NOT NULL, label TEXT NOT NULL, currency TEXT NOT NULL, amount INTEGER NOT NULL, weight INTEGER NOT NULL, isActive INTEGER NOT NULL, createdAtEpochMillis INTEGER NOT NULL, updatedAtEpochMillis INTEGER NOT NULL, PRIMARY KEY(id))")
+  database.execSQL("CREATE TABLE IF NOT EXISTS wheel_settings (id INTEGER NOT NULL, spinCostPoints INTEGER NOT NULL, PRIMARY KEY(id))")
+  database.execSQL("INSERT OR IGNORE INTO wheel_settings (id, spinCostPoints) VALUES (1, 0)")
+  database.execSQL("""CREATE TABLE IF NOT EXISTS wheel_spins (id TEXT NOT NULL, memberId TEXT NOT NULL, prizeId TEXT NOT NULL, prizeLabel TEXT NOT NULL, currency TEXT NOT NULL, amount INTEGER NOT NULL, costPoints INTEGER NOT NULL, spunAtEpochMillis INTEGER NOT NULL, PRIMARY KEY(id), FOREIGN KEY(memberId) REFERENCES members(id) ON UPDATE NO ACTION ON DELETE RESTRICT, FOREIGN KEY(prizeId) REFERENCES wheel_prizes(id) ON UPDATE NO ACTION ON DELETE RESTRICT)""")
+  database.execSQL("CREATE INDEX IF NOT EXISTS index_wheel_spins_memberId ON wheel_spins(memberId)")
+  database.execSQL("CREATE INDEX IF NOT EXISTS index_wheel_spins_prizeId ON wheel_spins(prizeId)")
+  database.execSQL("CREATE INDEX IF NOT EXISTS index_wheel_spins_spunAtEpochMillis ON wheel_spins(spunAtEpochMillis)")
+ }
+}
