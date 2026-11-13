@@ -274,3 +274,8 @@ The available host has GitHub repository read/write integration but no local And
 - Reward currency and amount are explicitly selected by the coach; no guessed formulas.
 - Hidden and group-puzzle tabs remain part of the destination. Their unique mechanics are not inferred; they require their own approved rules before specialized behavior is added.
 - No member login, submission, request, or self-service flow is permitted.
+
+## Members completion slice — 2026-11-13
+- Branch mission/members-complete (draft PR #4): Solar Hijri birthday reminder (3 days before, WorkManager + notification permission at first launch), book-reading model with Room migration 13→14, immutable growth-progress history, reading axis wired into member report/PDF, monthly trend charts in the member PDF.
+- CI evidence: run 43343026664 succeeded on aeafcae3ef1f8d1c7816f60f58912cdcdd4bcb48 (build + domain/data/members/refinery unit tests). No device or UI test performed.
+- Next: Progress menu (identity, missions, reading entry form/ranking, wheel, competition, sessions) per mrt-menu.md and ux_2.pdf.
