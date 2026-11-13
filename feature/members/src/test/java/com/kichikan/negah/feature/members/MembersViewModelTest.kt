@@ -70,6 +70,7 @@ class MembersViewModelTest {
             missions,
             FakeCatalogItemMediaRepository(),
             avatars,
+            FakeReadingRepository(),
         )
     }
 
@@ -427,4 +428,10 @@ private class FakeCatalogItemMediaRepository : CatalogItemMediaRepository {
     override suspend fun saveCatalogImage(itemId: String, input: InputStream, mimeType: String) = Unit
     override suspend fun loadCatalogImage(itemId: String): ByteArray? = null
     override suspend fun removeCatalogImage(itemId: String): Boolean = false
+}
+
+private class FakeReadingRepository : com.kichikan.negah.domain.reading.ReadingRepository {
+    private val rows = kotlinx.coroutines.flow.MutableStateFlow(emptyList<com.kichikan.negah.domain.reading.BookReading>())
+    override fun observeAll() = rows
+    override suspend fun add(reading: com.kichikan.negah.domain.reading.BookReading) { rows.value = rows.value + reading }
 }
