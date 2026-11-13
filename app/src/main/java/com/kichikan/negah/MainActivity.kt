@@ -26,6 +26,7 @@ class MainActivity : ComponentActivity() {
     private val homeDashboardViewModel: HomeDashboardViewModel by viewModels()
     private val dailyQuotesViewModel: DailyQuotesViewModel by viewModels()
     private val readingViewModel: ReadingViewModel by viewModels()
+    private val groupsViewModel: GroupsViewModel by viewModels()
 
     private val notificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -53,6 +54,7 @@ class MainActivity : ComponentActivity() {
                         homeDashboardViewModel,
                         dailyQuotesViewModel,
                         readingViewModel,
+                        groupsViewModel,
                     )
                 }
             }

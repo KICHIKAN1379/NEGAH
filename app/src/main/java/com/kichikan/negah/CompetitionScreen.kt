@@ -28,10 +28,12 @@ import com.kichikan.negah.domain.economy.LevelProgression
 @Composable
 fun CompetitionScreen(
     viewModel: ProgressViewModel,
+    groupsViewModel: GroupsViewModel,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val groupsState by groupsViewModel.state.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableStateOf("MEMBERS") }
     val ranked = remember(state.members) {
         state.members.sortedWith(compareByDescending<com.kichikan.negah.domain.member.Member> { it.totalXp }.thenBy { it.fullName })
@@ -50,7 +52,18 @@ fun CompetitionScreen(
             FilterChip(selected = tab == "GROUPS", onClick = { tab = "GROUPS" }, label = { Text("رتبه گروه‌ها") })
         }
         if (tab == "GROUPS") {
-            Text("گروه‌بندی اعضا هنوز در برنامه تعریف نشده است؛ پس رتبه گروه‌ها داده‌ای برای نمایش ندارد.")
+            val activeGroups = groupsState.groups.filter { it.group.isActive }
+            if (activeGroups.isEmpty()) {
+                Text("هنوز گروهی ساخته نشده است. گروه‌ها را از «اعضا ← گروه» بسازید.")
+            } else {
+                Text(
+                    "گروه‌ها ثبت شده‌اند؛ معیار و فرمول رتبه‌بندی گروه‌ها هنوز تأیید نشده است.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                activeGroups.forEach { entry ->
+                    Text(entry.group.name, style = MaterialTheme.typography.titleMedium)
+                }
+            }
         } else if (ranked.isEmpty()) {
             Text("هنوز عضوی ثبت نشده است.")
         } else {

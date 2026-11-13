@@ -1,6 +1,8 @@
 package com.kichikan.negah
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.material3.FilterChip
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -63,6 +65,7 @@ fun NegahRoot(
     homeDashboardViewModel: HomeDashboardViewModel,
     dailyQuotesViewModel: DailyQuotesViewModel,
     readingViewModel: ReadingViewModel,
+    groupsViewModel: GroupsViewModel,
 ) {
     var selected by rememberSaveable { mutableStateOf(MainDestination.HOME.name) }
     var openRefinery by rememberSaveable { mutableStateOf(false) }
@@ -78,6 +81,7 @@ fun NegahRoot(
     var openReading by rememberSaveable { mutableStateOf(false) }
     var openCompetition by rememberSaveable { mutableStateOf(false) }
     var openWheel by rememberSaveable { mutableStateOf(false) }
+    var membersTab by rememberSaveable { mutableStateOf("MEMBERS") }
     val membersState by membersViewModel.state.collectAsStateWithLifecycle()
     val sessionsState by sessionsViewModel.uiState.collectAsStateWithLifecycle()
     val homeAssets by homeDashboardViewModel.state.collectAsStateWithLifecycle()
@@ -182,7 +186,17 @@ fun NegahRoot(
                         )
                     }
                 }
-                MainDestination.MEMBERS -> MembersScreen(membersViewModel, Modifier.padding(padding))
+                MainDestination.MEMBERS -> Column(Modifier.padding(padding)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        FilterChip(selected = membersTab == "MEMBERS", onClick = { membersTab = "MEMBERS" }, label = { Text("اعضا") })
+                        FilterChip(selected = membersTab == "GROUPS", onClick = { membersTab = "GROUPS" }, label = { Text("گروه") })
+                    }
+                    if (membersTab == "GROUPS") GroupsScreen(groupsViewModel, Modifier.weight(1f))
+                    else MembersScreen(membersViewModel, Modifier.weight(1f))
+                }
                 MainDestination.PROGRESS -> {
                     val closeProgressEntry = {
                         openMissions = false
@@ -213,7 +227,7 @@ fun NegahRoot(
                             modifier = Modifier.padding(padding),
                         )
                         openReading -> ReadingScreen(readingViewModel, onBack = { openReading = false }, modifier = Modifier.padding(padding))
-                        openCompetition -> CompetitionScreen(progressViewModel, onBack = { openCompetition = false }, modifier = Modifier.padding(padding))
+                        openCompetition -> CompetitionScreen(progressViewModel, groupsViewModel, onBack = { openCompetition = false }, modifier = Modifier.padding(padding))
                         openWheel -> WheelPendingScreen(onBack = { openWheel = false }, modifier = Modifier.padding(padding))
                         else -> ProgressHubScreen(
                             onOpen = { entry ->
