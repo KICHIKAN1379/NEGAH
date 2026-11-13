@@ -23,15 +23,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kichikan.negah.domain.economy.LevelProgression
+import com.kichikan.negah.domain.group.GroupRankCalculator
 
 /** Ranking inside the coach's own ring only; ties are broken by name for a stable order. */
 @Composable
 fun CompetitionScreen(
     viewModel: ProgressViewModel,
+    groupsViewModel: GroupsViewModel,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val groupsState by groupsViewModel.state.collectAsStateWithLifecycle()
+    val groupRanking = remember(groupsState.groups, groupsState.members) {
+        GroupRankCalculator.rank(groupsState.groups, groupsState.members)
+    }
     var tab by rememberSaveable { mutableStateOf("MEMBERS") }
     val ranked = remember(state.members) {
         state.members.sortedWith(compareByDescending<com.kichikan.negah.domain.member.Member> { it.totalXp }.thenBy { it.fullName })
@@ -50,7 +56,25 @@ fun CompetitionScreen(
             FilterChip(selected = tab == "GROUPS", onClick = { tab = "GROUPS" }, label = { Text("رتبه گروه‌ها") })
         }
         if (tab == "GROUPS") {
-            Text("گروه‌بندی اعضا هنوز در برنامه تعریف نشده است؛ پس رتبه گروه‌ها داده‌ای برای نمایش ندارد.")
+            if (groupRanking.isEmpty()) {
+                Text("هنوز گروهی ساخته نشده است. گروه‌ها را از «اعضا ← گروه» بسازید.")
+            } else {
+                Text("ترتیب بر اساس مجموع XP اعضای هر گروه (سرگروه و زیرگروه).", style = MaterialTheme.typography.bodySmall)
+                groupRanking.forEachIndexed { index, entry ->
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("${index + 1}. ${entry.group.name}", style = MaterialTheme.typography.titleMedium)
+                                Text("${entry.totalXp} XP")
+                            }
+                            Text(
+                                "${entry.memberCount} عضو · امتیاز قابل‌خرج ${entry.totalSpendablePoints} · الماس ${entry.totalDiamonds}",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    }
+                }
+            }
         } else if (ranked.isEmpty()) {
             Text("هنوز عضوی ثبت نشده است.")
         } else {

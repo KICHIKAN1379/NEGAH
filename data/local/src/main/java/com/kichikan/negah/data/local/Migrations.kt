@@ -88,3 +88,12 @@ val MIGRATION_13_14 = object : Migration(13, 14) {
   database.execSQL("CREATE INDEX IF NOT EXISTS index_member_growth_history_growthItemId ON member_growth_history(growthItemId)")
  }
 }
+
+val MIGRATION_14_15 = object : Migration(14, 15) {
+ override fun migrate(database: SupportSQLiteDatabase) {
+  database.execSQL("""CREATE TABLE IF NOT EXISTS member_groups (id TEXT NOT NULL, name TEXT NOT NULL, leaderMemberId TEXT NOT NULL, isActive INTEGER NOT NULL, createdAtEpochMillis INTEGER NOT NULL, updatedAtEpochMillis INTEGER NOT NULL, PRIMARY KEY(id), FOREIGN KEY(leaderMemberId) REFERENCES members(id) ON UPDATE NO ACTION ON DELETE RESTRICT)""")
+  database.execSQL("CREATE INDEX IF NOT EXISTS index_member_groups_leaderMemberId ON member_groups(leaderMemberId)")
+  database.execSQL("""CREATE TABLE IF NOT EXISTS group_members (groupId TEXT NOT NULL, memberId TEXT NOT NULL, PRIMARY KEY(groupId, memberId), FOREIGN KEY(groupId) REFERENCES member_groups(id) ON UPDATE NO ACTION ON DELETE RESTRICT, FOREIGN KEY(memberId) REFERENCES members(id) ON UPDATE NO ACTION ON DELETE RESTRICT)""")
+  database.execSQL("CREATE INDEX IF NOT EXISTS index_group_members_memberId ON group_members(memberId)")
+ }
+}
