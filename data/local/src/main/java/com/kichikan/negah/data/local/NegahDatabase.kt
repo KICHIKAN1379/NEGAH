@@ -24,12 +24,14 @@ import com.kichikan.negah.data.local.mission.MissionEntity
 import com.kichikan.negah.data.local.mission.MissionAssignmentEntity
 import com.kichikan.negah.data.local.mission.MissionDao
 import com.kichikan.negah.data.local.group.GroupDao
+import com.kichikan.negah.data.local.group.GroupEconomyDao
+import com.kichikan.negah.data.local.group.GroupEconomyTransactionEntity
 import com.kichikan.negah.data.local.group.GroupMemberEntity
 import com.kichikan.negah.data.local.group.MemberGroupEntity
 import com.kichikan.negah.data.local.reading.BookReadingDao
 import com.kichikan.negah.data.local.reading.BookReadingEntity
 
-@Database(entities = [MemberEntity::class, SessionEntity::class, AttendanceEntity::class, AttendanceRevisionEntity::class, CommitmentEntity::class, CommitmentRevisionEntity::class, EconomyTransactionEntity::class, GrowthItemEntity::class, MemberGrowthProgressEntity::class, CatalogItemEntity::class, MemberInventoryEntity::class, MemberActiveItemEntity::class, ClassDayEntity::class, HomeShortcutEntity::class, HomeShortcutSettingsEntity::class, MediaAssetEntity::class, RingProfileEntity::class, MissionEntity::class, MissionAssignmentEntity::class, DailyQuoteEntity::class, BookReadingEntity::class, MemberGrowthHistoryEntity::class, MemberGroupEntity::class, GroupMemberEntity::class], version = 15, exportSchema = true)
+@Database(entities = [MemberEntity::class, SessionEntity::class, AttendanceEntity::class, AttendanceRevisionEntity::class, CommitmentEntity::class, CommitmentRevisionEntity::class, EconomyTransactionEntity::class, GrowthItemEntity::class, MemberGrowthProgressEntity::class, CatalogItemEntity::class, MemberInventoryEntity::class, MemberActiveItemEntity::class, ClassDayEntity::class, HomeShortcutEntity::class, HomeShortcutSettingsEntity::class, MediaAssetEntity::class, RingProfileEntity::class, MissionEntity::class, MissionAssignmentEntity::class, DailyQuoteEntity::class, BookReadingEntity::class, MemberGrowthHistoryEntity::class, MemberGroupEntity::class, GroupMemberEntity::class, GroupEconomyTransactionEntity::class], version = 16, exportSchema = true)
 @TypeConverters(AttendanceStatusConverter::class)
 abstract class NegahDatabase : RoomDatabase() {
  abstract fun memberDao(): MemberDao
@@ -48,4 +50,5 @@ abstract class NegahDatabase : RoomDatabase() {
  abstract fun dailyQuoteDao(): DailyQuoteDao
  abstract fun bookReadingDao(): BookReadingDao
  abstract fun groupDao(): GroupDao
+ abstract fun groupEconomyDao(): GroupEconomyDao
 }
