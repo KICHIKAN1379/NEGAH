@@ -71,4 +71,16 @@ class BirthdayReminderTest {
         assertTrue(BirthdayReminderCalculator.upcoming(members, today).isEmpty())
         assertNull(BirthdayReminderCalculator.parseMonthDay("1390/08"))
     }
+
+    @Test
+    fun jalaliTextRoundTripsAndRejectsInvalidDates() {
+        assertEquals(LocalDate.of(2026, 11, 12), JalaliDateText.parse("۱۴۰۵/۰۸/۲۱"))
+        assertEquals("1405/08/21", JalaliDateText.format(LocalDate.of(2026, 11, 12)))
+        assertEquals("1404/12/29", JalaliDateText.format(LocalDate.of(2026, 3, 20)))
+        assertEquals("1405/01/01", JalaliDateText.format(LocalDate.of(2026, 3, 21)))
+        assertNull(JalaliDateText.parse("1405/07/31"))
+        assertNull(JalaliDateText.parse("1404/12/30"))
+        assertEquals(LocalDate.of(2025, 3, 20), JalaliDateText.parse("1403/12/30"))
+        assertNull(JalaliDateText.parse("abc"))
+    }
 }

@@ -40,6 +40,18 @@ object JalaliCalendar {
         return firstDayOfYear(year).plusDays(dayOfYear.toLong())
     }
 
+    /** Converts [date] to (year, month, day) in the Solar Hijri calendar. */
+    fun toJalali(date: LocalDate): Triple<Int, Int, Int> {
+        val year = yearOf(date)
+        var remaining = ChronoUnit.DAYS.between(firstDayOfYear(year), date).toInt()
+        var month = 1
+        while (month < 12 && remaining >= daysInMonth(year, month)) {
+            remaining -= daysInMonth(year, month)
+            month++
+        }
+        return Triple(year, month, remaining + 1)
+    }
+
     /** Returns the Jalali year of [date]. */
     fun yearOf(date: LocalDate): Int {
         var year = date.year - 621
