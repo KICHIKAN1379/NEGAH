@@ -64,8 +64,28 @@ class GroupDomainTest {
         assertEquals(9L, saved.updatedAtEpochMillis)
     }
 
+
     @Test
-    fun rankingSumsXpOfRegisteredMembersAndIgnoresArchivedAndInactive() {
+    fun groupRankingUsesSpendablePointsNotXpOrDiamonds() {
+        val members = listOf(
+            member("a", xp = 10, points = 80, diamonds = 0),
+            member("b", xp = 10, points = 20, diamonds = 0),
+            member("c", xp = 9_999, points = 50, diamonds = 10_000),
+        )
+        val groups = listOf(
+            group("low-xp-high-points", "الف", "a", "b"),
+            group("high-xp-high-diamonds", "ب", "c"),
+        )
+
+        val ranking = GroupRankCalculator.rank(groups, members)
+
+        assertEquals(listOf("low-xp-high-points", "high-xp-high-diamonds"), ranking.map { it.group.id })
+        assertEquals(100L, ranking.first().totalSpendablePoints)
+        assertEquals(50L, ranking.last().totalSpendablePoints)
+    }
+
+    @Test
+    fun rankingSumsSpendablePointsAndIgnoresArchivedAndInactive() {
         val members = listOf(
             member("a", 100, points = 5, diamonds = 1), member("b", 50), member("c", 400),
             member("d", 90, archived = true), member("e", 10),
@@ -76,11 +96,11 @@ class GroupDomainTest {
             group("g3", "غیرفعال", "a", active = false),
         )
         val ranking = GroupRankCalculator.rank(groups, members)
-        assertEquals(listOf("g2", "g1"), ranking.map { it.group.id })
-        assertEquals(410L, ranking[0].totalXp)
-        assertEquals(150L, ranking[1].totalXp)
-        assertEquals(2, ranking[1].memberCount)
-        assertEquals(5L, ranking[1].totalSpendablePoints)
-        assertEquals(1L, ranking[1].totalDiamonds)
+        assertEquals(listOf("g1", "g2"), ranking.map { it.group.id })
+        assertEquals(150L, ranking[0].totalXp)
+        assertEquals(410L, ranking[1].totalXp)
+        assertEquals(2, ranking[0].memberCount)
+        assertEquals(5L, ranking[0].totalSpendablePoints)
+        assertEquals(1L, ranking[0].totalDiamonds)
     }
 }
