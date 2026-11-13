@@ -61,6 +61,8 @@ class GroupsViewModel @Inject constructor(
             subMemberIds = subMemberIds,
             nowEpochMillis = System.currentTimeMillis(),
             createdAtEpochMillis = existing?.group?.createdAtEpochMillis ?: System.currentTimeMillis(),
+            spendablePoints = existing?.group?.spendablePoints ?: 0L,
+            diamonds = existing?.group?.diamonds ?: 0L,
         )
         val message = when (result) {
             is SaveGroupResult.Saved -> "گروه ذخیره شد"
@@ -99,6 +101,7 @@ class GroupsViewModel @Inject constructor(
 
     fun loadEconomyHistory(groupId: String) {
         viewModelScope.launch {
+            mutableState.update { it.copy(economyHistory = emptyList()) }
             val history = groupRepository.observeEconomyTransactions(groupId).first()
             mutableState.update { it.copy(economyHistory = history) }
         }
