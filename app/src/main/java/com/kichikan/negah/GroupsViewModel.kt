@@ -61,8 +61,6 @@ class GroupsViewModel @Inject constructor(
             subMemberIds = subMemberIds,
             nowEpochMillis = System.currentTimeMillis(),
             createdAtEpochMillis = existing?.group?.createdAtEpochMillis ?: System.currentTimeMillis(),
-            spendablePoints = existing?.group?.spendablePoints ?: 0L,
-            diamonds = existing?.group?.diamonds ?: 0L,
         )
         val message = when (result) {
             is SaveGroupResult.Saved -> "گروه ذخیره شد"
