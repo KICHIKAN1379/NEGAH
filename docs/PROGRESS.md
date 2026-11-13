@@ -279,3 +279,8 @@ The available host has GitHub repository read/write integration but no local And
 - Branch mission/members-complete (draft PR #4): Solar Hijri birthday reminder (3 days before, WorkManager + notification permission at first launch), book-reading model with Room migration 13→14, immutable growth-progress history, reading axis wired into member report/PDF, monthly trend charts in the member PDF.
 - CI evidence: run 43343026664 succeeded on aeafcae3ef1f8d1c7816f60f58912cdcdd4bcb48 (build + domain/data/members/refinery unit tests). No device or UI test performed.
 - Next: Progress menu (identity, missions, reading entry form/ranking, wheel, competition, sessions) per mrt-menu.md and ux_2.pdf.
+
+## Progress hub slice — 2026-11-13
+- Progress now opens a six-entry hub (identity, missions, reading, wheel, competition, sessions) with back handling; reading has ranking + entry form + recent list; competition ranks members by XP inside the ring (group ranking unavailable: no group model); wheel is an explicit not-implemented screen.
+- CI evidence: run 43343891178 succeeded on 4c1b0c2e0cfd13be803c26b7f1e3162c5bee0864. No device/UI test performed.
+- Next: wheel (Room model, refinery settings, cost in spendable points, spin ledger), mission tabs (hidden mission, six-piece group puzzle), identity page per UX, shop details.
