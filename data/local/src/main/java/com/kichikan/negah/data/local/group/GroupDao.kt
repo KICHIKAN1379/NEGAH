@@ -17,6 +17,27 @@ interface GroupDao {
     @Upsert
     suspend fun upsertGroup(group: MemberGroupEntity)
 
+    @Query("SELECT EXISTS(SELECT 1 FROM member_groups WHERE id = :groupId)")
+    suspend fun groupExists(groupId: String): Boolean
+
+    @Query(
+        """
+        UPDATE member_groups
+        SET name = :name,
+            leaderMemberId = :leaderMemberId,
+            isActive = :isActive,
+            updatedAtEpochMillis = :updatedAt
+        WHERE id = :groupId
+        """,
+    )
+    suspend fun updateGroupDetails(
+        groupId: String,
+        name: String,
+        leaderMemberId: String,
+        isActive: Boolean,
+        updatedAt: Long,
+    )
+
     @Query("DELETE FROM group_members WHERE groupId = :groupId")
     suspend fun clearMemberships(groupId: String)
 
@@ -42,7 +63,17 @@ interface GroupDao {
     suspend fun saveGroup(group: MemberGroupEntity, subMemberIds: List<String>): Boolean {
         val everyone = (subMemberIds + group.leaderMemberId).distinct()
         if (group.isActive && findAssignedElsewhere(everyone, group.id).isNotEmpty()) return false
-        upsertGroup(group)
+        if (groupExists(group.id)) {
+            updateGroupDetails(
+                groupId = group.id,
+                name = group.name,
+                leaderMemberId = group.leaderMemberId,
+                isActive = group.isActive,
+                updatedAt = group.updatedAtEpochMillis,
+            )
+        } else {
+            upsertGroup(group)
+        }
         clearMemberships(group.id)
         upsertMemberships(subMemberIds.distinct().filter { it != group.leaderMemberId }.map { GroupMemberEntity(group.id, it) })
         return true

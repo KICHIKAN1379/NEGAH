@@ -13,6 +13,8 @@ data class MemberGroup(
     val isActive: Boolean,
     val createdAtEpochMillis: Long,
     val updatedAtEpochMillis: Long,
+    val spendablePoints: Long = 0L,
+    val diamonds: Long = 0L,
 )
 
 data class GroupWithMembers(
@@ -34,6 +36,81 @@ interface GroupRepository {
 
     /** Soft-deactivates a group; it frees its members and is never hard-deleted. */
     suspend fun archiveGroup(groupId: String, updatedAtEpochMillis: Long)
+
+    fun observeEconomyTransactions(groupId: String): Flow<List<GroupEconomyTransaction>>
+    suspend fun appendEconomyTransactions(transactions: List<GroupEconomyTransaction>): GroupEconomyAppendResult
+}
+
+
+enum class GroupEconomyCurrency { POINTS, DIAMONDS }
+
+data class GroupEconomyTransaction(
+    val id: String,
+    val groupId: String,
+    val currency: GroupEconomyCurrency,
+    /** Signed balance change; positive adds and negative subtracts. */
+    val amountDelta: Long,
+    val reason: String,
+    val createdAtEpochMillis: Long,
+)
+
+enum class GroupEconomyAppendResult {
+    APPENDED, GROUP_NOT_FOUND, INSUFFICIENT_BALANCE, BALANCE_OVERFLOW, INVALID_BATCH
+}
+
+sealed interface AdjustGroupEconomyResult {
+    data object InvalidAdjustment : AdjustGroupEconomyResult
+    data object Appended : AdjustGroupEconomyResult
+    data object GroupNotFound : AdjustGroupEconomyResult
+    data object InsufficientBalance : AdjustGroupEconomyResult
+    data object BalanceOverflow : AdjustGroupEconomyResult
+}
+
+class AdjustGroupEconomy @Inject constructor(
+    private val repository: GroupRepository,
+) {
+    suspend operator fun invoke(
+        groupId: String,
+        pointsDelta: Long,
+        diamondsDelta: Long,
+        reason: String,
+        nowEpochMillis: Long,
+    ): AdjustGroupEconomyResult {
+        val cleanReason = reason.trim()
+        if (groupId.isBlank() || cleanReason.isBlank() ||
+            (pointsDelta == 0L && diamondsDelta == 0L)
+        ) return AdjustGroupEconomyResult.InvalidAdjustment
+
+        val transactions = buildList {
+            if (pointsDelta != 0L) add(
+                GroupEconomyTransaction(
+                    id = UUID.randomUUID().toString(),
+                    groupId = groupId,
+                    currency = GroupEconomyCurrency.POINTS,
+                    amountDelta = pointsDelta,
+                    reason = cleanReason,
+                    createdAtEpochMillis = nowEpochMillis,
+                ),
+            )
+            if (diamondsDelta != 0L) add(
+                GroupEconomyTransaction(
+                    id = UUID.randomUUID().toString(),
+                    groupId = groupId,
+                    currency = GroupEconomyCurrency.DIAMONDS,
+                    amountDelta = diamondsDelta,
+                    reason = cleanReason,
+                    createdAtEpochMillis = nowEpochMillis,
+                ),
+            )
+        }
+        return when (repository.appendEconomyTransactions(transactions)) {
+            GroupEconomyAppendResult.APPENDED -> AdjustGroupEconomyResult.Appended
+            GroupEconomyAppendResult.GROUP_NOT_FOUND -> AdjustGroupEconomyResult.GroupNotFound
+            GroupEconomyAppendResult.INSUFFICIENT_BALANCE -> AdjustGroupEconomyResult.InsufficientBalance
+            GroupEconomyAppendResult.BALANCE_OVERFLOW -> AdjustGroupEconomyResult.BalanceOverflow
+            GroupEconomyAppendResult.INVALID_BATCH -> AdjustGroupEconomyResult.InvalidAdjustment
+        }
+    }
 }
 
 sealed interface SaveGroupResult {
@@ -77,15 +154,14 @@ class SaveGroup @Inject constructor(
 data class GroupRankEntry(
     val group: MemberGroup,
     val memberCount: Int,
-    val totalXp: Long,
     val totalSpendablePoints: Long,
     val totalDiamonds: Long,
 )
 
 /**
- * Group ranking uses the summed XP (permanent progress) of the group's registered members;
- * ties fall back to member count and then name for a stable order. Archived or unknown
- * members contribute nothing.
+ * AK1 ranks by each active group's own spendable-point balance. Member balances,
+ * member XP, and group diamonds do not affect the ranking. Archived members only
+ * affect the displayed active-member count.
  */
 object GroupRankCalculator {
     fun rank(groups: List<GroupWithMembers>, members: List<Member>): List<GroupRankEntry> {
@@ -95,14 +171,11 @@ object GroupRankCalculator {
             GroupRankEntry(
                 group = entry.group,
                 memberCount = present.size,
-                totalXp = present.sumOf { it.totalXp },
-                totalSpendablePoints = present.sumOf { it.spendablePoints },
-                totalDiamonds = present.sumOf { it.diamonds },
+                totalSpendablePoints = entry.group.spendablePoints,
+                totalDiamonds = entry.group.diamonds,
             )
         }.sortedWith(
-            compareByDescending<GroupRankEntry> { it.totalXp }
-                .thenByDescending { it.memberCount }
-                .thenBy { it.group.name },
+            compareByDescending<GroupRankEntry> { it.totalSpendablePoints },
         )
     }
 }
