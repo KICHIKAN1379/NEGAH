@@ -132,8 +132,6 @@ class SaveGroup @Inject constructor(
         subMemberIds: Collection<String>,
         nowEpochMillis: Long,
         createdAtEpochMillis: Long = nowEpochMillis,
-        spendablePoints: Long = 0L,
-        diamonds: Long = 0L,
     ): SaveGroupResult {
         val cleanName = name.trim()
         if (cleanName.isEmpty()) return SaveGroupResult.InvalidName
@@ -147,8 +145,6 @@ class SaveGroup @Inject constructor(
             isActive = true,
             createdAtEpochMillis = createdAtEpochMillis,
             updatedAtEpochMillis = nowEpochMillis,
-            spendablePoints = spendablePoints,
-            diamonds = diamonds,
         )
         return if (repository.saveGroup(group, subs)) SaveGroupResult.Saved(group)
         else SaveGroupResult.MemberAlreadyInAnotherGroup
