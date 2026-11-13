@@ -10,12 +10,19 @@ import kotlinx.coroutines.runBlocking
 
 private class FakeGroupRepository(private val accept: Boolean = true) : GroupRepository {
     var saved: Pair<MemberGroup, List<String>>? = null
+    var economyTransactions = emptyList<GroupEconomyTransaction>()
     override fun observeGroups(): Flow<List<GroupWithMembers>> = flowOf(emptyList())
     override suspend fun saveGroup(group: MemberGroup, subMemberIds: List<String>): Boolean {
         if (accept) saved = group to subMemberIds
         return accept
     }
     override suspend fun archiveGroup(groupId: String, updatedAtEpochMillis: Long) = Unit
+    override fun observeEconomyTransactions(groupId: String) = flowOf(economyTransactions.filter { it.groupId == groupId })
+    override suspend fun appendEconomyTransactions(transactions: List<GroupEconomyTransaction>): GroupEconomyAppendResult {
+        if (!accept) return GroupEconomyAppendResult.GROUP_NOT_FOUND
+        economyTransactions = economyTransactions + transactions
+        return GroupEconomyAppendResult.APPENDED
+    }
 }
 
 class GroupDomainTest {
