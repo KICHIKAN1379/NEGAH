@@ -1,5 +1,6 @@
 package com.kichikan.negah.data.local.group
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -26,8 +27,8 @@ data class MemberGroupEntity(
     val isActive: Boolean,
     val createdAtEpochMillis: Long,
     val updatedAtEpochMillis: Long,
-    val spendablePoints: Long = 0L,
-    val diamonds: Long = 0L,
+    @ColumnInfo(defaultValue = "0") val spendablePoints: Long = 0L,
+    @ColumnInfo(defaultValue = "0") val diamonds: Long = 0L,
 ) {
     fun toDomain() = MemberGroup(id, name, leaderMemberId, isActive, createdAtEpochMillis, updatedAtEpochMillis, spendablePoints, diamonds)
 
