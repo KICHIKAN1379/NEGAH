@@ -168,10 +168,10 @@ fun GroupsScreen(
         val group = state.groups.firstOrNull { it.group.id == groupId }?.group
         AlertDialog(
             onDismissRequest = { economyGroupId = null; viewModel.clearMessage() },
-            title = { Text("تغییر موجودی \${group?.name.orEmpty()}") },
+            title = { Text("تغییر موجودی ${group?.name.orEmpty()}") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("موجودی فعلی: \${group?.spendablePoints ?: 0L} امتیاز · \${group?.diamonds ?: 0L} الماس")
+                    Text("موجودی فعلی: ${group?.spendablePoints ?: 0L} امتیاز · ${group?.diamonds ?: 0L} الماس")
                     OutlinedTextField(
                         value = pointsDelta,
                         onValueChange = { pointsDelta = it.filter { ch -> ch == '-' || ch.isDigit() } },
@@ -217,7 +217,7 @@ fun GroupsScreen(
         val group = state.groups.firstOrNull { it.group.id == groupId }?.group
         AlertDialog(
             onDismissRequest = { historyGroupId = null; viewModel.clearEconomyHistory() },
-            title = { Text("سوابق اقتصاد \${group?.name.orEmpty()}") },
+            title = { Text("سوابق اقتصاد ${group?.name.orEmpty()}") },
             text = {
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -229,7 +229,7 @@ fun GroupsScreen(
                         state.economyHistory.forEach { transaction ->
                             val currency = if (transaction.currency.name == "POINTS") "امتیاز" else "الماس"
                             Text(
-                                "\${if (transaction.amountDelta > 0) "+" else ""}\${transaction.amountDelta} $currency · \${transaction.reason}",
+                                "${if (transaction.amountDelta > 0) "+" else ""}${transaction.amountDelta} $currency · ${transaction.reason}",
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                         }
