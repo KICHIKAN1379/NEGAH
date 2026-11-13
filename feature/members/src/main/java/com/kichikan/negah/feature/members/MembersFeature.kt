@@ -98,6 +98,9 @@ import com.kichikan.negah.domain.mission.MissionAssignment
 import com.kichikan.negah.domain.mission.MissionAssignmentStatus
 import com.kichikan.negah.domain.mission.MissionKind
 import com.kichikan.negah.domain.mission.MissionRepository
+import com.kichikan.negah.domain.reading.BookReading
+import com.kichikan.negah.domain.reading.ReadingRepository
+import com.kichikan.negah.domain.reading.ReadingScoreCalculator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -134,6 +137,7 @@ data class MembersUiState(
     val activeInventoryItems: List<ActiveInventoryItem> = emptyList(),
     val missions: List<Mission> = emptyList(),
     val missionAssignments: List<MissionAssignment> = emptyList(),
+    val bookReadings: List<BookReading> = emptyList(),
     val catalogImageBytes: Map<String, ByteArray> = emptyMap(),
     val inventoryMessage: String? = null,
     val isSaving: Boolean = false,
@@ -189,6 +193,7 @@ class MembersViewModel @Inject constructor(
     private val missionRepository: MissionRepository,
     private val catalogItemMediaRepository: CatalogItemMediaRepository,
     private val avatarRepository: MemberAvatarRepository,
+    private val readingRepository: ReadingRepository,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(MembersUiState())
     val state = mutableState.asStateFlow()
@@ -205,6 +210,11 @@ class MembersViewModel @Inject constructor(
             repository.observeActiveMembers().collect { members ->
                 mutableState.update { it.copy(members = members) }
                 grantBirthdayDiamonds(members)
+            }
+        }
+        viewModelScope.launch {
+            readingRepository.observeAll().collect { readings ->
+                mutableState.update { it.copy(bookReadings = readings) }
             }
         }
         viewModelScope.launch {
@@ -608,7 +618,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val selectedMember = state.members.firstOrNull { it.id == state.selectedMemberId }
     if (selectedMember != null) {
-        MemberProfileScreen(selectedMember, state.economyTransactions, state.historyFilter, viewModel::onHistoryFilterChanged, state.growthItems, state.growthProgress, state.growthSaveMessage, state.inventoryEntries, state.availableCatalogItems, state.activeInventoryItems, state.inventoryMessage, state.profileMessage, state.avatarBytes, state.avatarMessage, state.catalogImageBytes, state.missions, state.missionAssignments, viewModel::updateSelectedMemberProfile, viewModel::activateBadge, viewModel::adjustEconomyBalance, viewModel::updateMemberAvatar, viewModel::removeMemberAvatar, viewModel::saveGrowthProgress, viewModel::activateInventoryItem, viewModel::grantCatalogItem, viewModel::onProfileClosed, modifier)
+        MemberProfileScreen(selectedMember, state.economyTransactions, state.historyFilter, viewModel::onHistoryFilterChanged, state.growthItems, state.growthProgress, state.growthSaveMessage, state.inventoryEntries, state.availableCatalogItems, state.activeInventoryItems, state.inventoryMessage, state.profileMessage, state.avatarBytes, state.avatarMessage, state.catalogImageBytes, state.missions, state.missionAssignments, state.bookReadings, viewModel::updateSelectedMemberProfile, viewModel::activateBadge, viewModel::adjustEconomyBalance, viewModel::updateMemberAvatar, viewModel::removeMemberAvatar, viewModel::saveGrowthProgress, viewModel::activateInventoryItem, viewModel::grantCatalogItem, viewModel::onProfileClosed, modifier)
         return
     }
 
@@ -766,7 +776,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, historyFilter: MemberHistoryFilter, onHistoryFilterChanged: (MemberHistoryFilter) -> Unit, growthItems: List<GrowthItem>, growthProgress: List<MemberGrowthProgress>, growthSaveMessage: String?, inventoryEntries: List<MemberInventoryEntry>, availableCatalogItems: List<CatalogItem>, activeInventoryItems: List<ActiveInventoryItem>, inventoryMessage: String?, profileMessage: String?, avatarBytes: ByteArray?, avatarMessage: String?, catalogImageBytes: Map<String, ByteArray>, missions: List<Mission>, missionAssignments: List<MissionAssignment>, onUpdateProfile: (String, String, String) -> Unit, onActivateBadge: (Int) -> Unit, onAdjustEconomy: (EconomyCurrency, Long, String) -> Unit, onUpdateAvatar: (InputStream, String) -> Unit, onRemoveAvatar: () -> Unit, onSaveGrowthProgress: (GrowthItem, Int, String?) -> Unit, onActivateInventoryItem: (MemberInventoryEntry) -> Unit, onGrantCatalogItem: (CatalogItem) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
+private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, historyFilter: MemberHistoryFilter, onHistoryFilterChanged: (MemberHistoryFilter) -> Unit, growthItems: List<GrowthItem>, growthProgress: List<MemberGrowthProgress>, growthSaveMessage: String?, inventoryEntries: List<MemberInventoryEntry>, availableCatalogItems: List<CatalogItem>, activeInventoryItems: List<ActiveInventoryItem>, inventoryMessage: String?, profileMessage: String?, avatarBytes: ByteArray?, avatarMessage: String?, catalogImageBytes: Map<String, ByteArray>, missions: List<Mission>, missionAssignments: List<MissionAssignment>, bookReadings: List<BookReading>, onUpdateProfile: (String, String, String) -> Unit, onActivateBadge: (Int) -> Unit, onAdjustEconomy: (EconomyCurrency, Long, String) -> Unit, onUpdateAvatar: (InputStream, String) -> Unit, onRemoveAvatar: () -> Unit, onSaveGrowthProgress: (GrowthItem, Int, String?) -> Unit, onActivateInventoryItem: (MemberInventoryEntry) -> Unit, onGrantCatalogItem: (CatalogItem) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
     var inventoryTab by rememberSaveable { mutableStateOf("آواتار") }
     var showAllReceivedHistory by rememberSaveable { mutableStateOf(false) }
     var showProfileEditDialog by rememberSaveable { mutableStateOf(false) }
@@ -784,6 +794,7 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
     var exportReport by rememberSaveable { mutableStateOf(true) }
     var exportHistory by rememberSaveable { mutableStateOf(true) }
     var pendingPdfSections by remember { mutableStateOf(emptyList<Pair<String, String>>()) }
+    var pendingPdfCharts by remember { mutableStateOf(emptyList<PdfChartSeries>()) }
     val context = LocalContext.current
     val activeAvatarId = activeInventoryItems.firstOrNull { it.category == InventoryCategory.AVATAR }?.catalogItemId
     val activeFrameId = activeInventoryItems.firstOrNull { it.category == InventoryCategory.FRAME }?.catalogItemId
@@ -792,7 +803,7 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
     LaunchedEffect(profileMessage) { if (profileMessage == "مشخصات عضو ذخیره شد") showProfileEditDialog = false }
     val pdfLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
         if (uri != null) {
-            val pdf = createMemberPdf(member.fullName, pendingPdfSections, avatarBytes, activeAvatarBytes, activeFrameBytes)
+            val pdf = createMemberPdf(member.fullName, pendingPdfSections, pendingPdfCharts, avatarBytes, activeAvatarBytes, activeFrameBytes)
             runCatching { context.contentResolver.openOutputStream(uri)?.use { pdf.writeTo(it) } }
             pdf.close()
         }
@@ -1018,6 +1029,7 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
             growthProgress = growthProgress,
             missions = missions,
             missionAssignments = missionAssignments,
+            bookReadings = bookReadings,
         )
         val historyTransactions = transactions.filter { transaction ->
             when (historyFilter) {
@@ -1141,7 +1153,25 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
                             growthProgress.firstOrNull { it.growthItemId == item.id }?.progressPercent ?: 0
                         }.average().toInt()
                         val reportSummary = calculateJalaliMemberReport(transactions, reportYear, reportMonth, true)
+                        val reportMemberReadings = bookReadings.filter { it.memberId == member.id }
+                        val reportMonthReadings = reportMemberReadings.filter { reading ->
+                            val (readYear, readMonth) = jalaliYearMonth(reading.readAtEpochMillis)
+                            readYear == reportYear && readMonth == reportMonth
+                        }
+                        val reportReadingText = if (reportMemberReadings.isEmpty()) "داده‌ای ثبت نشده"
+                            else "${reportMonthReadings.size} کتاب در این ماه · امتیاز مطالعه کل ${ReadingScoreCalculator.score(reportMemberReadings, member.id)}"
                         val reportLevel = LevelProgression.levelFor(member.totalXp)
+                        pendingPdfCharts = if (!exportReport) emptyList() else buildList {
+                            add(PdfChartSeries("XP", reportSummary.xpSeries))
+                            add(PdfChartSeries("امتیاز قابل‌خرج", reportSummary.pointsSeries))
+                            add(PdfChartSeries("الماس", reportSummary.diamondsSeries))
+                            val readingDaily = MutableList(reportSummary.xpSeries.size) { 0L }
+                            reportMonthReadings.forEach { reading ->
+                                val day = Calendar.getInstance(ULocale("fa_IR@calendar=persian")).apply { timeInMillis = reading.readAtEpochMillis }.get(Calendar.DATE) - 1
+                                if (day in readingDaily.indices) readingDaily[day] += reading.level.toLong()
+                            }
+                            add(PdfChartSeries("کتاب‌خوانی (مجموع سطح)", readingDaily))
+                        }
                         pendingPdfSections = buildList {
                             if (exportIdentity) add("اطلاعات هویتی" to "نام: ${member.fullName}\nنام نمایشی: ${member.nickname ?: "ثبت نشده"}\nتاریخ تولد: ${member.birthDateJalali ?: "ثبت نشده"}\nسطح: $level\nنشان فعال: ${effectiveActiveBadgeLevel(member, level)?.let { RankBadgeProgression.all.getOrNull(it - 1)?.title } ?: "ندارد"}\nXP: ${member.totalXp}\nامتیاز قابل خرج: ${member.spendablePoints}\nالماس: ${member.diamonds}")
                             if (exportTreasure) add("گنجینه" to (inventoryEntries.joinToString("\n") { entry ->
@@ -1156,7 +1186,7 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
 مأموریت: $reportCompletedMissions از ${reportAssignments.size} تکمیل‌شده، $reportApprovedMissions تأییدشده
 امتیاز قابل خرج: ${member.spendablePoints} · تغییر بازه: ${formatReportDelta(reportSummary.pointsDelta)}
 نقشه کمال: ${reportGrowthAverage?.let { "$it٪ وضعیت فعلی" } ?: "بدون شاخص فعال"} · روند تاریخی ذخیره نشده
-کتاب‌خوانی: داده‌ای ثبت نشده
+کتاب‌خوانی: $reportReadingText
 سطح: $reportLevel · ${member.totalXp} XP · تغییر بازه: ${formatReportDelta(reportSummary.xpDelta)}
 الماس: ${member.diamonds} · تغییر بازه: ${formatReportDelta(reportSummary.diamondsDelta)}
 """)
@@ -1269,6 +1299,7 @@ private fun MemberReportCard(
     growthProgress: List<MemberGrowthProgress>,
     missions: List<Mission>,
     missionAssignments: List<MissionAssignment>,
+    bookReadings: List<BookReading>,
 ) {
     var periodMode by rememberSaveable { mutableStateOf("MONTH") }
     val currentPersianDate = remember { Calendar.getInstance(ULocale("fa_IR@calendar=persian")) }
@@ -1367,10 +1398,26 @@ private fun MemberReportCard(
                 else "میانگین وضعیت فعلی از ${growthItems.size} شاخص فعال؛ تاریخچه روند هنوز ذخیره نمی‌شود",
             progress = growthAverage?.div(100f),
         )
+        val memberReadings = bookReadings.filter { it.memberId == member.id }
+        val periodReadings = memberReadings.filter { reading ->
+            val (readYear, readMonth) = jalaliYearMonth(reading.readAtEpochMillis)
+            readYear == selectedYear && (periodMode != "MONTH" || readMonth == selectedMonth)
+        }
+        val readingSeries = remember(periodReadings, periodMode, missionBucketCount) {
+            val buckets = MutableList(missionBucketCount) { 0L }
+            periodReadings.forEach { reading ->
+                val date = Calendar.getInstance(ULocale("fa_IR@calendar=persian")).apply { timeInMillis = reading.readAtEpochMillis }
+                val index = if (periodMode == "MONTH") date.get(Calendar.DATE) - 1 else date.get(Calendar.MONTH)
+                if (index in buckets.indices) buckets[index] += reading.level.toLong()
+            }
+            buckets
+        }
         MemberReportAxisCard(
             title = "کتاب‌خوانی",
-            value = "داده‌ای ثبت نشده",
-            detail = "ثبت فعالیت کتاب‌خوانی هنوز در این نسخه فعال نیست",
+            value = if (memberReadings.isEmpty()) "داده‌ای ثبت نشده" else "${periodReadings.size} کتاب در بازه",
+            detail = if (memberReadings.isEmpty()) "هنوز کتابی برای این عضو در «پیشرفت ← کتاب‌خوانی» ثبت نشده است"
+                else "امتیاز مطالعه کل: ${ReadingScoreCalculator.score(memberReadings, member.id)} از ${memberReadings.size} کتاب • مجموع سطح کتاب‌های بازه: ${periodReadings.sumOf { it.level }}",
+            series = if (periodReadings.isEmpty()) null else readingSeries,
         )
         MemberReportAxisCard(
             title = "سطح",
@@ -1487,7 +1534,9 @@ private fun calculateJalaliMemberReport(
     )
 }
 
-private fun createMemberPdf(name: String, sections: List<Pair<String, String>>, avatarBytes: ByteArray?, activeAvatarBytes: ByteArray?, activeFrameBytes: ByteArray?): PdfDocument {
+private class PdfChartSeries(val title: String, val values: List<Long>)
+
+private fun createMemberPdf(name: String, sections: List<Pair<String, String>>, charts: List<PdfChartSeries>, avatarBytes: ByteArray?, activeAvatarBytes: ByteArray?, activeFrameBytes: ByteArray?): PdfDocument {
     val document = PdfDocument()
     val pageWidth = 595
     val pageHeight = 842
@@ -1567,6 +1616,43 @@ private fun createMemberPdf(name: String, sections: List<Pair<String, String>>, 
             .setAlignment(Layout.Alignment.ALIGN_NORMAL).setTextDirection(TextDirectionHeuristics.RTL).setIncludePad(false).setLineSpacing(4f, 1f).build()
         drawLayout(body)
         y += 8f
+    }
+    val chartsToDraw = charts.filter { chart -> chart.values.any { it != 0L } }
+    if (chartsToDraw.isNotEmpty()) {
+        val chartHeadingText = "نمودار روند ماهانه"
+        val chartHeading = StaticLayout.Builder.obtain(chartHeadingText, 0, chartHeadingText.length, headingPaint, (pageWidth - margin * 2).toInt())
+            .setAlignment(Layout.Alignment.ALIGN_NORMAL).setTextDirection(TextDirectionHeuristics.RTL).setIncludePad(false).build()
+        if (page == null) startPage()
+        if (y + chartHeading.height + 120f > pageHeight - margin) { finishPage(); startPage() }
+        drawLayout(chartHeading)
+        val chartHeight = 80f
+        val framePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 0.8f; color = android.graphics.Color.rgb(180, 190, 200) }
+        val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1.6f; color = android.graphics.Color.rgb(0, 150, 120) }
+        chartsToDraw.forEach { chart ->
+            val label = StaticLayout.Builder.obtain(chart.title, 0, chart.title.length, bodyPaint, (pageWidth - margin * 2).toInt())
+                .setAlignment(Layout.Alignment.ALIGN_NORMAL).setTextDirection(TextDirectionHeuristics.RTL).setIncludePad(false).build()
+            if (page == null) startPage()
+            if (y + label.height + chartHeight + 28f > pageHeight - margin) { finishPage(); startPage() }
+            drawLayout(label)
+            val left = margin
+            val right = pageWidth - margin
+            val top = y
+            val bottom = y + chartHeight
+            canvas!!.drawRect(left, top, right, bottom, framePaint)
+            val maxValue = maxOf(chart.values.maxOrNull() ?: 0L, 0L)
+            val minValue = minOf(chart.values.minOrNull() ?: 0L, 0L)
+            val span = (maxValue - minValue).coerceAtLeast(1L).toFloat()
+            val step = if (chart.values.size > 1) (right - left - 16f) / (chart.values.size - 1) else 0f
+            val path = android.graphics.Path()
+            chart.values.forEachIndexed { index, value ->
+                // Day/month 1 sits on the right edge to follow the RTL reading direction.
+                val px = right - 8f - index * step
+                val py = bottom - 8f - (value - minValue) / span * (chartHeight - 16f)
+                if (index == 0) path.moveTo(px, py) else path.lineTo(px, py)
+            }
+            canvas!!.drawPath(path, linePaint)
+            y += chartHeight + 14f
+        }
     }
     finishPage()
     return document
@@ -1731,4 +1817,9 @@ private fun ProfileValue(label: String, value: String) {
         Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(value, style = MaterialTheme.typography.titleSmall)
     }
+}
+
+private fun jalaliYearMonth(epochMillis: Long): Pair<Int, Int> {
+    val calendar = Calendar.getInstance(ULocale("fa_IR@calendar=persian")).apply { timeInMillis = epochMillis }
+    return calendar.get(Calendar.YEAR) to (calendar.get(Calendar.MONTH) + 1)
 }

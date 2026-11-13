@@ -77,3 +77,14 @@ val MIGRATION_12_13 = object : Migration(12, 13) {
   database.execSQL("ALTER TABLE members ADD COLUMN activeBadgeLevel INTEGER")
  }
 }
+
+val MIGRATION_13_14 = object : Migration(13, 14) {
+ override fun migrate(database: SupportSQLiteDatabase) {
+  database.execSQL("""CREATE TABLE IF NOT EXISTS book_readings (id TEXT NOT NULL, memberId TEXT NOT NULL, title TEXT NOT NULL, readAtEpochMillis INTEGER NOT NULL, level INTEGER NOT NULL, createdAtEpochMillis INTEGER NOT NULL, PRIMARY KEY(id), FOREIGN KEY(memberId) REFERENCES members(id) ON UPDATE NO ACTION ON DELETE RESTRICT)""")
+  database.execSQL("CREATE INDEX IF NOT EXISTS index_book_readings_memberId ON book_readings(memberId)")
+  database.execSQL("CREATE INDEX IF NOT EXISTS index_book_readings_readAtEpochMillis ON book_readings(readAtEpochMillis)")
+  database.execSQL("""CREATE TABLE IF NOT EXISTS member_growth_history (id TEXT NOT NULL, memberId TEXT NOT NULL, growthItemId TEXT NOT NULL, previousPercent INTEGER, newPercent INTEGER NOT NULL, note TEXT, changedAtEpochMillis INTEGER NOT NULL, PRIMARY KEY(id), FOREIGN KEY(memberId) REFERENCES members(id) ON UPDATE NO ACTION ON DELETE RESTRICT, FOREIGN KEY(growthItemId) REFERENCES growth_items(id) ON UPDATE NO ACTION ON DELETE RESTRICT)""")
+  database.execSQL("CREATE INDEX IF NOT EXISTS index_member_growth_history_memberId ON member_growth_history(memberId)")
+  database.execSQL("CREATE INDEX IF NOT EXISTS index_member_growth_history_growthItemId ON member_growth_history(growthItemId)")
+ }
+}

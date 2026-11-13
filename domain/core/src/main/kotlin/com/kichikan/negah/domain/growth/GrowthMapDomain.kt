@@ -1,6 +1,7 @@
 package com.kichikan.negah.domain.growth
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import javax.inject.Inject
 
 enum class GrowthTrack { CAPABILITY, SELF_IMPROVEMENT }
@@ -24,12 +25,24 @@ data class MemberGrowthProgress(
     val updatedAtEpochMillis: Long,
 )
 
+/** Immutable audit row written whenever a member's progress value or note changes. */
+data class GrowthProgressChange(
+    val id: String,
+    val memberId: String,
+    val growthItemId: String,
+    val previousPercent: Int?,
+    val newPercent: Int,
+    val note: String?,
+    val changedAtEpochMillis: Long,
+)
+
 interface GrowthMapRepository {
     fun observeItems(track: GrowthTrack): Flow<List<GrowthItem>>
     fun observeAllItems(track: GrowthTrack): Flow<List<GrowthItem>>
     fun observeProgress(memberId: String): Flow<List<MemberGrowthProgress>>
     suspend fun saveItem(item: GrowthItem)
     suspend fun updateProgress(progress: MemberGrowthProgress)
+    fun observeHistory(memberId: String): Flow<List<GrowthProgressChange>> = emptyFlow()
 }
 
 sealed interface UpdateGrowthProgressResult {

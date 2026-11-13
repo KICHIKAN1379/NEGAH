@@ -1,5 +1,6 @@
 package com.kichikan.negah
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -61,6 +62,7 @@ fun NegahRoot(
     sessionsViewModel: SessionsViewModel,
     homeDashboardViewModel: HomeDashboardViewModel,
     dailyQuotesViewModel: DailyQuotesViewModel,
+    readingViewModel: ReadingViewModel,
 ) {
     var selected by rememberSaveable { mutableStateOf(MainDestination.HOME.name) }
     var openRefinery by rememberSaveable { mutableStateOf(false) }
@@ -72,6 +74,10 @@ fun NegahRoot(
     var openWeeklyPulse by rememberSaveable { mutableStateOf(false) }
     var openCoachAssistant by rememberSaveable { mutableStateOf(false) }
     var openDailyQuotes by rememberSaveable { mutableStateOf(false) }
+    var openIdentity by rememberSaveable { mutableStateOf(false) }
+    var openReading by rememberSaveable { mutableStateOf(false) }
+    var openCompetition by rememberSaveable { mutableStateOf(false) }
+    var openWheel by rememberSaveable { mutableStateOf(false) }
     val membersState by membersViewModel.state.collectAsStateWithLifecycle()
     val sessionsState by sessionsViewModel.uiState.collectAsStateWithLifecycle()
     val homeAssets by homeDashboardViewModel.state.collectAsStateWithLifecycle()
@@ -106,6 +112,10 @@ fun NegahRoot(
                             openWeeklyPulse = false
                             openCoachAssistant = false
                             openDailyQuotes = false
+                            openIdentity = false
+                            openReading = false
+                            openCompetition = false
+                            openWheel = false
                         },
                         icon = { Text(destination.title.take(1)) },
                         label = { Text(destination.title) },
@@ -174,10 +184,19 @@ fun NegahRoot(
                 }
                 MainDestination.MEMBERS -> MembersScreen(membersViewModel, Modifier.padding(padding))
                 MainDestination.PROGRESS -> {
-                    if (openMissions) {
-                        MissionsScreen(progressViewModel, Modifier.padding(padding))
-                    } else if (openSessions) {
-                        SessionsScreen(
+                    val closeProgressEntry = {
+                        openMissions = false
+                        openSessions = false
+                        openIdentity = false
+                        openReading = false
+                        openCompetition = false
+                        openWheel = false
+                    }
+                    val inProgressEntry = openMissions || openSessions || openIdentity || openReading || openCompetition || openWheel
+                    BackHandler(enabled = inProgressEntry) { closeProgressEntry() }
+                    when {
+                        openMissions -> MissionsScreen(progressViewModel, Modifier.padding(padding))
+                        openSessions -> SessionsScreen(
                             viewModel = sessionsViewModel,
                             onBack = { openSessions = false },
                             onOpenClassDays = {
@@ -188,17 +207,27 @@ fun NegahRoot(
                             },
                             modifier = Modifier.padding(padding),
                         )
-                    } else {
-                        Column(Modifier.fillMaxSize().padding(padding)) {
-                            Button(onClick = { openMissions = true }, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                                Text("مأموریت‌ها")
-                            }
-                            ProgressScreen(
-                                viewModel = progressViewModel,
-                                onOpenSessions = { openSessions = true },
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
+                        openIdentity -> ProgressScreen(
+                            viewModel = progressViewModel,
+                            onOpenSessions = { openIdentity = false; openSessions = true },
+                            modifier = Modifier.padding(padding),
+                        )
+                        openReading -> ReadingScreen(readingViewModel, onBack = { openReading = false }, modifier = Modifier.padding(padding))
+                        openCompetition -> CompetitionScreen(progressViewModel, onBack = { openCompetition = false }, modifier = Modifier.padding(padding))
+                        openWheel -> WheelPendingScreen(onBack = { openWheel = false }, modifier = Modifier.padding(padding))
+                        else -> ProgressHubScreen(
+                            onOpen = { entry ->
+                                when (entry) {
+                                    ProgressEntry.IDENTITY -> openIdentity = true
+                                    ProgressEntry.MISSIONS -> openMissions = true
+                                    ProgressEntry.READING -> openReading = true
+                                    ProgressEntry.WHEEL -> openWheel = true
+                                    ProgressEntry.COMPETITION -> openCompetition = true
+                                    ProgressEntry.SESSIONS -> openSessions = true
+                                }
+                            },
+                            modifier = Modifier.padding(padding),
+                        )
                     }
                 }
                 MainDestination.SETTINGS -> {

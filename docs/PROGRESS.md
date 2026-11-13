@@ -26,11 +26,11 @@ Last updated: 2026-11-11
 
 ## Confirmed repository facts
 
-- develop is 119 commits ahead of main; main currently contains only README.md.
+- PR #1 was merged into main on 2026-11-12; main now contains the full MVP tree (develop kept for CI history).
 - Audited base: develop at 8bf6828e1d8f574b60440b5930c6a64261748fb0.
 - The audited tree contains 80 files, including 60 Kotlin files, Gradle multi-module configuration, Room persistence, Compose UI, and unit/DAO tests.
 - The mission branch contains the reconciled product documentation plus class-day configuration and a session/attendance vertical slice.
-- Draft PR #1 targets develop. It is not merged; main remains untouched.
+- PR #1 (mission/coach-mvp) is merged. Latest green CI: run 43294662278 on 77f5de8.
 - No local build/test/emulator/device run was performed in this host; the verified builds were executed by GitHub Actions.
 
 ## Existing implementation observed
@@ -274,3 +274,13 @@ The available host has GitHub repository read/write integration but no local And
 - Reward currency and amount are explicitly selected by the coach; no guessed formulas.
 - Hidden and group-puzzle tabs remain part of the destination. Their unique mechanics are not inferred; they require their own approved rules before specialized behavior is added.
 - No member login, submission, request, or self-service flow is permitted.
+
+## Members completion slice — 2026-11-13
+- Branch mission/members-complete (draft PR #4): Solar Hijri birthday reminder (3 days before, WorkManager + notification permission at first launch), book-reading model with Room migration 13→14, immutable growth-progress history, reading axis wired into member report/PDF, monthly trend charts in the member PDF.
+- CI evidence: run 43343026664 succeeded on aeafcae3ef1f8d1c7816f60f58912cdcdd4bcb48 (build + domain/data/members/refinery unit tests). No device or UI test performed.
+- Next: Progress menu (identity, missions, reading entry form/ranking, wheel, competition, sessions) per mrt-menu.md and ux_2.pdf.
+
+## Progress hub slice — 2026-11-13
+- Progress now opens a six-entry hub (identity, missions, reading, wheel, competition, sessions) with back handling; reading has ranking + entry form + recent list; competition ranks members by XP inside the ring (group ranking unavailable: no group model); wheel is an explicit not-implemented screen.
+- CI evidence: run 43343891178 succeeded on 4c1b0c2e0cfd13be803c26b7f1e3162c5bee0864. No device/UI test performed.
+- Next: wheel (Room model, refinery settings, cost in spendable points, spin ledger), mission tabs (hidden mission, six-piece group puzzle), identity page per UX, shop details.
