@@ -65,6 +65,7 @@ fun NegahRoot(
     homeDashboardViewModel: HomeDashboardViewModel,
     dailyQuotesViewModel: DailyQuotesViewModel,
     readingViewModel: ReadingViewModel,
+    wheelViewModel: WheelViewModel,
     groupsViewModel: GroupsViewModel,
 ) {
     var selected by rememberSaveable { mutableStateOf(MainDestination.HOME.name) }
@@ -228,7 +229,7 @@ fun NegahRoot(
                         )
                         openReading -> ReadingScreen(readingViewModel, onBack = { openReading = false }, modifier = Modifier.padding(padding))
                         openCompetition -> CompetitionScreen(progressViewModel, groupsViewModel, onBack = { openCompetition = false }, modifier = Modifier.padding(padding))
-                        openWheel -> WheelPendingScreen(onBack = { openWheel = false }, modifier = Modifier.padding(padding))
+                        openWheel -> WheelScreen(wheelViewModel, onBack = { openWheel = false }, modifier = Modifier.padding(padding))
                         else -> ProgressHubScreen(
                             onOpen = { entry ->
                                 when (entry) {

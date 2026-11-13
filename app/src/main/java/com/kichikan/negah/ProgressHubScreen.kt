@@ -45,15 +45,3 @@ fun ProgressHubScreen(
         }
     }
 }
-
-@Composable
-fun WheelPendingScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Text("گردونه", style = MaterialTheme.typography.headlineSmall)
-        Text("گردونه هنوز پیاده‌سازی نشده است. جوایز، وزن‌ها و هزینه آن از پالایشگاه تنظیم خواهد شد و فقط با داده واقعی کار می‌کند.")
-        androidx.compose.material3.TextButton(onClick = onBack) { Text("بازگشت") }
-    }
-}
