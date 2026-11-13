@@ -18,11 +18,12 @@ interface WheelDao {
     @Query("SELECT * FROM wheel_prizes WHERE isActive = 1 ORDER BY createdAtEpochMillis, id")
     suspend fun activePrizes(): List<WheelPrizeEntity>
 
-    @Query("SELECT createdAtEpochMillis FROM wheel_prizes WHERE id = :id")
-    suspend fun createdAtOf(id: String): Long?
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertPrize(prize: WheelPrizeEntity)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertPrize(prize: WheelPrizeEntity)
+    /** In-place update: REPLACE would delete the row and trip the RESTRICT key from past spins. */
+    @Query("UPDATE wheel_prizes SET label = :label, currency = :currency, amount = :amount, weight = :weight, isActive = :isActive, updatedAtEpochMillis = :updatedAt WHERE id = :id")
+    suspend fun updatePrize(id: String, label: String, currency: String, amount: Long, weight: Int, isActive: Boolean, updatedAt: Long): Int
 
     @Query("SELECT spinCostPoints FROM wheel_settings WHERE id = 1")
     fun observeSpinCost(): Flow<Long?>
@@ -60,8 +61,8 @@ interface WheelDao {
 
     @Transaction
     suspend fun savePrize(prize: WheelPrizeEntity) {
-        val createdAt = createdAtOf(prize.id) ?: prize.createdAtEpochMillis
-        upsertPrize(prize.copy(createdAtEpochMillis = createdAt))
+        val updated = updatePrize(prize.id, prize.label, prize.currency, prize.amount, prize.weight, prize.isActive, prize.updatedAtEpochMillis)
+        if (updated == 0) insertPrize(prize)
     }
 
     /**
