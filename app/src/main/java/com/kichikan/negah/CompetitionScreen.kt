@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kichikan.negah.domain.economy.LevelProgression
+import com.kichikan.negah.domain.group.GroupRankCalculator
 
 /** Ranking inside the coach's own ring only; ties are broken by name for a stable order. */
 @Composable
@@ -52,16 +53,32 @@ fun CompetitionScreen(
             FilterChip(selected = tab == "GROUPS", onClick = { tab = "GROUPS" }, label = { Text("رتبه گروه‌ها") })
         }
         if (tab == "GROUPS") {
-            val activeGroups = groupsState.groups.filter { it.group.isActive }
-            if (activeGroups.isEmpty()) {
-                Text("هنوز گروهی ساخته نشده است. گروه‌ها را از «اعضا ← گروه» بسازید.")
+            val groupRanking = remember(groupsState.groups, state.members) {
+                GroupRankCalculator.rank(groupsState.groups, state.members)
+            }
+            if (groupRanking.isEmpty()) {
+                Text("هنوز گروه فعالی ساخته نشده است. گروه‌ها را از «اعضا ← گروه» بسازید.")
             } else {
                 Text(
-                    "گروه‌ها ثبت شده‌اند؛ معیار و فرمول رتبه‌بندی گروه‌ها هنوز تأیید نشده است.",
+                    "رتبه‌بندی مطابق AK1 بر اساس مجموع امتیاز قابل‌خرج اعضای فعال هر گروه؛ الماس و XP در رتبه اثری ندارند.",
                     style = MaterialTheme.typography.bodySmall,
                 )
-                activeGroups.forEach { entry ->
-                    Text(entry.group.name, style = MaterialTheme.typography.titleMedium)
+                groupRanking.forEachIndexed { index, entry ->
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text("${index + 1}. ${entry.group.name}", style = MaterialTheme.typography.titleMedium)
+                                Text("${entry.memberCount} عضو فعال", style = MaterialTheme.typography.bodySmall)
+                            }
+                            Column(horizontalAlignment = androidx.compose.ui.Alignment.End) {
+                                Text("${entry.totalSpendablePoints} امتیاز", style = MaterialTheme.typography.titleMedium)
+                                Text("${entry.totalDiamonds} الماس", style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
                 }
             }
         } else if (ranked.isEmpty()) {
