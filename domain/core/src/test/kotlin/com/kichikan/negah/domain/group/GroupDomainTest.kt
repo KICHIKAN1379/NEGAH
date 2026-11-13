@@ -32,8 +32,15 @@ class GroupDomainTest {
         createdAtEpochMillis = 0, updatedAtEpochMillis = 0, isArchived = archived,
     )
 
-    private fun group(id: String, name: String, leader: String, vararg subs: String, active: Boolean = true) =
-        GroupWithMembers(MemberGroup(id, name, leader, active, 0, 0), subs.toList())
+    private fun group(
+        id: String,
+        name: String,
+        leader: String,
+        vararg subs: String,
+        active: Boolean = true,
+        points: Long = 0L,
+        diamonds: Long = 0L,
+    ) = GroupWithMembers(MemberGroup(id, name, leader, active, 0, 0, points, diamonds), subs.toList())
 
     @Test
     fun saveRequiresNameLeaderAndAtLeastOneSubMember() = runBlocking {
@@ -78,9 +85,9 @@ class GroupDomainTest {
             member("d", 90, archived = true), member("e", 10),
         )
         val groups = listOf(
-            group("g1", "الف", "a", "b", "d"),
-            group("g2", "ب", "c", "e"),
-            group("g3", "غیرفعال", "a", active = false),
+            group("g1", "الف", "a", "b", "d", points = 100, diamonds = 7),
+            group("g2", "ب", "c", "e", points = 200, diamonds = 2),
+            group("g3", "غیرفعال", "a", active = false, points = 999),
         )
         val ranking = GroupRankCalculator.rank(groups, members)
         assertEquals(listOf("g2", "g1"), ranking.map { it.group.id })
