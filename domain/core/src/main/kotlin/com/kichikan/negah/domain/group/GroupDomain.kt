@@ -154,7 +154,6 @@ class SaveGroup @Inject constructor(
 data class GroupRankEntry(
     val group: MemberGroup,
     val memberCount: Int,
-    val totalXp: Long,
     val totalSpendablePoints: Long,
     val totalDiamonds: Long,
 )
@@ -172,9 +171,8 @@ object GroupRankCalculator {
             GroupRankEntry(
                 group = entry.group,
                 memberCount = present.size,
-                totalXp = present.sumOf { it.totalXp },
-                totalSpendablePoints = present.sumOf { it.spendablePoints },
-                totalDiamonds = present.sumOf { it.diamonds },
+                totalSpendablePoints = entry.group.spendablePoints,
+                totalDiamonds = entry.group.diamonds,
             )
         }.sortedWith(
             compareByDescending<GroupRankEntry> { it.totalXp }
