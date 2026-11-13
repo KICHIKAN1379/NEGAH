@@ -83,9 +83,9 @@ data class GroupRankEntry(
 )
 
 /**
- * Group ranking uses the summed XP (permanent progress) of the group's registered members;
- * ties fall back to member count and then name for a stable order. Archived or unknown
- * members contribute nothing.
+ * Mirrors AK1: rank active groups by the sum of spendable points held by their
+ * registered, non-archived members. Diamonds and XP are informational only.
+ * Sorting is descending and stable, so equal totals retain the repository order.
  */
 object GroupRankCalculator {
     fun rank(groups: List<GroupWithMembers>, members: List<Member>): List<GroupRankEntry> {
@@ -100,9 +100,7 @@ object GroupRankCalculator {
                 totalDiamonds = present.sumOf { it.diamonds },
             )
         }.sortedWith(
-            compareByDescending<GroupRankEntry> { it.totalXp }
-                .thenByDescending { it.memberCount }
-                .thenBy { it.group.name },
+            compareByDescending<GroupRankEntry> { it.totalSpendablePoints },
         )
     }
 }
