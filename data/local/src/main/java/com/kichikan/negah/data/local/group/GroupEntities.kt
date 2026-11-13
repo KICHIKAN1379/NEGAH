@@ -26,13 +26,15 @@ data class MemberGroupEntity(
     val isActive: Boolean,
     val createdAtEpochMillis: Long,
     val updatedAtEpochMillis: Long,
+    val spendablePoints: Long = 0L,
+    val diamonds: Long = 0L,
 ) {
-    fun toDomain() = MemberGroup(id, name, leaderMemberId, isActive, createdAtEpochMillis, updatedAtEpochMillis)
+    fun toDomain() = MemberGroup(id, name, leaderMemberId, isActive, createdAtEpochMillis, updatedAtEpochMillis, spendablePoints, diamonds)
 
     companion object {
         fun fromDomain(group: MemberGroup) = MemberGroupEntity(
             group.id, group.name, group.leaderMemberId, group.isActive,
-            group.createdAtEpochMillis, group.updatedAtEpochMillis,
+            group.createdAtEpochMillis, group.updatedAtEpochMillis, group.spendablePoints, group.diamonds,
         )
     }
 }
