@@ -8,6 +8,7 @@ import com.kichikan.negah.domain.group.MemberGroup
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 
 class RoomGroupRepository @Inject constructor(
     private val dao: GroupDao,
