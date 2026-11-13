@@ -95,6 +95,26 @@ class GroupDaoTest {
         assertTrue(economyDao.observeForGroup("g1").first().isEmpty())
     }
 
+
+    @Test
+    fun editingGroupMetadataDoesNotResetIndependentEconomy() = runBlocking {
+        assertTrue(dao.saveGroup(group("g1", "a"), listOf("b")))
+        val economyDao = database.groupEconomyDao()
+        assertEquals(
+            GroupEconomyAppendResult.APPENDED,
+            economyDao.appendAtomically(
+                listOf(GroupEconomyTransactionEntity("points-keep", "g1", "POINTS", 75L, "پاداش", 13L)),
+            ),
+        )
+
+        assertTrue(dao.saveGroup(group("g1", "a"), listOf("c")))
+        val saved = dao.observeGroups().first().single()
+
+        assertEquals(75L, saved.spendablePoints)
+        assertEquals(0L, saved.diamonds)
+        assertEquals(listOf("c"), dao.observeMemberships().first().map { it.memberId })
+    }
+
     @Test
     fun savesGroupWithLeaderAndSubMembers() = runBlocking {
         assertTrue(dao.saveGroup(group("g1", "a"), listOf("b", "c")))
