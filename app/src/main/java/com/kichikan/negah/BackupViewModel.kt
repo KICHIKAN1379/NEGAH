@@ -97,6 +97,7 @@ class BackupViewModel @Inject constructor(
         val prepared = preparedRestore ?: return
         runBusy("در حال ساخت نسخه ایمنی…") {
             backupManager.queueRestore(prepared)
+            prepared.directory.deleteRecursively()
             preparedRestore = null
             mutableState.update {
                 it.copy(
