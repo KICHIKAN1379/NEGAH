@@ -6,7 +6,7 @@ import android.net.Uri
 import android.provider.DocumentsContract
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.kichikan.negah.data.local.NegahDatabase
+import com.kichikan.negah.data.local.DatabaseMaintenance
 import com.kichikan.negah.domain.backup.BackupRetention
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -27,7 +27,7 @@ data class BackupUiState(val folder: String? = null, val busy: Boolean = false, 
 @HiltViewModel
 class BackupViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val database: NegahDatabase,
+    private val maintenance: DatabaseMaintenance,
 ) : ViewModel() {
     private val prefs = context.getSharedPreferences("backup", Context.MODE_PRIVATE)
     private val mutableState = MutableStateFlow(BackupUiState(folder = prefs.getString(KEY_TREE, null)))
@@ -65,7 +65,7 @@ class BackupViewModel @Inject constructor(
 
     private fun writeBackup(tree: Uri): String {
         // Flush the write-ahead log so the single .db file is complete.
-        database.openHelper.writableDatabase.query("PRAGMA wal_checkpoint(FULL)").use { it.moveToFirst() }
+        maintenance.checkpoint()
         val dbFile: File = context.getDatabasePath(DB_NAME)
         val resolver = context.contentResolver
         val parent = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree))
@@ -78,7 +78,7 @@ class BackupViewModel @Inject constructor(
                 dbFile.inputStream().use { it.copyTo(zip) }
                 zip.closeEntry()
                 zip.putNextEntry(ZipEntry("manifest.txt"))
-                zip.write("app=negah\ndbVersion=${database.openHelper.readableDatabase.version}\ncreated=$name\n".toByteArray())
+                zip.write("app=negah\ndbVersion=${maintenance.schemaVersion()}\ncreated=$name\n".toByteArray())
                 zip.closeEntry()
             }
         }
