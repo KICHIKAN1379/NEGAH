@@ -73,6 +73,7 @@ fun NegahRoot(
     var openClassDays by rememberSaveable { mutableStateOf(false) }
     var openHomeShortcuts by rememberSaveable { mutableStateOf(false) }
     var openRingProfile by rememberSaveable { mutableStateOf(false) }
+    var openSoundBackgroundTheme by rememberSaveable { mutableStateOf(false) }
     var openSessions by rememberSaveable { mutableStateOf(false) }
     var openMissions by rememberSaveable { mutableStateOf(false) }
     var openWeeklyPulse by rememberSaveable { mutableStateOf(false) }
@@ -112,6 +113,7 @@ fun NegahRoot(
                             openClassDays = false
                             openHomeShortcuts = false
                             openRingProfile = false
+                            openSoundBackgroundTheme = false
                             openSessions = false
                             openMissions = false
                             openWeeklyPulse = false
@@ -157,6 +159,7 @@ fun NegahRoot(
                                 openClassDays = false
                                 openHomeShortcuts = false
                                 openRingProfile = false
+                                openSoundBackgroundTheme = false
                                 openSessions = false
                                 openWeeklyPulse = false
                                 openCoachAssistant = false
@@ -249,6 +252,7 @@ fun NegahRoot(
                     when {
                         openRefinery -> RefineryScreen(refineryViewModel, Modifier.padding(padding))
                         openRingProfile -> RingProfileScreen(ringProfileViewModel, onBack = { openRingProfile = false }, modifier = Modifier.padding(padding))
+                        openSoundBackgroundTheme -> SoundBackgroundThemeScreen(onBack = { openSoundBackgroundTheme = false }, modifier = Modifier.padding(padding))
                         openDailyQuotes -> DailyQuotesScreen(dailyQuotesViewModel, onBack = { openDailyQuotes = false }, modifier = Modifier.padding(padding))
                         openClassDays -> ClassDaysScreen(
                             viewModel = classDaysViewModel,
@@ -266,17 +270,20 @@ fun NegahRoot(
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
                                 Text("تنظیمات", style = MaterialTheme.typography.headlineSmall)
-                                Button(onClick = { openHomeShortcuts = true }, modifier = Modifier.fillMaxWidth()) {
-                                    Text("میان‌برهای خانه")
+                                Button(onClick = { openRefinery = true }, modifier = Modifier.fillMaxWidth()) {
+                                    Text("پالایشگاه")
                                 }
                                 Button(onClick = { openRingProfile = true }, modifier = Modifier.fillMaxWidth()) {
                                     Text("ویرایش پروفایل حلقه")
                                 }
-                                Button(onClick = { openRefinery = true }, modifier = Modifier.fillMaxWidth()) {
-                                    Text("پالایشگاه")
+                                Button(onClick = { openSoundBackgroundTheme = true }, modifier = Modifier.fillMaxWidth()) {
+                                    Text("صدا، پس‌زمینه و تم")
                                 }
                                 Button(onClick = { openDailyQuotes = true }, modifier = Modifier.fillMaxWidth()) { Text("جمله‌های روز") }
                                 Button(onClick = { openClassDays = true }, modifier = Modifier.fillMaxWidth()) { Text("روزهای کلاس") }
+                                Button(onClick = { openHomeShortcuts = true }, modifier = Modifier.fillMaxWidth()) {
+                                    Text("میان‌برهای خانه")
+                                }
                             }
                         }
                     }
