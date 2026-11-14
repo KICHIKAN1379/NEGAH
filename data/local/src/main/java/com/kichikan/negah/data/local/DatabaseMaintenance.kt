@@ -26,11 +26,10 @@ class DatabaseMaintenance @Inject constructor(
             "Unable to create backup snapshot directory"
         }
 
+        val sqlite = database.openHelper.writableDatabase
+        ensureTruncateJournalMode(sqlite)
+
         return database.runInTransaction(Callable {
-            val sqlite = database.openHelper.writableDatabase
-            check(journalMode(sqlite) == "truncate") {
-                "Database must use TRUNCATE journal mode before backup"
-            }
 
             val sourceDatabase = context.getDatabasePath(DATABASE_NAME)
             check(sourceDatabase.isFile) { "Database file is missing" }
@@ -79,6 +78,16 @@ class DatabaseMaintenance @Inject constructor(
             }
         }
         return digest.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    private fun ensureTruncateJournalMode(database: SupportSQLiteDatabase) {
+        val current = journalMode(database)
+        if (current == "truncate") return
+        val applied = database.query("PRAGMA journal_mode=TRUNCATE").use { cursor ->
+            check(cursor.moveToFirst()) { "Unable to set database journal mode" }
+            cursor.getString(0).lowercase()
+        }
+        check(applied == "truncate") { "SQLite refused TRUNCATE journal mode; current mode is $applied" }
     }
 
     private fun journalMode(database: SupportSQLiteDatabase): String =
