@@ -397,11 +397,15 @@ object PendingRestoreInstaller {
                 android.os.Process.killProcess(android.os.Process.myPid())
                 return
             }
-            prefs.edit()
+            val cleared = prefs.edit()
                 .putBoolean(BackupArchiveManager.KEY_PENDING_RESTORE, false)
                 .putBoolean(BackupArchiveManager.KEY_INSTALLING_RESTORE, false)
                 .putString(BackupArchiveManager.KEY_RESTORE_MESSAGE, "بازیابی کامل نشد؛ اطلاعات قبلی حفظ و بازیابی لغو شد.")
                 .commit()
+            if (!cleared) {
+                android.os.Process.killProcess(android.os.Process.myPid())
+                return
+            }
             pending.deleteRecursively()
             rollback.deleteRecursively()
             return
@@ -457,11 +461,15 @@ object PendingRestoreInstaller {
                 android.os.Process.killProcess(android.os.Process.myPid())
                 return
             }
-            prefs.edit()
+            val cleared = prefs.edit()
                 .putBoolean(BackupArchiveManager.KEY_PENDING_RESTORE, false)
                 .putBoolean(BackupArchiveManager.KEY_INSTALLING_RESTORE, false)
                 .putString(BackupArchiveManager.KEY_RESTORE_MESSAGE, "بازیابی انجام نشد؛ نسخهٔ قبلی حفظ شد. فایل پشتیبان را دوباره بررسی کنید.")
                 .commit()
+            if (!cleared) {
+                android.os.Process.killProcess(android.os.Process.myPid())
+                return
+            }
             pending.deleteRecursively()
             rollback.deleteRecursively()
         } finally {
@@ -482,8 +490,11 @@ object PendingRestoreInstaller {
         }
         val previousMedia = File(rollback, BackupArchiveManager.MEDIA_DIRECTORY)
         if (mediaDirectory.exists()) mediaDirectory.deleteRecursively()
-        if (previousMedia.isDirectory) previousMedia.copyRecursively(mediaDirectory, overwrite = true)
-        else mediaDirectory.mkdirs()
+        if (previousMedia.isDirectory) {
+            check(previousMedia.copyRecursively(mediaDirectory, overwrite = true)) { "Unable to restore previous media files" }
+        } else {
+            check(mediaDirectory.mkdirs() || mediaDirectory.isDirectory) { "Unable to recreate media directory" }
+        }
     }
 
     private fun deleteDatabaseSidecars(databaseFile: File) {
