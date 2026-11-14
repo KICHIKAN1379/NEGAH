@@ -1,6 +1,8 @@
 package com.kichikan.negah
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.FilterChip
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Arrangement
@@ -8,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -67,9 +70,11 @@ fun NegahRoot(
     readingViewModel: ReadingViewModel,
     wheelViewModel: WheelViewModel,
     groupsViewModel: GroupsViewModel,
+    backupViewModel: BackupViewModel,
 ) {
     var selected by rememberSaveable { mutableStateOf(MainDestination.HOME.name) }
     var openRefinery by rememberSaveable { mutableStateOf(false) }
+    var openBackup by rememberSaveable { mutableStateOf(false) }
     var openClassDays by rememberSaveable { mutableStateOf(false) }
     var openHomeShortcuts by rememberSaveable { mutableStateOf(false) }
     var openRingProfile by rememberSaveable { mutableStateOf(false) }
@@ -89,6 +94,10 @@ fun NegahRoot(
     val dailyQuotesState by dailyQuotesViewModel.state.collectAsStateWithLifecycle()
     val homeShortcuts by homeShortcutsViewModel.uiState.collectAsStateWithLifecycle()
     val ringProfile by ringProfileViewModel.uiState.collectAsStateWithLifecycle()
+    val backupState by backupViewModel.state.collectAsStateWithLifecycle()
+    val firstRunFolderPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(), backupViewModel::onFolderPicked,
+    )
     val dashboard = remember(membersState.members, sessionsState.sessions, sessionsState.attendanceRecords, homeAssets.transactions, dailyQuotesState.quotes) {
         buildHomeDashboard(
             members = membersState.members,
@@ -109,6 +118,7 @@ fun NegahRoot(
                             if (openHomeShortcuts) homeShortcutsViewModel.discardChanges()
                             selected = destination.name
                             openRefinery = false
+                            openBackup = false
                             openClassDays = false
                             openHomeShortcuts = false
                             openRingProfile = false
@@ -154,6 +164,7 @@ fun NegahRoot(
                             bannerBytes = ringProfile.bannerBytes,
                             onOpenShortcut = { shortcut ->
                                 openRefinery = false
+                                openBackup = false
                                 openClassDays = false
                                 openHomeShortcuts = false
                                 openRingProfile = false
@@ -218,6 +229,7 @@ fun NegahRoot(
                                 selected = MainDestination.SETTINGS.name
                                 openSessions = false
                                 openRefinery = false
+                                openBackup = false
                                 openClassDays = true
                             },
                             modifier = Modifier.padding(padding),
@@ -247,6 +259,7 @@ fun NegahRoot(
                 }
                 MainDestination.SETTINGS -> {
                     when {
+                        openBackup -> BackupScreen(backupViewModel, onBack = { openBackup = false }, modifier = Modifier.padding(padding))
                         openRefinery -> RefineryScreen(refineryViewModel, Modifier.padding(padding))
                         openRingProfile -> RingProfileScreen(ringProfileViewModel, onBack = { openRingProfile = false }, modifier = Modifier.padding(padding))
                         openDailyQuotes -> DailyQuotesScreen(dailyQuotesViewModel, onBack = { openDailyQuotes = false }, modifier = Modifier.padding(padding))
@@ -277,6 +290,7 @@ fun NegahRoot(
                                 }
                                 Button(onClick = { openDailyQuotes = true }, modifier = Modifier.fillMaxWidth()) { Text("جمله‌های روز") }
                                 Button(onClick = { openClassDays = true }, modifier = Modifier.fillMaxWidth()) { Text("روزهای کلاس") }
+                                Button(onClick = { openBackup = true }, modifier = Modifier.fillMaxWidth()) { Text("ورودی و خروجی اطلاعات") }
                             }
                         }
                     }
@@ -285,6 +299,28 @@ fun NegahRoot(
             }
         }
     }
+        if (backupState.showSetupPrompt) {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                AlertDialog(
+                onDismissRequest = backupViewModel::markSetupPromptShown,
+                title = { Text("فعال‌سازی پشتیبان خودکار") },
+                text = {
+                    Text("برای نگهداری نسخهٔ پشتیبان، برنامه فقط به پوشه‌ای دسترسی می‌گیرد که خودت از انتخاب‌گر فایل Android مشخص می‌کنی. می‌توانی پوشه‌ای به نام MRT بسازی یا انتخاب کنی. تا انتخاب پوشه، پشتیبان خودکار فعال نمی‌شود.")
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        backupViewModel.markSetupPromptShown()
+                        firstRunFolderPicker.launch(null)
+                    }) { Text("انتخاب پوشه MRT") }
+                },
+                dismissButton = {
+                    androidx.compose.material3.TextButton(onClick = backupViewModel::markSetupPromptShown) {
+                        Text("بعداً")
+                    }
+                },
+                )
+            }
+        }
 }
 
 private fun formatSolarHijriDate(epochMillis: Long): String =

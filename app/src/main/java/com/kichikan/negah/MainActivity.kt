@@ -27,6 +27,7 @@ class MainActivity : ComponentActivity() {
     private val dailyQuotesViewModel: DailyQuotesViewModel by viewModels()
     private val readingViewModel: ReadingViewModel by viewModels()
     private val wheelViewModel: WheelViewModel by viewModels()
+    private val backupViewModel: BackupViewModel by viewModels()
     private val groupsViewModel: GroupsViewModel by viewModels()
 
     private val notificationPermission =
@@ -34,6 +35,16 @@ class MainActivity : ComponentActivity() {
             // Re-run the check right after the coach grants notifications.
             if (granted) BirthdayReminderWorker.schedule(applicationContext)
         }
+
+    override fun onStart() {
+        super.onStart()
+        AutomaticBackupWorker.cancel(applicationContext)
+    }
+
+    override fun onStop() {
+        if (!isChangingConfigurations) AutomaticBackupWorker.schedule(applicationContext)
+        super.onStop()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,6 +68,7 @@ class MainActivity : ComponentActivity() {
                         readingViewModel,
                         wheelViewModel,
                         groupsViewModel,
+                        backupViewModel,
                     )
                 }
             }
