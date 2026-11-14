@@ -66,7 +66,10 @@ fun ProgressScreen(
                 }
             }
             Text(selectedMember?.fullName.orEmpty(), style = MaterialTheme.typography.titleLarge)
-            selectedMember?.let { MemberProgressSummary(it) }
+            selectedMember?.let { member ->
+                MemberProgressSummary(member)
+                MemberIdentityDetails(member, state)
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(
                     selected = track == GrowthTrack.CAPABILITY,
@@ -166,5 +169,25 @@ private fun SummaryValue(label: String, value: String) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(label, style = MaterialTheme.typography.bodySmall)
         Text(value, style = MaterialTheme.typography.titleLarge)
+    }
+}
+
+@Composable
+private fun MemberIdentityDetails(member: com.kichikan.negah.domain.member.Member, state: ProgressUiState) {
+    val membership = state.groups.firstOrNull { member.id in it.allMemberIds }
+    val role = when {
+        membership == null -> null
+        membership.group.leaderMemberId == member.id -> "سرگروه"
+        else -> "زیرگروه"
+    }
+    val books = state.readings.count { it.memberId == member.id }
+    val readingScore = com.kichikan.negah.domain.reading.ReadingScoreCalculator.score(state.readings, member.id)
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("اطلاعات شناسنامه", style = MaterialTheme.typography.titleMedium)
+            Text("تاریخ تولد: " + (member.birthDateJalali?.takeIf(String::isNotBlank) ?: "ثبت نشده"))
+            Text("گروه: " + (membership?.let { it.group.name + " (" + role + ")" } ?: "بدون گروه"))
+            Text("کتاب‌خوانی: $books کتاب، امتیاز مطالعه $readingScore")
+        }
     }
 }
