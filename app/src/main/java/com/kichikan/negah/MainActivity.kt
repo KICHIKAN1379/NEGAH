@@ -35,6 +35,21 @@ class MainActivity : ComponentActivity() {
             if (granted) BirthdayReminderWorker.schedule(applicationContext)
         }
 
+    override fun onStart() {
+        super.onStart()
+        BackgroundMusicController.onForeground(applicationContext)
+    }
+
+    override fun onStop() {
+        BackgroundMusicController.onBackground()
+        super.onStop()
+    }
+
+    override fun onDestroy() {
+        BackgroundMusicController.release()
+        super.onDestroy()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !BirthdayReminderWorker.canNotify(this)) {
