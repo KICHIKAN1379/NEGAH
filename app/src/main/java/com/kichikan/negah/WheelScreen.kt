@@ -1,6 +1,22 @@
 package com.kichikan.negah
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -70,11 +86,34 @@ fun WheelScreen(
             }
         }
         selected?.let { Text("امتیاز قابل‌خرج: ${it.spendablePoints} · الماس: ${it.diamonds}") }
-        Button(onClick = { viewModel.spin(selectedMemberId) }, enabled = state.prizes.any { it.isActive }) {
+        val activePrizes = state.prizes.filter { it.isActive && it.weight > 0 }
+        val rotation = remember { Animatable(0f) }
+        var spinning by remember { mutableStateOf(false) }
+        var revealedToken by rememberSaveable { mutableStateOf(state.spinToken) }
+        LaunchedEffect(state.spinToken) {
+            val win = state.lastWin
+            if (state.spinToken == revealedToken || win == null) return@LaunchedEffect
+            val total = activePrizes.sumOf { it.weight }.toFloat()
+            val index = activePrizes.indexOfFirst { it.id == win.prizeId }
+            if (total <= 0f || index < 0) { revealedToken = state.spinToken; return@LaunchedEffect }
+            val before = activePrizes.take(index).sumOf { it.weight }
+            val center = (before + activePrizes[index].weight / 2f) / total * 360f
+            val current = rotation.value
+            val toTop = (((360f - center) - current) % 360f + 360f) % 360f
+            // Turns and duration come from the phone-clock second at the tap.
+            val turns = 4 + state.spinSecond % 3
+            val duration = 2500 + (state.spinSecond % 5) * 300
+            spinning = true
+            rotation.animateTo(current + turns * 360f + toTop, tween(duration, easing = CubicBezierEasing(0.15f, 0.7f, 0.2f, 1f)))
+            spinning = false
+            revealedToken = state.spinToken
+        }
+        if (activePrizes.isNotEmpty()) WheelDisk(activePrizes, rotation.value)
+        Button(onClick = { viewModel.spin(selectedMemberId) }, enabled = state.prizes.any { it.isActive } && !spinning) {
             Text("چرخاندن گردونه")
         }
         if (state.prizes.none { it.isActive }) Text("برای چرخاندن، ابتدا حداقل یک جایزه فعال تعریف کنید.")
-        state.lastWin?.let { win ->
+        state.lastWin?.takeIf { !spinning && revealedToken == state.spinToken }?.let { win ->
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Text("نتیجه: ${win.prizeLabel}", style = MaterialTheme.typography.titleMedium)
@@ -131,4 +170,38 @@ private fun WheelSettings(prizes: List<WheelPrize>, spinCost: Long, viewModel: W
         viewModel.savePrize(null, label, EconomyCurrency.valueOf(currency), amount.trim().toLongOrNull(), weight.trim().toIntOrNull(), true)
         label = ""; amount = ""; weight = ""
     }) { Text("افزودن جایزه") }
+}
+
+private val wheelColors = listOf(
+    Color(0xFF3F6FB5), Color(0xFFE08A2E), Color(0xFF3E9B6A), Color(0xFFB5513F), Color(0xFF7A5BB5), Color(0xFFC9A227),
+)
+
+@Composable
+private fun WheelDisk(prizes: List<WheelPrize>, rotationDegrees: Float) {
+    val measurer = rememberTextMeasurer()
+    val total = prizes.sumOf { it.weight }.toFloat()
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+        Canvas(Modifier.fillMaxWidth(0.85f).aspectRatio(1f).padding(top = 14.dp)) {
+            val radius = size.minDimension / 2f
+            val center = Offset(size.width / 2f, size.height / 2f)
+            rotate(rotationDegrees, center) {
+                var start = -90f
+                prizes.forEachIndexed { i, prize ->
+                    val sweep = prize.weight / total * 360f
+                    drawArc(wheelColors[i % wheelColors.size], start, sweep, true, Offset.Zero, Size(size.width, size.height))
+                    val mid = Math.toRadians((start + sweep / 2f).toDouble())
+                    val label = measurer.measure(prize.label, TextStyle(color = Color.White, fontSize = 12.sp), maxLines = 1)
+                    val tx = center.x + (radius * 0.6f) * Math.cos(mid).toFloat() - label.size.width / 2f
+                    val ty = center.y + (radius * 0.6f) * Math.sin(mid).toFloat() - label.size.height / 2f
+                    drawText(label, topLeft = Offset(tx, ty))
+                    start += sweep
+                }
+            }
+            drawCircle(Color.White, radius * 0.08f, center)
+            val pointer = Path().apply {
+                moveTo(center.x - 14f, 0f); lineTo(center.x + 14f, 0f); lineTo(center.x, 34f); close()
+            }
+            drawPath(pointer, Color(0xFFD32F2F))
+        }
+    }
 }
