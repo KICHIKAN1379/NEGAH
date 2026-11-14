@@ -358,6 +358,7 @@ class BackupArchiveManager @Inject constructor(
         const val KEY_SETUP_PROMPT_SHOWN = "setup_prompt_shown"
         const val KEY_PENDING_RESTORE = "pending_restore"
         const val KEY_INSTALLING_RESTORE = "installing_restore"
+        const val KEY_RESTORE_AWAITING_VERIFICATION = "restore_awaiting_verification"
         const val KEY_RESTORE_MESSAGE = "restore_message"
         const val DATABASE_NAME = "negah_coach.db"
         const val MEDIA_DIRECTORY = "media-assets"
@@ -388,13 +389,45 @@ class BackupArchiveManager @Inject constructor(
 object PendingRestoreInstaller {
     fun apply(context: Context) {
         val prefs = context.getSharedPreferences(BackupArchiveManager.PREFS_NAME, Context.MODE_PRIVATE)
-        if (!prefs.getBoolean(BackupArchiveManager.KEY_PENDING_RESTORE, false)) return
-
         val backupRoot = File(context.filesDir, BackupArchiveManager.BACKUP_DIRECTORY)
         val pending = File(backupRoot, BackupArchiveManager.PENDING_DIRECTORY)
         val rollback = File(backupRoot, "restore-rollback")
         val databaseFile = context.getDatabasePath(BackupArchiveManager.DATABASE_NAME)
         val mediaDirectory = File(context.filesDir, BackupArchiveManager.MEDIA_DIRECTORY)
+
+        // Keep the safety point until the replacement database has survived a
+        // subsequent cold start and an SQLite integrity check.
+        if (!prefs.getBoolean(BackupArchiveManager.KEY_PENDING_RESTORE, false)) {
+            if (prefs.getBoolean(BackupArchiveManager.KEY_RESTORE_AWAITING_VERIFICATION, false)) {
+                val verified = runCatching {
+                    val installed = SQLiteDatabase.openDatabase(
+                        databaseFile.absolutePath, null,
+                        SQLiteDatabase.OPEN_READONLY or SQLiteDatabase.NO_LOCALIZED_COLLATORS,
+                    )
+                    installed.use {
+                        val result = it.rawQuery("PRAGMA integrity_check", null).use { cursor ->
+                            check(cursor.moveToFirst())
+                            cursor.getString(0)
+                        }
+                        check(result.equals("ok", ignoreCase = true))
+                    }
+                }.isSuccess
+                if (verified) {
+                    rollback.deleteRecursively()
+                    prefs.edit()
+                        .putBoolean(BackupArchiveManager.KEY_RESTORE_AWAITING_VERIFICATION, false)
+                        .putString(BackupArchiveManager.KEY_RESTORE_MESSAGE, "بازیابی تأیید شد؛ نسخهٔ ایمنی قبلی پاک شد.")
+                        .commit()
+                } else {
+                    runCatching { restorePrevious(databaseFile, mediaDirectory, rollback) }
+                    prefs.edit()
+                        .putBoolean(BackupArchiveManager.KEY_RESTORE_AWAITING_VERIFICATION, false)
+                        .putString(BackupArchiveManager.KEY_RESTORE_MESSAGE, "اعتبارسنجی پس از راه‌اندازی ناموفق بود؛ نسخهٔ ایمنی قبلی بازگردانده شد.")
+                        .commit()
+                }
+            }
+            return
+        }
 
         if (prefs.getBoolean(BackupArchiveManager.KEY_INSTALLING_RESTORE, false)) {
             val restored = runCatching { restorePrevious(databaseFile, mediaDirectory, rollback) }.isSuccess
@@ -455,11 +488,11 @@ object PendingRestoreInstaller {
                 prefs.edit()
                     .putBoolean(BackupArchiveManager.KEY_PENDING_RESTORE, false)
                     .putBoolean(BackupArchiveManager.KEY_INSTALLING_RESTORE, false)
-                    .putString(BackupArchiveManager.KEY_RESTORE_MESSAGE, "بازیابی با موفقیت انجام شد. نسخهٔ ایمنی قبلی نگهداری شده است.")
+                    .putBoolean(BackupArchiveManager.KEY_RESTORE_AWAITING_VERIFICATION, true)
+                    .putString(BackupArchiveManager.KEY_RESTORE_MESSAGE, "بازیابی نصب شد؛ نسخهٔ ایمنی تا تأیید راه‌اندازی بعدی حفظ می‌شود.")
                     .commit(),
             ) { "Unable to finalize restore state" }
             pending.deleteRecursively()
-            rollback.deleteRecursively()
         } catch (failure: Exception) {
             val rolledBack = !rollback.exists() || runCatching { restorePrevious(databaseFile, mediaDirectory, rollback) }.isSuccess
             if (!rolledBack) {
