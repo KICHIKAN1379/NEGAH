@@ -12,8 +12,8 @@ import javax.inject.Inject
 /**
  * Creates a consistent on-disk snapshot while Room holds its write transaction.
  *
- * The database is configured for TRUNCATE journaling so the main database file
- * is self-contained and no WAL sidecar needs to be copied.
+ * The database is configured for a single-file journal mode (TRUNCATE; DELETE
+ * is also safe as a fallback), so no WAL sidecar needs to be copied.
  */
 class DatabaseMaintenance @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -78,16 +78,6 @@ class DatabaseMaintenance @Inject constructor(
             }
         }
         return digest.digest().joinToString("") { "%02x".format(it) }
-    }
-
-    private fun ensureTruncateJournalMode(database: SupportSQLiteDatabase) {
-        val current = journalMode(database)
-        if (current == "truncate") return
-        val applied = database.query("PRAGMA journal_mode=TRUNCATE").use { cursor ->
-            check(cursor.moveToFirst()) { "Unable to set database journal mode" }
-            cursor.getString(0).lowercase()
-        }
-        check(applied == "truncate") { "SQLite refused TRUNCATE journal mode; current mode is $applied" }
     }
 
     private fun journalMode(database: SupportSQLiteDatabase): String =
