@@ -1,6 +1,8 @@
 package com.kichikan.negah
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.FilterChip
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Arrangement
@@ -8,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -91,6 +94,10 @@ fun NegahRoot(
     val dailyQuotesState by dailyQuotesViewModel.state.collectAsStateWithLifecycle()
     val homeShortcuts by homeShortcutsViewModel.uiState.collectAsStateWithLifecycle()
     val ringProfile by ringProfileViewModel.uiState.collectAsStateWithLifecycle()
+    val backupState by backupViewModel.state.collectAsStateWithLifecycle()
+    val firstRunFolderPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(), backupViewModel::onFolderPicked,
+    )
     val dashboard = remember(membersState.members, sessionsState.sessions, sessionsState.attendanceRecords, homeAssets.transactions, dailyQuotesState.quotes) {
         buildHomeDashboard(
             members = membersState.members,
@@ -292,6 +299,26 @@ fun NegahRoot(
             }
         }
     }
+        if (backupState.showSetupPrompt) {
+            AlertDialog(
+                onDismissRequest = backupViewModel::markSetupPromptShown,
+                title = { Text("فعال‌سازی پشتیبان خودکار") },
+                text = {
+                    Text("برای نگهداری نسخهٔ پشتیبان، برنامه فقط به پوشه‌ای دسترسی می‌گیرد که خودت از انتخاب‌گر فایل Android مشخص می‌کنی. می‌توانی پوشه‌ای به نام MRT بسازی یا انتخاب کنی. تا انتخاب پوشه، پشتیبان خودکار فعال نمی‌شود.")
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        backupViewModel.markSetupPromptShown()
+                        firstRunFolderPicker.launch(null)
+                    }) { Text("انتخاب پوشه MRT") }
+                },
+                dismissButton = {
+                    androidx.compose.material3.TextButton(onClick = backupViewModel::markSetupPromptShown) {
+                        Text("بعداً")
+                    }
+                },
+            )
+        }
 }
 
 private fun formatSolarHijriDate(epochMillis: Long): String =
