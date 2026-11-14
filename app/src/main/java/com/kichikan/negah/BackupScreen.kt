@@ -63,7 +63,7 @@ fun BackupScreen(viewModel: BackupViewModel, onBack: () -> Unit, modifier: Modif
         Text("خروجی و بازیابی دستی", style = MaterialTheme.typography.titleMedium)
         Text("خروجی کامل حلقه شامل پایگاه داده، سوابق و تصاویر است. فایل خروجی رمزگذاری نمی‌شود؛ آن را در محل امن نگه دارید.")
         OutlinedButton(
-            onClick = { exportPicker.launch(BackupRetention.fileName(LocalDateTime.now())) },
+            onClick = { exportPicker.launch(BackupRetention.exportFileName(LocalDateTime.now())) },
             enabled = !state.busy && !state.restoreQueued,
             modifier = Modifier.fillMaxWidth(),
         ) { Text("تهیه خروجی کامل حلقه") }
