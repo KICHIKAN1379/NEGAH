@@ -70,7 +70,8 @@ class DatabaseMaintenanceTest {
             snapshot.deleteRecursively()
             database.close()
             context.deleteDatabase("negah_coach.db")
-            mediaRoot.deleteRecursively()
+            File(mediaRoot, relativePath).delete()
+            mediaRoot.delete()
         }
     }
 }
