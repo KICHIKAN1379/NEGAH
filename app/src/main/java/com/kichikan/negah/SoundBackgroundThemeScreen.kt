@@ -127,6 +127,7 @@ private fun displayName(context: Context, uri: Uri): String? =
 object BackgroundMusicController {
     private var player: MediaPlayer? = null
     private var currentUri: Uri? = null
+    private var loadedUri: Uri? = null
     private var prepared = false
     private var enabled = false
     private var foreground = false
@@ -163,6 +164,7 @@ object BackgroundMusicController {
         player?.release()
         player = null
         prepared = false
+        loadedUri = null
     }
 
     private fun synchronize(context: Context) {
@@ -172,7 +174,7 @@ object BackgroundMusicController {
             return
         }
 
-        if (player != null && currentUri == uri && prepared) {
+        if (player != null && loadedUri == uri && prepared) {
             if (player?.isPlaying == false) runCatching { player?.start() }
             return
         }
@@ -180,6 +182,7 @@ object BackgroundMusicController {
         release()
         val next = MediaPlayer()
         player = next
+        loadedUri = uri
         next.setAudioAttributes(
             AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_GAME)
