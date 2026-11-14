@@ -27,7 +27,15 @@ class DatabaseMaintenance @Inject constructor(
         }
 
         val sqlite = database.openHelper.writableDatabase
-        val mode = journalMode(sqlite)
+        var mode = journalMode(sqlite)
+        if (mode != "truncate" && mode != "delete") {
+            // Room's TRUNCATE setting is applied when the helper opens; retry
+            // explicitly for test databases and providers that report WAL.
+            mode = sqlite.query("PRAGMA journal_mode=TRUNCATE").use { cursor ->
+                check(cursor.moveToFirst()) { "Unable to switch database to a single-file journal mode" }
+                cursor.getString(0).lowercase()
+            }
+        }
         check(mode == "truncate" || mode == "delete") {
             "Database journal mode $mode is not safe for a single-file snapshot"
         }
