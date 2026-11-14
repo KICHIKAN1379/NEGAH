@@ -150,8 +150,6 @@ class BackupArchiveManager @Inject constructor(
         } catch (failure: Exception) {
             safetyTemp.delete()
             throw failure
-        } finally {
-            prepared.directory.deleteRecursively()
         }
     }
 
