@@ -12,6 +12,8 @@ object BackupRetention {
 
     fun fileName(at: LocalDateTime): String = PREFIX + stamp.format(at) + SUFFIX
 
+    fun exportFileName(at: LocalDateTime): String = "negah-export-" + stamp.format(at) + SUFFIX
+
     fun isBackupName(name: String): Boolean =
         name.startsWith(PREFIX) && name.endsWith(SUFFIX) &&
             runCatching { LocalDateTime.parse(name.removePrefix(PREFIX).removeSuffix(SUFFIX), stamp) }.isSuccess
