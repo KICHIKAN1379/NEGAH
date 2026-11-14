@@ -283,7 +283,7 @@ fun NegahRoot(
                                 }
                                 Button(onClick = { openDailyQuotes = true }, modifier = Modifier.fillMaxWidth()) { Text("جمله‌های روز") }
                                 Button(onClick = { openClassDays = true }, modifier = Modifier.fillMaxWidth()) { Text("روزهای کلاس") }
-                                Button(onClick = { openBackup = true }, modifier = Modifier.fillMaxWidth()) { Text("پشتیبان‌گیری") }
+                                Button(onClick = { openBackup = true }, modifier = Modifier.fillMaxWidth()) { Text("ورودی و خروجی اطلاعات") }
                             }
                         }
                     }
