@@ -5,8 +5,8 @@ import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import androidx.work.BackoffPolicy
 import androidx.work.WorkerParameters
-import androidx.work.WorkRequest
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -40,7 +40,7 @@ class AutomaticBackupWorker(
         fun schedule(context: Context) {
             val request = OneTimeWorkRequestBuilder<AutomaticBackupWorker>()
                 .setInitialDelay(20, TimeUnit.SECONDS)
-                .setBackoffCriteria(WorkRequest.BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
                 .build()
             WorkManager.getInstance(context).enqueueUniqueWork(
                 UNIQUE_WORK_NAME, ExistingWorkPolicy.REPLACE, request,
