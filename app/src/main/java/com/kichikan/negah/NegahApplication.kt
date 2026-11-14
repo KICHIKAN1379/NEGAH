@@ -7,6 +7,7 @@ import dagger.hilt.android.HiltAndroidApp
 class NegahApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+        PendingRestoreInstaller.apply(this)
         BirthdayReminderWorker.schedule(this)
     }
 }
