@@ -1,6 +1,7 @@
 package com.kichikan.negah.data.local.di
 import android.content.Context
 import androidx.room.Room
+import androidx.room.RoomDatabase
 import com.kichikan.negah.data.local.*
 import com.kichikan.negah.data.local.attendance.AttendanceDao
 import com.kichikan.negah.data.local.commitment.CommitmentDao
