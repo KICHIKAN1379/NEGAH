@@ -71,7 +71,7 @@ class BackupArchiveManager @Inject constructor(
     }
 
     fun prepareRestore(source: Uri): PreparedRestore {
-        val root = File(context.cacheDir, "negah-restore-\${UUID.randomUUID()}")
+        val root = File(context.cacheDir, "negah-restore-${UUID.randomUUID()}")
         val extracted = File(root, "payload")
         check(extracted.mkdirs()) { "Unable to prepare restore validation area" }
         try {
@@ -132,8 +132,8 @@ class BackupArchiveManager @Inject constructor(
             val pendingDatabase = File(pending, DATABASE_NAME)
             val pendingMedia = File(pending, MEDIA_DIRECTORY)
             check(pendingMedia.mkdirs()) { "Unable to create media restore staging" }
-            File(prepared.directory, DATABASE_ENTRY).copyTo(pendingDatabase, overwrite = true)
-            val sourceMedia = File(prepared.directory, MEDIA_DIRECTORY)
+            File(prepared.directory, "payload/$DATABASE_ENTRY").copyTo(pendingDatabase, overwrite = true)
+            val sourceMedia = File(prepared.directory, "payload/$MEDIA_DIRECTORY")
             if (sourceMedia.exists()) {
                 check(sourceMedia.copyRecursively(pendingMedia, overwrite = true).isSuccess) {
                     "Unable to stage media assets"
@@ -156,7 +156,7 @@ class BackupArchiveManager @Inject constructor(
     }
 
     private fun createArchive(output: OutputStream) {
-        val snapshot = File(context.cacheDir, "negah-backup-\${UUID.randomUUID()}")
+        val snapshot = File(context.cacheDir, "negah-backup-${UUID.randomUUID()}")
         check(snapshot.mkdirs()) { "Unable to create backup snapshot" }
         try {
             val databaseVersion = maintenance.snapshotTo(snapshot)
@@ -165,7 +165,7 @@ class BackupArchiveManager @Inject constructor(
                 File(snapshot, MEDIA_DIRECTORY).listFiles()
                     ?.filter { it.isFile }
                     ?.sortedBy { it.name }
-                    ?.forEach { add("$MEDIA_DIRECTORY/\${it.name}" to it) }
+                    ?.forEach { add("$MEDIA_DIRECTORY/${it.name}" to it) }
             }
             val entries = JSONArray()
             payloads.forEach { (path, file) ->
