@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.kichikan.negah.data.local.media.MediaAssetEntity
 import java.io.File
 import java.util.UUID
+import java.security.MessageDigest
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -44,7 +45,7 @@ class DatabaseMaintenanceTest {
                     relativePath = relativePath,
                     mimeType = "image/png",
                     byteSize = bytes.size.toLong(),
-                    sha256 = "0".repeat(64),
+                    sha256 = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) },
                     createdAtEpochMillis = 1L,
                     ),
                 )
