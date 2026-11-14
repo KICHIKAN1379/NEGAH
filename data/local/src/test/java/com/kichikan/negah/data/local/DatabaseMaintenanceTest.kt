@@ -14,6 +14,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 
 @RunWith(RobolectricTestRunner::class)
@@ -51,7 +52,9 @@ class DatabaseMaintenanceTest {
                 )
             }
 
-            val version = DatabaseMaintenance(context, database).snapshotTo(snapshot)
+            val version = runBlocking(Dispatchers.IO) {
+                DatabaseMaintenance(context, database).snapshotTo(snapshot)
+            }
 
             assertEquals(18, version)
             val copiedDatabase = File(snapshot, "negah_coach.db")
