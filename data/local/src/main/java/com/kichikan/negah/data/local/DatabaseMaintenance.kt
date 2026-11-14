@@ -26,13 +26,13 @@ class DatabaseMaintenance @Inject constructor(
             "Unable to create backup snapshot directory"
         }
 
-        return database.runInTransaction(Callable {
-            val sqlite = database.openHelper.writableDatabase
-            val mode = journalMode(sqlite)
-            check(mode == "truncate" || mode == "delete") {
-                "Database journal mode $mode is not safe for a single-file snapshot"
-            }
+        val sqlite = database.openHelper.writableDatabase
+        val mode = journalMode(sqlite)
+        check(mode == "truncate" || mode == "delete") {
+            "Database journal mode $mode is not safe for a single-file snapshot"
+        }
 
+        return database.runInTransaction(Callable {
             val sourceDatabase = context.getDatabasePath(DATABASE_NAME)
             check(sourceDatabase.isFile) { "Database file is missing" }
             sourceDatabase.copyTo(File(destination, DATABASE_NAME), overwrite = true)
