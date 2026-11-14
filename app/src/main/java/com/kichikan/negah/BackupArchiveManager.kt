@@ -135,7 +135,7 @@ class BackupArchiveManager @Inject constructor(
             File(prepared.directory, "payload/$DATABASE_ENTRY").copyTo(pendingDatabase, overwrite = true)
             val sourceMedia = File(prepared.directory, "payload/$MEDIA_DIRECTORY")
             if (sourceMedia.exists()) {
-                check(sourceMedia.copyRecursively(pendingMedia, overwrite = true).isSuccess) {
+                check(sourceMedia.copyRecursively(pendingMedia, overwrite = true)) {
                     "Unable to stage media assets"
                 }
             }
@@ -393,13 +393,19 @@ object PendingRestoreInstaller {
         val mediaDirectory = File(context.filesDir, BackupArchiveManager.MEDIA_DIRECTORY)
 
         if (prefs.getBoolean(BackupArchiveManager.KEY_INSTALLING_RESTORE, false)) {
-            runCatching { restorePrevious(databaseFile, mediaDirectory, rollback) }
+            val restored = runCatching { restorePrevious(databaseFile, mediaDirectory, rollback) }.isSuccess
+            if (!restored) {
+                prefs.edit().putString(BackupArchiveManager.KEY_RESTORE_MESSAGE, "بازیابی نیمه‌تمام است؛ برای محافظت از اطلاعات، برنامه دوباره راه‌اندازی می‌شود.").commit()
+                android.os.Process.killProcess(android.os.Process.myPid())
+                return
+            }
             prefs.edit()
                 .putBoolean(BackupArchiveManager.KEY_PENDING_RESTORE, false)
                 .putBoolean(BackupArchiveManager.KEY_INSTALLING_RESTORE, false)
                 .putString(BackupArchiveManager.KEY_RESTORE_MESSAGE, "بازیابی کامل نشد؛ اطلاعات قبلی حفظ و بازیابی لغو شد.")
                 .commit()
             pending.deleteRecursively()
+            rollback.deleteRecursively()
             return
         }
 
@@ -414,7 +420,7 @@ object PendingRestoreInstaller {
                 File(rollbackTemp, "had-database").writeText("true")
             }
             if (mediaDirectory.isDirectory) {
-                check(mediaDirectory.copyRecursively(File(rollbackTemp, BackupArchiveManager.MEDIA_DIRECTORY), overwrite = true).isSuccess)
+                check(mediaDirectory.copyRecursively(File(rollbackTemp, BackupArchiveManager.MEDIA_DIRECTORY), overwrite = true))
             }
             if (rollback.exists()) check(rollback.deleteRecursively())
             check(rollbackTemp.renameTo(rollback)) { "Unable to prepare rollback files" }
@@ -425,7 +431,7 @@ object PendingRestoreInstaller {
             if (mediaTemp.exists()) check(mediaTemp.deleteRecursively())
             val pendingMedia = File(pending, BackupArchiveManager.MEDIA_DIRECTORY)
             if (pendingMedia.exists()) {
-                check(pendingMedia.copyRecursively(mediaTemp, overwrite = true).isSuccess)
+                check(pendingMedia.copyRecursively(mediaTemp, overwrite = true))
             } else {
                 check(mediaTemp.mkdirs())
             }
@@ -437,21 +443,29 @@ object PendingRestoreInstaller {
             check(databaseTemp.renameTo(databaseFile)) { "Unable to install restored database" }
             check(mediaTemp.renameTo(mediaDirectory)) { "Unable to install restored images" }
 
-            prefs.edit()
-                .putBoolean(BackupArchiveManager.KEY_PENDING_RESTORE, false)
-                .putBoolean(BackupArchiveManager.KEY_INSTALLING_RESTORE, false)
-                .putString(BackupArchiveManager.KEY_RESTORE_MESSAGE, "بازیابی با موفقیت انجام شد. نسخهٔ ایمنی قبلی نگهداری شده است.")
-                .commit()
+            check(
+                prefs.edit()
+                    .putBoolean(BackupArchiveManager.KEY_PENDING_RESTORE, false)
+                    .putBoolean(BackupArchiveManager.KEY_INSTALLING_RESTORE, false)
+                    .putString(BackupArchiveManager.KEY_RESTORE_MESSAGE, "بازیابی با موفقیت انجام شد. نسخهٔ ایمنی قبلی نگهداری شده است.")
+                    .commit(),
+            ) { "Unable to finalize restore state" }
             pending.deleteRecursively()
             rollback.deleteRecursively()
         } catch (failure: Exception) {
-            if (rollback.exists()) runCatching { restorePrevious(databaseFile, mediaDirectory, rollback) }
+            val rolledBack = !rollback.exists() || runCatching { restorePrevious(databaseFile, mediaDirectory, rollback) }.isSuccess
+            if (!rolledBack) {
+                prefs.edit().putString(BackupArchiveManager.KEY_RESTORE_MESSAGE, "بازگردانی نسخهٔ ایمنی کامل نشد؛ برنامه برای جلوگیری از تغییر بیشتر بسته می‌شود.").commit()
+                android.os.Process.killProcess(android.os.Process.myPid())
+                return
+            }
             prefs.edit()
                 .putBoolean(BackupArchiveManager.KEY_PENDING_RESTORE, false)
                 .putBoolean(BackupArchiveManager.KEY_INSTALLING_RESTORE, false)
                 .putString(BackupArchiveManager.KEY_RESTORE_MESSAGE, "بازیابی انجام نشد؛ نسخهٔ قبلی حفظ شد. فایل پشتیبان را دوباره بررسی کنید.")
                 .commit()
             pending.deleteRecursively()
+            rollback.deleteRecursively()
         } finally {
             databaseTemp.delete()
             if (mediaTemp.exists()) mediaTemp.deleteRecursively()
