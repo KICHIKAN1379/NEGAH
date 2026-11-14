@@ -351,6 +351,7 @@ class BackupArchiveManager @Inject constructor(
     companion object {
         const val PREFS_NAME = "backup"
         const val KEY_TREE = "tree_uri"
+        const val KEY_SETUP_PROMPT_SHOWN = "setup_prompt_shown"
         const val KEY_PENDING_RESTORE = "pending_restore"
         const val KEY_INSTALLING_RESTORE = "installing_restore"
         const val KEY_RESTORE_MESSAGE = "restore_message"
