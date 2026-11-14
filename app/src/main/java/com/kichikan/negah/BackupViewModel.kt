@@ -3,17 +3,12 @@ package com.kichikan.negah
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.provider.DocumentsContract
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.kichikan.negah.data.local.DatabaseMaintenance
 import com.kichikan.negah.domain.backup.BackupRetention
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.io.File
 import java.time.LocalDateTime
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,16 +17,29 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-data class BackupUiState(val folder: String? = null, val busy: Boolean = false, val message: String? = null)
+data class BackupUiState(
+    val folder: String? = null,
+    val busy: Boolean = false,
+    val message: String? = null,
+    val restorePreview: BackupPreview? = null,
+    val restoreQueued: Boolean = false,
+)
 
 @HiltViewModel
 class BackupViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val maintenance: DatabaseMaintenance,
+    private val backupManager: BackupArchiveManager,
 ) : ViewModel() {
-    private val prefs = context.getSharedPreferences("backup", Context.MODE_PRIVATE)
-    private val mutableState = MutableStateFlow(BackupUiState(folder = prefs.getString(KEY_TREE, null)))
+    private val prefs = context.getSharedPreferences(BackupArchiveManager.PREFS_NAME, Context.MODE_PRIVATE)
+    private val mutableState = MutableStateFlow(
+        BackupUiState(
+            folder = prefs.getString(BackupArchiveManager.KEY_TREE, null),
+            message = prefs.getString(BackupArchiveManager.KEY_RESTORE_MESSAGE, null),
+            restoreQueued = BackupArchiveManager.hasPendingRestore(context),
+        ),
+    )
     val state = mutableState.asStateFlow()
+    private var preparedRestore: PreparedRestore? = null
 
     fun onFolderPicked(uri: Uri?) {
         if (uri == null) return
@@ -43,63 +51,89 @@ class BackupViewModel @Inject constructor(
             mutableState.update { s -> s.copy(message = "دسترسی دائمی به پوشه داده نشد") }
             return
         }
-        prefs.edit().putString(KEY_TREE, uri.toString()).apply()
-        mutableState.update { it.copy(folder = uri.toString(), message = "پوشه پشتیبان انتخاب شد") }
+        prefs.edit().putString(BackupArchiveManager.KEY_TREE, uri.toString()).apply()
+        mutableState.update { it.copy(folder = uri.toString(), message = "پوشه MRT انتخاب شد") }
     }
 
     fun backupNow() {
-        val tree = mutableState.value.folder?.let(Uri::parse)
-        if (tree == null) {
+        if (mutableState.value.folder == null) {
             mutableState.update { it.copy(message = "ابتدا پوشه MRT را انتخاب کنید") }
             return
         }
-        mutableState.update { it.copy(busy = true, message = null) }
+        runBusy("در حال ساخت پشتیبان…") {
+            val name = backupManager.createAutomaticBackup()
+            if (name == null) "پشتیبان خودکار هنوز فعال نشده است."
+            else "پشتیبان ساخته شد: $name"
+        }
+    }
+
+    fun exportTo(uri: Uri?) {
+        if (uri == null) return
+        runBusy("در حال آماده‌سازی خروجی…") {
+            backupManager.exportTo(uri)
+            "خروجی کامل حلقه با موفقیت ساخته شد."
+        }
+    }
+
+    fun prepareRestore(uri: Uri?) {
+        if (uri == null) return
+        preparedRestore?.directory?.deleteRecursively()
+        preparedRestore = null
+        runBusy("در حال بررسی فایل پشتیبان…") {
+            val prepared = backupManager.prepareRestore(uri)
+            preparedRestore = prepared
+            mutableState.update {
+                it.copy(busy = false, restorePreview = prepared.preview, message = null)
+            }
+            null
+        }
+    }
+
+    fun dismissRestorePreview() {
+        preparedRestore?.directory?.deleteRecursively()
+        preparedRestore = null
+        mutableState.update { it.copy(restorePreview = null) }
+    }
+
+    fun confirmRestore() {
+        val prepared = preparedRestore ?: return
+        runBusy("در حال ساخت نسخه ایمنی…") {
+            backupManager.queueRestore(prepared)
+            preparedRestore = null
+            mutableState.update {
+                it.copy(
+                    busy = false,
+                    restorePreview = null,
+                    restoreQueued = true,
+                    message = prefs.getString(BackupArchiveManager.KEY_RESTORE_MESSAGE, null),
+                )
+            }
+            null
+        }
+    }
+
+    private fun runBusy(progress: String, operation: suspend () -> String?) {
+        if (mutableState.value.busy || mutableState.value.restoreQueued) return
+        mutableState.update { it.copy(busy = true, message = progress) }
         viewModelScope.launch {
-            val text = withContext(Dispatchers.IO) {
-                runCatching { writeBackup(tree) }
-                    .fold({ "پشتیبان ساخته شد: $it" }, { "پشتیبان‌گیری ناموفق بود؛ پوشه را دوباره انتخاب کنید" })
+            val result = withContext(Dispatchers.IO) {
+                runCatching { operation() }
             }
-            mutableState.update { it.copy(busy = false, message = text) }
+            result.fold(
+                onSuccess = { message ->
+                    mutableState.update { it.copy(busy = false, message = message) }
+                },
+                onFailure = { failure ->
+                    mutableState.update {
+                        it.copy(busy = false, message = failure.message ?: "عملیات پشتیبان‌گیری ناموفق بود")
+                    }
+                },
+            )
         }
     }
 
-    private fun writeBackup(tree: Uri): String {
-        // Flush the write-ahead log so the single .db file is complete.
-        maintenance.checkpoint()
-        val dbFile: File = context.getDatabasePath(DB_NAME)
-        val resolver = context.contentResolver
-        val parent = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree))
-        val name = BackupRetention.fileName(LocalDateTime.now())
-        val target = DocumentsContract.createDocument(resolver, parent, "application/zip", name)
-            ?: error("create failed")
-        resolver.openOutputStream(target, "w")!!.use { out ->
-            ZipOutputStream(out).use { zip ->
-                zip.putNextEntry(ZipEntry(DB_NAME))
-                dbFile.inputStream().use { it.copyTo(zip) }
-                zip.closeEntry()
-                zip.putNextEntry(ZipEntry("manifest.txt"))
-                zip.write("app=negah\ndbVersion=${maintenance.schemaVersion()}\ncreated=$name\n".toByteArray())
-                zip.closeEntry()
-            }
-        }
-        // Retention: keep only the newest two backups; unrelated files are left alone.
-        val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree))
-        val existing = mutableListOf<Pair<String, String>>()
-        resolver.query(
-            children,
-            arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME),
-            null, null, null,
-        )?.use { c -> while (c.moveToNext()) existing += c.getString(1) to c.getString(0) }
-        BackupRetention.namesToDelete(existing.map { it.first }).forEach { stale ->
-            existing.firstOrNull { it.first == stale }?.let { (_, id) ->
-                DocumentsContract.deleteDocument(resolver, DocumentsContract.buildDocumentUriUsingTree(tree, id))
-            }
-        }
-        return name
-    }
-
-    private companion object {
-        const val KEY_TREE = "tree_uri"
-        const val DB_NAME = "negah_coach.db"
+    override fun onCleared() {
+        preparedRestore?.directory?.deleteRecursively()
+        super.onCleared()
     }
 }
