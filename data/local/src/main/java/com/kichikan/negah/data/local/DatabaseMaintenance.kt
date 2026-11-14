@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.sqlite.db.SupportSQLiteDatabase
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
+import java.io.FileInputStream
+import java.security.MessageDigest
 import java.util.concurrent.Callable
 import javax.inject.Inject
 
@@ -40,24 +42,43 @@ class DatabaseMaintenance @Inject constructor(
                 "Unable to create media snapshot directory"
             }
 
-            val relativePaths = mutableListOf<String>()
-            sqlite.query("SELECT relativePath FROM media_assets").use { cursor ->
-                val pathColumn = cursor.getColumnIndexOrThrow("relativePath")
-                while (cursor.moveToNext()) relativePaths += cursor.getString(pathColumn)
+            val assets = mutableListOf<Triple<String, Long, String>>()
+            sqlite.query("SELECT relativePath, byteSize, sha256 FROM media_assets").use { cursor ->
+                while (cursor.moveToNext()) {
+                    assets += Triple(cursor.getString(0), cursor.getLong(1), cursor.getString(2))
+                }
             }
 
-            relativePaths.distinct().forEach { relativePath ->
+            assets.distinctBy { it.first }.forEach { (relativePath, expectedSize, expectedHash) ->
                 require(ASSET_PATH.matches(relativePath)) { "Invalid media asset path in database" }
                 val source = File(mediaRoot, relativePath)
                 check(source.canonicalFile.parentFile == mediaRoot.canonicalFile && source.isFile) {
                     "A referenced media asset is missing"
                 }
+                check(source.length() == expectedSize && sha256(source) == expectedHash) {
+                    "A referenced media asset failed integrity validation"
+                }
                 val target = File(mediaDestination, relativePath)
                 source.copyTo(target, overwrite = true)
-                check(target.length() == source.length()) { "Media asset snapshot is incomplete" }
+                check(target.length() == expectedSize && sha256(target) == expectedHash) {
+                    "Media asset snapshot is incomplete"
+                }
             }
             sqlite.version
         })
+    }
+
+    private fun sha256(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        FileInputStream(file).buffered().use { input ->
+            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                digest.update(buffer, 0, count)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
     private fun journalMode(database: SupportSQLiteDatabase): String =
