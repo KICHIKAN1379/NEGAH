@@ -1,80 +1,71 @@
 # NEGAH Coach — Mission Progress
 
-Last updated: 2026-11-11
+Last updated: 2026-11-14
 
 ## Mission and approval boundary
 
 - Product: نگاه مربی (Android, offline-first, single-ring).
 - Repository: https://github.com/KICHIKAN1379/NEGAH
-- Working branch: mission/coach-mvp
-- Base branch: develop
-- Base commit SHA: 8bf6828e1d8f574b60440b5930c6a64261748fb0
-- Canonical draft PR: https://github.com/KICHIKAN1379/NEGAH/pull/1
-- Owner's instruction: continue routine product, design, implementation and verification work without requiring a separate "next" command at every step; final acceptance remains with the owner.
-- Do not merge to main, publish a release, perform destructive data changes, or silently resolve product/architecture decisions with material impact. Stop and request owner approval for those gates.
+- Integration branch: `main`.
+- New implementation work uses short-lived `mission/*` branches and reviewed pull requests.
+- PR #1 (coach MVP), PR #5 (group foundation), PR #7 (independent group economy and AK1 ranking), and PR #8 (wheel data/UI foundation) are recorded as merged in GitHub.
+- PR #9 (wheel animation) is open; it is not merged.
+- Owner instruction: continue routine product, design, implementation and verification work without requiring a separate "next" command at every step; final acceptance remains with the owner.
+- Do not merge, publish a release, perform destructive data changes, or silently resolve material product/architecture decisions. Stop at those approval gates.
 
 ## Current phase
 
-- Phase 1 — Repository audit: completed (read-only).
-- Phase 2 — Product specification reconciliation: working baseline drafted and reconciled against the approved product guide, UX and UX2; owner final acceptance remains pending.
-- Phase 3 — UX reference baseline: source map exists in docs/UX_REFERENCE_MAP.md; primary visual reference is ux.pdf and navigation/mapping index is ux 2.pdf.
-- Phase 4 — Technical implementation: class-days settings, session creation/editing and the first attendance workflow are implemented and CI-verified; remaining product requirements continue below.
-- Architecture baseline: docs/ARCHITECTURE.md.
-- Prior implementation snapshot: docs/IMPLEMENTATION_STATUS.md.
-- Current delivery plan: docs/IMPLEMENTATION_PLAN.md.
-- Current product baseline: docs/PRODUCT_SPEC.md.
+- Repository audit and product-spec reconciliation: baseline completed; final product acceptance remains with the owner.
+- UX reference baseline: `docs/UX_REFERENCE_MAP.md`; primary visual reference is `ux.pdf` and the mapping index is `ux 2.pdf`.
+- Technical implementation: the main branch now includes member, session/attendance, reading, group, group-economy and competition work, plus the wheel foundation described below.
+- Current focus: reconcile the stale delivery documentation, review the open wheel-graphics PR, and continue with safe outstanding offline-MVP work.
+- Architecture baseline: `docs/ARCHITECTURE.md`.
+- Product baseline: `docs/PRODUCT_SPEC.md`.
+- Delivery plan: `docs/IMPLEMENTATION_PLAN.md`.
 
 ## Confirmed repository facts
 
-- PR #1 was merged into main on 2026-11-12; main now contains the full MVP tree (develop kept for CI history).
-- Audited base: develop at 8bf6828e1d8f574b60440b5930c6a64261748fb0.
-- The audited tree contains 80 files, including 60 Kotlin files, Gradle multi-module configuration, Room persistence, Compose UI, and unit/DAO tests.
-- The mission branch contains the reconciled product documentation plus class-day configuration and a session/attendance vertical slice.
-- PR #1 (mission/coach-mvp) is merged. Latest green CI: run 43294662278 on 77f5de8.
-- No local build/test/emulator/device run was performed in this host; the verified builds were executed by GitHub Actions.
+- Latest observed main commit: `5f7373bea9117b769c692dc35540936f3af1f098` (merge commit for PR #8).
+- PR #7 merged as `176df46e9bc75f909311331120c3435abb33c70d`; it adds independent group economy balances and AK1-compatible group ranking.
+- PR #8 is reported merged by GitHub. Its tested head was `9c96883cbff215db4e7aeffec7ca81edfe2be2f0`; Android CI run [#204](https://github.com/KICHIKAN1379/NEGAH/actions/runs/43530430679) completed successfully, including build/test and debug APK upload. An earlier run #203 failed before the successful run.
+- PR #9 head is `00f6baf32d2db585e1471e3b31c45dd294a13ffd`; Android CI run [#205](https://github.com/KICHIKAN1379/NEGAH/actions/runs/43546451712) completed successfully, including build/test and debug APK upload. PR #9 remains open.
+- The successful CI runs are evidence for their exact PR heads, not for manual device/UI verification.
+- No local Android SDK/Gradle, emulator or physical-device run was performed in this host.
 
 ## Existing implementation observed
 
 - Multi-module Android project using Kotlin, Jetpack Compose, Hilt and Room.
-- Main navigation shell has five destinations: Home, Members, Progress, Shop and Settings.
-- Members feature includes member registration/list/profile-related flows.
-- Progress currently shows growth-map progress and now links to Sessions.
-- Shop currently exposes a basic member/catalog purchase flow.
-- Refinery currently manages growth-map items and catalog items.
-- Domain rules include five attendance states and required-reason validation for absent, excused absence and unrecorded.
-- Session creation and editing, completion state, previous/next week navigation, configured-class-day calendar, session filtering/search and attendance entry are now connected to Room. Session edits preserve the session ID, creation timestamp, completion state and attendance references; a separate audit log for session-field edits is still absent.
-- Attendance revisions are stored transactionally when a previously saved status/reason/confirmation changes.
-- Session deletion is intentionally not exposed in the UI pending an explicit retention policy; the DAO-level foreign-key constraint prevents deletion when attendance exists.
+- Five primary destinations: Home, Members, Progress, Shop and Settings.
+- Member profiles include separate XP/points/diamonds balances, ledger history, archive/restore, Ganjine, growth map, reports, reading records and media assets.
+- Sessions and attendance include configured class days, editing, five attendance states, reason validation, revision history, monthly reporting and CSV export.
+- Progress includes the six-entry hub, reading workflow, member competition and group competition.
+- Group economy uses group-owned balances and an append-only ledger; group ranking follows the approved AK1 rule (active groups ordered by their own spendable points; diamonds are informational).
+- Ring profile, member avatar and catalog image assets use app-private storage; their binary contents are not yet portable through backup.
+- PR #8 added a weighted prize-wheel implementation with a configurable spendable-point spin cost, prize ledger/history and coach settings. Treat this as a product/safety hold, not as an approved pattern to extend.
+- PR #9 proposes a visual wheel animation and changes the outcome selection to use the current timestamp modulo total prize weight; see the current review note below.
 
 ## Confirmed gaps / risks
 
-- Home now has a data-backed weekly pulse, seven-day attendance summary, recent sessions and configurable shortcuts. Ring identity/profile, ring image, Home banner and daily quote are still missing, so the approved Home reference (UX pages 35–36) is not complete.
-- Progress is not yet the full six-entry experience; missions, reading, wheel and competition are not implemented as complete flows.
-- Settings is currently a minimal entry point to Refinery and class-day settings; most of the nine approved settings options are missing.
-- Sessions/attendance now include a month-navigable report with separate counts for all five attendance states, selected-month CSV export, and a live revision-history view; a group filter waits for the group data model.
-- The Sessions screen now supports previous/next week navigation; its seven-day window starts on Saturday and day chips remain limited to configured class days.
-- Member profile now includes growth/economy/inventory sections, four Ganjine tabs, automatic level badges, received-history filters, a six-axis report card, and active/archive switching with restore. Member profile avatar selection and display now use app-private image storage; catalog and ring image flows and frame rendering remain unsupported.
-- Backup/restore, MRT retention of at most two versions, and first-run file-access flow are not implemented. Backup encryption and portable key recovery are explicitly deferred until online-service work.
-- WorkManager is mentioned in README architecture text, but no WorkManager implementation/dependency was found in the audited files.
-- DAO tests now cover class-day persistence and session/attendance persistence, update revisions and deletion restrictions. The 5→6 database migration has not yet been exercised by a dedicated migration test.
-- The repository contains gradle/wrapper/gradle-wrapper.properties but no gradlew script, gradlew.bat or gradle-wrapper.jar; local wrapper builds are not currently available.
+- **Wheel hold:** the current design exchanges spendable points for a chance at weighted random prizes. Do not extend or land this paid chance-based mechanic. Any future wheel work must first be redesigned as a free, non-wagering and transparent activity; product changes still require owner review.
+- **PR #9 review finding:** its `WheelViewModel.spin` derives the selected weighted outcome from `Math.floorMod(now, total)`, where `now` is the wall-clock timestamp. This is deterministic and predictable rather than a proper random draw. CI success does not validate fairness or product safety.
+- Local backup/restore, portable media packaging, MRT automatic retention of at most two versions, and the first-run storage flow remain incomplete. Encryption and portable key recovery remain deferred until online-service work.
+- Hidden-mission and group-puzzle mechanics still need explicit product rules; do not infer them.
+- Most of the nine approved Settings destinations and final UX alignment remain incomplete.
+- UI/instrumentation tests, manual emulator/device verification, dedicated migration coverage, release signing and Play Store readiness remain outstanding.
+- The repository has Gradle wrapper properties, but the local wrapper scripts/JAR and a local Android SDK are unavailable in this host; use GitHub Actions for build evidence.
 
 ## Product constraints to preserve
 
 - Offline-first; no backend, account system or cloud sync in this version.
-- Five main destinations in this exact order: Home, Members, Progress, Shop, Settings.
-- XP, spendable points and diamonds remain independent currencies.
-- Level 0 is 0–19 XP; level 1 is 20–49 XP; each next level adds 30 XP.
-- Attendance states: present, absent, excused absence, late, unrecorded.
-- Reason is mandatory for absent, excused absence and unrecorded.
-- Weekly session calendar must be based on class days configured in Settings (Saturday through Friday).
-- Members list has no group filter; attendance may have its own group filter. Members can be archived without deletion and restored from a separate archived list.
-- Ganjine has four tabs: avatar, frame, badge, reward. Badges are earned automatically by level; no manual granting or purchase.
-- Shop has three categories: avatar, frame and reward. Avatar/frame use diamonds; rewards use spendable points.
-- Automatic backups retain at most two versions in the MRT folder; this newer owner decision supersedes older guide snapshots mentioning a larger count.
-- First-run file access must use an Android-appropriate user-mediated storage flow.
+- Five main destinations remain Home, Members, Progress, Shop and Settings, in the approved order.
+- XP, spendable points and diamonds remain independent; XP is never spendable.
+- Attendance has exactly five states; absent, excused absence and unrecorded require a reason.
+- Weekly sessions follow the configured class weekdays (Saturday through Friday).
+- Members list has no group filter; archive/restore preserves history.
+- Badges are earned automatically by level and are never manually granted or purchased.
+- Automatic backup retention is at most two versions in MRT; backup encryption/key recovery remain deferred.
 - Preserve history and data integrity; no destructive migration or permanent deletion without an explicit, reviewable decision.
-- Do not add "command center", "signal", separate Home cards for today's operations, or inter-ring competition.
+- Do not add a command center, Home operation cards, or inter-ring competition.
 
 ## Baseline and current verification
 
@@ -139,23 +130,20 @@ Last updated: 2026-11-11
 - UI/integration tests: not run.
 - Manual device verification: not run.
 - The host has no local Android SDK/Gradle execution environment; build verification was performed by GitHub Actions.
-- Canonical draft PR #1 remains open and unmerged; temporary CI verification PRs #2 and #3 were closed; main remains untouched.
+- PR #1 is merged. PR #5, #7 and #8 are also reported merged; PR #9 remains open. The current integration branch is main.
 
 ## Next permitted work
 
-1. Re-check CI for the birthday profile-edit change and keep the exact commit/result linked.
-2. Add durable image-asset storage and image selection/display for member, ring and catalog assets; later include actual bytes in portable backup/restore.
-3. Complete ring profile and Home identity/banner/daily-quote flows.
-4. Complete the remaining Settings options and the missing Progress domains (missions, reading, wheel and competition) without inventing unresolved scoring rules.
-5. Add group filter only when the group data model and UX rules are implemented.
-6. Implement the local backup/restore flow when scheduled in the offline MVP plan; keep encryption and portable key recovery deferred until online-service work, with the agreed MRT two-version retention and background trigger.
-7. Run CI after each meaningful code slice and record exact commit-linked results.
-8. Keep merge, release, destructive data operations and material unresolved product decisions behind owner approval.
+1. Keep PR #9 unmerged while its paid chance-based wheel dependency remains unresolved; do not improve or land the paid random-reward mechanic.
+2. Prioritize local backup/restore design and implementation: preserve all Room data and media assets, support portable export/import, retain at most two automatic MRT versions, and use a user-mediated document flow. Keep encryption/key recovery deferred.
+3. Complete approved mission tabs only after the hidden-mission and group-puzzle rules are explicitly decided.
+4. Finish the remaining Settings destinations and verify the existing Home/ring profile flows against UX.
+5. Add missing migration, DAO, ViewModel and UI tests; verify every meaningful change on its exact PR head in CI.
+6. Keep merge, release, destructive data operations and material unresolved product decisions behind owner approval.
 
 ## Current blocker
 
-The available host has GitHub repository read/write integration but no local Android SDK/Gradle execution environment. GitHub Actions has verified the current source commit ee0d4906e7ecab62ace832b822822dee798203d6. The repository still lacks the Gradle Wrapper scripts/JAR. UI tests, manual device verification, dedicated migration testing, release signing and Play Store readiness remain outstanding; do not claim these are complete.
-
+The GitHub integration can inspect and update repository files, but this host has no local Android SDK/Gradle or device runtime. CI has verified PR #8 head `9c96883cbff215db4e7aeffec7ca81edfe2be2f0` (run #204) and PR #9 head `00f6baf32d2db585e1471e3b31c45dd294a13ffd` (run #205). These results do not establish device/UI correctness. The paid chance-based wheel design and the predictable timestamp-based result in PR #9 are separate review blockers; do not treat green CI as approval of either.
 
 ## Latest continuation — attendance revision history
 - Added a live revision-history section to the attendance screen, showing the member, previous status, previous reason (when present), and change timestamp.
