@@ -5,10 +5,8 @@ import android.content.Intent
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.kichikan.negah.domain.backup.BackupRetention
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.time.LocalDateTime
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -121,7 +119,7 @@ class BackupViewModel @Inject constructor(
             }
             result.fold(
                 onSuccess = { message ->
-                    mutableState.update { it.copy(busy = false, message = message) }
+                    mutableState.update { it.copy(busy = false, message = message ?: it.message) }
                 },
                 onFailure = { failure ->
                     mutableState.update {
