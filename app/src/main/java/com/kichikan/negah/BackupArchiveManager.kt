@@ -301,12 +301,13 @@ class BackupArchiveManager @Inject constructor(
             tree, DocumentsContract.getTreeDocumentId(tree),
         )
         val existing = mutableListOf<Pair<String, String>>()
-        resolver.query(
+        val cursor = resolver.query(
             children,
             arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME),
             null, null, null,
-        )?.use { cursor ->
-            while (cursor.moveToNext()) existing += cursor.getString(1) to cursor.getString(0)
+        ) ?: error("Unable to list backups in the selected MRT folder")
+        cursor.use {
+            while (it.moveToNext()) existing += it.getString(1) to it.getString(0)
         }
         BackupRetention.namesToDelete(existing.map { it.first }).forEach { stale ->
             existing.firstOrNull { it.first == stale }?.let { (_, id) ->
