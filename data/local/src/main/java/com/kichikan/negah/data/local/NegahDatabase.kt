@@ -34,7 +34,7 @@ import com.kichikan.negah.data.local.group.MemberGroupEntity
 import com.kichikan.negah.data.local.reading.BookReadingDao
 import com.kichikan.negah.data.local.reading.BookReadingEntity
 
-@Database(entities = [MemberEntity::class, SessionEntity::class, AttendanceEntity::class, AttendanceRevisionEntity::class, CommitmentEntity::class, CommitmentRevisionEntity::class, EconomyTransactionEntity::class, GrowthItemEntity::class, MemberGrowthProgressEntity::class, CatalogItemEntity::class, MemberInventoryEntity::class, MemberActiveItemEntity::class, ClassDayEntity::class, HomeShortcutEntity::class, HomeShortcutSettingsEntity::class, MediaAssetEntity::class, RingProfileEntity::class, MissionEntity::class, MissionAssignmentEntity::class, DailyQuoteEntity::class, BookReadingEntity::class, MemberGrowthHistoryEntity::class, MemberGroupEntity::class, GroupMemberEntity::class, GroupEconomyTransactionEntity::class, WheelPrizeEntity::class, WheelSettingsEntity::class, WheelSpinEntity::class], version = 17, exportSchema = true)
+@Database(entities = [MemberEntity::class, SessionEntity::class, AttendanceEntity::class, AttendanceRevisionEntity::class, CommitmentEntity::class, CommitmentRevisionEntity::class, EconomyTransactionEntity::class, GrowthItemEntity::class, MemberGrowthProgressEntity::class, CatalogItemEntity::class, MemberInventoryEntity::class, MemberActiveItemEntity::class, ClassDayEntity::class, HomeShortcutEntity::class, HomeShortcutSettingsEntity::class, MediaAssetEntity::class, RingProfileEntity::class, MissionEntity::class, MissionAssignmentEntity::class, DailyQuoteEntity::class, BookReadingEntity::class, MemberGrowthHistoryEntity::class, MemberGroupEntity::class, GroupMemberEntity::class, GroupEconomyTransactionEntity::class, WheelPrizeEntity::class, WheelSettingsEntity::class, WheelSpinEntity::class, com.kichikan.negah.data.local.mission.PuzzlePieceEntity::class], version = 18, exportSchema = true)
 @TypeConverters(AttendanceStatusConverter::class)
 abstract class NegahDatabase : RoomDatabase() {
  abstract fun memberDao(): MemberDao
@@ -54,5 +54,6 @@ abstract class NegahDatabase : RoomDatabase() {
  abstract fun bookReadingDao(): BookReadingDao
  abstract fun groupDao(): GroupDao
  abstract fun groupEconomyDao(): GroupEconomyDao
+ abstract fun puzzleDao(): com.kichikan.negah.data.local.mission.PuzzleDao
  abstract fun wheelDao(): com.kichikan.negah.data.local.wheel.WheelDao
 }
