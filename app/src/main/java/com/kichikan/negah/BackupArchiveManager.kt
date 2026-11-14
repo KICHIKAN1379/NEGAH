@@ -219,6 +219,9 @@ class BackupArchiveManager @Inject constructor(
                         if (count < 0) break
                         entryBytes += count
                         totalBytes += count
+                        if (path == MANIFEST_ENTRY) require(entryBytes <= MAX_MANIFEST_BYTES) {
+                            "Backup manifest is too large"
+                        }
                         require(entryBytes <= MAX_ENTRY_BYTES && totalBytes <= MAX_TOTAL_BYTES) {
                             "Backup expands beyond the allowed size"
                         }
@@ -371,6 +374,7 @@ class BackupArchiveManager @Inject constructor(
         private const val MAX_TOTAL_BYTES = 1024L * 1024 * 1024
         private const val MAX_ENTRY_BYTES = 512L * 1024 * 1024
         private const val MAX_ENTRIES = 5002
+        private const val MAX_MANIFEST_BYTES = 2L * 1024 * 1024
         private val SHA256_PATTERN = Regex("^[0-9a-f]{64}$")
         private val ASSET_PATH = Regex("^[0-9a-fA-F-]{36}\\.(jpg|png|webp)$")
 
