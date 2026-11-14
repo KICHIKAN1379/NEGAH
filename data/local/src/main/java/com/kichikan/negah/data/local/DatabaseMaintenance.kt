@@ -2,7 +2,6 @@ package com.kichikan.negah.data.local
 
 import android.content.Context
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.kichikan.negah.data.local.media.MediaAssetFileStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.util.concurrent.Callable
