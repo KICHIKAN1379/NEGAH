@@ -12,6 +12,8 @@ class BackupRetentionTest {
         val name = BackupRetention.fileName(LocalDateTime.of(2026, 11, 14, 22, 5, 9))
         assertEquals("negah-backup-20261114-220509.zip", name)
         assertTrue(BackupRetention.isBackupName(name))
+        assertEquals("negah-export-20261114-220509.zip", BackupRetention.exportFileName(LocalDateTime.of(2026, 11, 14, 22, 5, 9)))
+        assertFalse(BackupRetention.isBackupName("negah-export-20261114-220509.zip"))
         assertFalse(BackupRetention.isBackupName("notes.zip"))
         assertFalse(BackupRetention.isBackupName("negah-backup-abc.zip"))
     }
