@@ -36,6 +36,16 @@ class MainActivity : ComponentActivity() {
             if (granted) BirthdayReminderWorker.schedule(applicationContext)
         }
 
+    override fun onStart() {
+        super.onStart()
+        AutomaticBackupWorker.cancel(applicationContext)
+    }
+
+    override fun onStop() {
+        if (!isChangingConfigurations) AutomaticBackupWorker.schedule(applicationContext)
+        super.onStop()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !BirthdayReminderWorker.canNotify(this)) {
