@@ -60,8 +60,12 @@ fun SoundBackgroundThemeScreen(
             }
             selectedUri = uri.toString()
             selectedName = displayName(context, uri)
-            preferences.edit().putString(KEY_BACKGROUND_MUSIC_URI, selectedUri).apply()
-            BackgroundMusicController.configure(context, selectedUri, musicEnabled)
+            musicEnabled = true
+            preferences.edit()
+                .putString(KEY_BACKGROUND_MUSIC_URI, selectedUri)
+                .putBoolean(KEY_BACKGROUND_MUSIC_ENABLED, true)
+                .apply()
+            BackgroundMusicController.configure(context, selectedUri, true)
         }
     }
 
