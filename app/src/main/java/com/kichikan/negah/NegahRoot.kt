@@ -300,7 +300,8 @@ fun NegahRoot(
         }
     }
         if (backupState.showSetupPrompt) {
-            AlertDialog(
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                AlertDialog(
                 onDismissRequest = backupViewModel::markSetupPromptShown,
                 title = { Text("فعال‌سازی پشتیبان خودکار") },
                 text = {
@@ -317,7 +318,8 @@ fun NegahRoot(
                         Text("بعداً")
                     }
                 },
-            )
+                )
+            }
         }
 }
 
