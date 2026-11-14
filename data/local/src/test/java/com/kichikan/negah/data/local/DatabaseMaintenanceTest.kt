@@ -13,6 +13,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import kotlinx.coroutines.runBlocking
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -33,8 +34,9 @@ class DatabaseMaintenanceTest {
         val snapshot = File(context.cacheDir, "backup-test-$assetId")
 
         try {
-            database.mediaAssetDao().insert(
-                MediaAssetEntity(
+            runBlocking {
+                database.mediaAssetDao().insert(
+                    MediaAssetEntity(
                     id = assetId,
                     ownerType = "MEMBER",
                     ownerId = "member-1",
@@ -44,8 +46,9 @@ class DatabaseMaintenanceTest {
                     byteSize = bytes.size.toLong(),
                     sha256 = "0".repeat(64),
                     createdAtEpochMillis = 1L,
-                ),
-            )
+                    ),
+                )
+            }
 
             val version = DatabaseMaintenance(context, database).snapshotTo(snapshot)
 
