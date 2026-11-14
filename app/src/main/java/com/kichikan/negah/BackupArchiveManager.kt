@@ -62,12 +62,12 @@ class BackupArchiveManager @Inject constructor(
             val output = resolver.openOutputStream(target, "w")
                 ?: error("Unable to open the new backup file")
             output.use { createArchive(it) }
-            applyRetention(tree)
-            return name
         } catch (failure: Exception) {
             runCatching { DocumentsContract.deleteDocument(resolver, target) }
             throw failure
         }
+        applyRetention(tree)
+        return name
     }
 
     fun prepareRestore(source: Uri): PreparedRestore {
