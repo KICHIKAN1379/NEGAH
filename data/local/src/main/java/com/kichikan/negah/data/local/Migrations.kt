@@ -128,3 +128,10 @@ val MIGRATION_16_17 = object : Migration(16, 17) {
   database.execSQL("CREATE INDEX IF NOT EXISTS index_wheel_spins_spunAtEpochMillis ON wheel_spins(spunAtEpochMillis)")
  }
 }
+
+val MIGRATION_17_18 = object : Migration(17, 18) {
+ override fun migrate(database: SupportSQLiteDatabase) {
+  database.execSQL("CREATE TABLE IF NOT EXISTS puzzle_pieces (missionId TEXT NOT NULL, groupId TEXT NOT NULL, pieceIndex INTEGER NOT NULL, completedAtEpochMillis INTEGER NOT NULL, PRIMARY KEY(missionId, groupId, pieceIndex), FOREIGN KEY(missionId) REFERENCES missions(id) ON UPDATE NO ACTION ON DELETE RESTRICT, FOREIGN KEY(groupId) REFERENCES member_groups(id) ON UPDATE NO ACTION ON DELETE RESTRICT)")
+  database.execSQL("CREATE INDEX IF NOT EXISTS index_puzzle_pieces_groupId ON puzzle_pieces(groupId)")
+ }
+}

@@ -53,16 +53,18 @@ fun MissionsScreen(viewModel: ProgressViewModel, modifier: Modifier = Modifier) 
    MissionKind.entries.forEach { item -> FilterChip(selected=kind==item,onClick={tab=item.name;chosen=null},label={Text(item.titleFa())}) }
   }
   when(kind) {
-   MissionKind.REGULAR -> {
-    Button(onClick={showCreate=true},modifier=Modifier.fillMaxWidth()){Text("ایجاد مأموریت")}
-    OutlinedButton(onClick={exportLauncher.launch("فهرست-مأموریت‌ها.jpg")},enabled=missions.isNotEmpty(),modifier=Modifier.fillMaxWidth()) {
+   MissionKind.REGULAR, MissionKind.HIDDEN -> {
+    val hidden=kind==MissionKind.HIDDEN
+    Button(onClick={showCreate=true},modifier=Modifier.fillMaxWidth()){Text(if(hidden) "ایجاد مأموریت ویژه (مخفی)" else "ایجاد مأموریت")}
+    if(hidden) Text("🔒 فقط برای مربی؛ این مأموریت‌ها در خروجی JPEG و نمایش عمومی نمی‌آیند.",style=MaterialTheme.typography.bodySmall)
+    else OutlinedButton(onClick={exportLauncher.launch("فهرست-مأموریت‌ها.jpg")},enabled=missions.isNotEmpty(),modifier=Modifier.fillMaxWidth()) {
      Text("خروجی JPEG توضیحات و پاداش‌ها")
     }
-    if(missions.isEmpty()) Text("هنوز مأموریت عادی ثبت نشده است.")
+    if(missions.isEmpty()) Text(if(hidden) "هنوز مأموریت ویژه‌ای ثبت نشده است." else "هنوز مأموریت عادی ثبت نشده است.")
     missions.forEach { mission ->
      Card(onClick={chosen=mission.id;viewModel.selectMission(mission.id)},modifier=Modifier.fillMaxWidth()) {
       Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-       Text(mission.title,style=MaterialTheme.typography.titleMedium)
+       Text((if(hidden) "🔒 " else "")+mission.title,style=MaterialTheme.typography.titleMedium)
        mission.description?.let { Text(it) }
        Text("پاداش: "+mission.rewardAmount+" "+mission.rewardCurrency.titleFa())
       }
@@ -87,24 +89,53 @@ fun MissionsScreen(viewModel: ProgressViewModel, modifier: Modifier = Modifier) 
      }
     }
    }
-   MissionKind.HIDDEN -> Text("مأموریت مخفی؛ قواعد اختصاصی و نحوه نمایش آن هنوز نیازمند تصمیم مربی است.")
-   MissionKind.GROUP_PUZZLE -> Text("پازل گروهی؛ قواعد گروه‌بندی و تکمیل گروهی هنوز تعیین نشده است.")
+   MissionKind.GROUP_PUZZLE -> {
+    Button(onClick={showCreate=true},modifier=Modifier.fillMaxWidth()){Text("ایجاد پازل گروهی")}
+    Text("هر پازل شش تکه دارد؛ با ثبت تکه ششم، پاداش یک‌بار به حساب خود گروه واریز می‌شود.",style=MaterialTheme.typography.bodySmall)
+    if(missions.isEmpty()) Text("هنوز پازلی ثبت نشده است.")
+    missions.forEach { mission ->
+     Card(onClick={chosen=mission.id;viewModel.selectMission(mission.id)},modifier=Modifier.fillMaxWidth()) {
+      Column(Modifier.padding(12.dp)) {
+       Text(mission.title,style=MaterialTheme.typography.titleMedium)
+       Text("پاداش گروه: "+mission.rewardAmount+" "+mission.rewardCurrency.titleFa())
+      }
+     }
+    }
+    state.puzzleMessage?.let { Text(it,color=MaterialTheme.colorScheme.primary) }
+    chosen?.let { puzzleId ->
+     if(state.groups.isEmpty()) Text("هنوز گروه فعالی ساخته نشده است.")
+     state.groups.forEach { g ->
+      val done=state.pieces.filter { it.missionId==puzzleId && it.groupId==g.group.id }.map { it.pieceIndex }.toSet()
+      Card(Modifier.fillMaxWidth()) {
+       Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        Text(g.group.name+" — "+done.size+" از "+PUZZLE_PIECE_COUNT,style=MaterialTheme.typography.titleSmall)
+        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+         (1..PUZZLE_PIECE_COUNT).forEach { i ->
+          FilterChip(selected=i in done,onClick={viewModel.completePuzzlePiece(puzzleId,g.group.id,i)},enabled=i !in done,label={Text(i.toString())})
+         }
+        }
+       }
+      }
+     }
+    }
+   }
   }
  }
- if(showCreate) NewMissionDialog({showCreate=false}) { title,desc,currency,amount ->
-  viewModel.createMission(MissionKind.REGULAR,title,desc,currency,amount);showCreate=false
+ if(showCreate) NewMissionDialog(kind,{showCreate=false}) { title,desc,currency,amount ->
+  viewModel.createMission(kind,title,desc,currency,amount);showCreate=false
  }
 }
 @Composable
-private fun NewMissionDialog(close:()->Unit,create:(String,String,EconomyCurrency,Long)->Unit) {
+private fun NewMissionDialog(kind:MissionKind,close:()->Unit,create:(String,String,EconomyCurrency,Long)->Unit) {
  var title by remember { mutableStateOf("") };var desc by remember { mutableStateOf("") }
- var amount by remember { mutableStateOf("1") };var currency by remember { mutableStateOf(EconomyCurrency.XP) }
- AlertDialog(onDismissRequest=close,title={Text("مأموریت عادی جدید")},text={
+ var amount by remember { mutableStateOf("1") };var currency by remember { mutableStateOf(if(kind==MissionKind.GROUP_PUZZLE) EconomyCurrency.POINTS else EconomyCurrency.XP) }
+ val currencies=if(kind==MissionKind.GROUP_PUZZLE) listOf(EconomyCurrency.POINTS,EconomyCurrency.DIAMONDS) else EconomyCurrency.entries
+ AlertDialog(onDismissRequest=close,title={Text(when(kind){MissionKind.HIDDEN->"مأموریت ویژه (مخفی) جدید";MissionKind.GROUP_PUZZLE->"پازل گروهی جدید";else->"مأموریت عادی جدید"})},text={
   Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
    OutlinedTextField(title,{title=it},label={Text("عنوان")},singleLine=true)
    OutlinedTextField(desc,{desc=it},label={Text("توضیحات")})
    Text("نوع پاداش")
-   Row(horizontalArrangement=Arrangement.spacedBy(4.dp)){EconomyCurrency.entries.forEach { c -> FilterChip(selected=currency==c,onClick={currency=c},label={Text(c.titleFa())}) }}
+   Row(horizontalArrangement=Arrangement.spacedBy(4.dp)){currencies.forEach { c -> FilterChip(selected=currency==c,onClick={currency=c},label={Text(c.titleFa())}) }}
    OutlinedTextField(amount,{amount=it.filter(Char::isDigit)},label={Text("مقدار پاداش")},singleLine=true)
   }
  },confirmButton={Button(onClick={amount.toLongOrNull()?.let { create(title,desc,currency,it) }},enabled=title.isNotBlank()&&(amount.toLongOrNull()?:0)>0){Text("ثبت")}},
