@@ -21,6 +21,7 @@ data class BackupUiState(
     val message: String? = null,
     val restorePreview: BackupPreview? = null,
     val restoreQueued: Boolean = false,
+    val showSetupPrompt: Boolean = false,
 )
 
 @HiltViewModel
@@ -34,6 +35,8 @@ class BackupViewModel @Inject constructor(
             folder = prefs.getString(BackupArchiveManager.KEY_TREE, null),
             message = prefs.getString(BackupArchiveManager.KEY_RESTORE_MESSAGE, null),
             restoreQueued = BackupArchiveManager.hasPendingRestore(context),
+            showSetupPrompt = prefs.getString(BackupArchiveManager.KEY_TREE, null) == null &&
+                !prefs.getBoolean(BackupArchiveManager.KEY_SETUP_PROMPT_SHOWN, false),
         ),
     )
     val state = mutableState.asStateFlow()
@@ -49,8 +52,16 @@ class BackupViewModel @Inject constructor(
             mutableState.update { s -> s.copy(message = "دسترسی دائمی به پوشه داده نشد") }
             return
         }
-        prefs.edit().putString(BackupArchiveManager.KEY_TREE, uri.toString()).apply()
-        mutableState.update { it.copy(folder = uri.toString(), message = "پوشه MRT انتخاب شد") }
+        prefs.edit()
+            .putString(BackupArchiveManager.KEY_TREE, uri.toString())
+            .putBoolean(BackupArchiveManager.KEY_SETUP_PROMPT_SHOWN, true)
+            .apply()
+        mutableState.update { it.copy(folder = uri.toString(), showSetupPrompt = false, message = "پوشه MRT انتخاب شد") }
+    }
+
+    fun markSetupPromptShown() {
+        prefs.edit().putBoolean(BackupArchiveManager.KEY_SETUP_PROMPT_SHOWN, true).apply()
+        mutableState.update { it.copy(showSetupPrompt = false) }
     }
 
     fun backupNow() {
