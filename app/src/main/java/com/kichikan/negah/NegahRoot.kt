@@ -67,9 +67,11 @@ fun NegahRoot(
     readingViewModel: ReadingViewModel,
     wheelViewModel: WheelViewModel,
     groupsViewModel: GroupsViewModel,
+    backupViewModel: BackupViewModel,
 ) {
     var selected by rememberSaveable { mutableStateOf(MainDestination.HOME.name) }
     var openRefinery by rememberSaveable { mutableStateOf(false) }
+    var openBackup by rememberSaveable { mutableStateOf(false) }
     var openClassDays by rememberSaveable { mutableStateOf(false) }
     var openHomeShortcuts by rememberSaveable { mutableStateOf(false) }
     var openRingProfile by rememberSaveable { mutableStateOf(false) }
@@ -109,6 +111,7 @@ fun NegahRoot(
                             if (openHomeShortcuts) homeShortcutsViewModel.discardChanges()
                             selected = destination.name
                             openRefinery = false
+                            openBackup = false
                             openClassDays = false
                             openHomeShortcuts = false
                             openRingProfile = false
@@ -154,6 +157,7 @@ fun NegahRoot(
                             bannerBytes = ringProfile.bannerBytes,
                             onOpenShortcut = { shortcut ->
                                 openRefinery = false
+                                openBackup = false
                                 openClassDays = false
                                 openHomeShortcuts = false
                                 openRingProfile = false
@@ -218,6 +222,7 @@ fun NegahRoot(
                                 selected = MainDestination.SETTINGS.name
                                 openSessions = false
                                 openRefinery = false
+                                openBackup = false
                                 openClassDays = true
                             },
                             modifier = Modifier.padding(padding),
@@ -247,6 +252,7 @@ fun NegahRoot(
                 }
                 MainDestination.SETTINGS -> {
                     when {
+                        openBackup -> BackupScreen(backupViewModel, onBack = { openBackup = false }, modifier = Modifier.padding(padding))
                         openRefinery -> RefineryScreen(refineryViewModel, Modifier.padding(padding))
                         openRingProfile -> RingProfileScreen(ringProfileViewModel, onBack = { openRingProfile = false }, modifier = Modifier.padding(padding))
                         openDailyQuotes -> DailyQuotesScreen(dailyQuotesViewModel, onBack = { openDailyQuotes = false }, modifier = Modifier.padding(padding))
@@ -277,6 +283,7 @@ fun NegahRoot(
                                 }
                                 Button(onClick = { openDailyQuotes = true }, modifier = Modifier.fillMaxWidth()) { Text("جمله‌های روز") }
                                 Button(onClick = { openClassDays = true }, modifier = Modifier.fillMaxWidth()) { Text("روزهای کلاس") }
+                                Button(onClick = { openBackup = true }, modifier = Modifier.fillMaxWidth()) { Text("پشتیبان‌گیری") }
                             }
                         }
                     }
