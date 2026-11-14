@@ -13,7 +13,6 @@ import com.kichikan.negah.domain.wheel.WheelSpin
 import com.kichikan.negah.domain.wheel.WheelSpinResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.UUID
-import java.util.concurrent.ThreadLocalRandom
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,6 +25,10 @@ data class WheelUiState(
     val spinCost: Long = 0L,
     val spins: List<WheelSpin> = emptyList(),
     val lastWin: WheelSpin? = null,
+    /** Bumped on every successful spin so the screen can start one animation per spin. */
+    val spinToken: Long = 0L,
+    /** Phone-clock second (0..59) at the moment of the tap; drives turns and duration. */
+    val spinSecond: Int = 0,
     val message: String? = null,
 )
 
@@ -51,12 +54,15 @@ class WheelViewModel @Inject constructor(
             return
         }
         viewModelScope.launch {
-            val result = repository.spin(memberId, UUID.randomUUID().toString(), System.currentTimeMillis()) { total ->
-                ThreadLocalRandom.current().nextLong(total)
+            // The outcome and the motion both come from the phone clock at the moment of the tap.
+            val now = System.currentTimeMillis()
+            val second = ((now / 1000L) % 60L).toInt()
+            val result = repository.spin(memberId, UUID.randomUUID().toString(), now) { total ->
+                Math.floorMod(now, total)
             }
             mutableState.update {
                 when (result) {
-                    is WheelSpinResult.Won -> it.copy(lastWin = result.spin, message = null)
+                    is WheelSpinResult.Won -> it.copy(lastWin = result.spin, message = null, spinToken = it.spinToken + 1, spinSecond = second)
                     WheelSpinResult.NoActivePrizes -> it.copy(lastWin = null, message = "هیچ جایزه فعالی تعریف نشده است")
                     WheelSpinResult.InsufficientPoints -> it.copy(lastWin = null, message = "امتیاز قابل‌خرج عضو برای چرخاندن کافی نیست")
                     WheelSpinResult.InvalidMember -> it.copy(lastWin = null, message = "عضو نامعتبر است")
