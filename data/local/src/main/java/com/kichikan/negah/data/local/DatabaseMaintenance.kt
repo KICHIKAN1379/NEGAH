@@ -1,0 +1,104 @@
+package com.kichikan.negah.data.local
+
+import android.content.Context
+import androidx.sqlite.db.SupportSQLiteDatabase
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
+import java.io.FileInputStream
+import java.security.MessageDigest
+import java.util.concurrent.Callable
+import javax.inject.Inject
+
+/**
+ * Creates a consistent on-disk snapshot while Room holds its write transaction.
+ *
+ * The database is configured for a single-file journal mode (TRUNCATE; DELETE
+ * is also safe as a fallback), so no WAL sidecar needs to be copied.
+ */
+class DatabaseMaintenance @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val database: NegahDatabase,
+) {
+    fun schemaVersion(): Int = database.openHelper.readableDatabase.version
+
+    fun snapshotTo(destination: File): Int {
+        require(destination.exists() || destination.mkdirs()) {
+            "Unable to create backup snapshot directory"
+        }
+
+        val sqlite = database.openHelper.writableDatabase
+        var mode = journalMode(sqlite)
+        if (mode != "truncate" && mode != "delete") {
+            // Room's TRUNCATE setting is applied when the helper opens; retry
+            // explicitly for test databases and providers that report WAL.
+            mode = sqlite.query("PRAGMA journal_mode=TRUNCATE").use { cursor ->
+                check(cursor.moveToFirst()) { "Unable to switch database to a single-file journal mode" }
+                cursor.getString(0).lowercase()
+            }
+        }
+        check(mode == "truncate" || mode == "delete") {
+            "Database journal mode $mode is not safe for a single-file snapshot"
+        }
+
+        return database.runInTransaction(Callable {
+            val sourceDatabase = context.getDatabasePath(DATABASE_NAME)
+            check(sourceDatabase.isFile) { "Database file is missing" }
+            sourceDatabase.copyTo(File(destination, DATABASE_NAME), overwrite = true)
+
+            val mediaRoot = File(context.filesDir, MEDIA_DIRECTORY)
+            val mediaDestination = File(destination, MEDIA_DIRECTORY)
+            check(mediaDestination.exists() || mediaDestination.mkdirs()) {
+                "Unable to create media snapshot directory"
+            }
+
+            val assets = mutableListOf<Triple<String, Long, String>>()
+            sqlite.query("SELECT relativePath, byteSize, sha256 FROM media_assets").use { cursor ->
+                while (cursor.moveToNext()) {
+                    assets += Triple(cursor.getString(0), cursor.getLong(1), cursor.getString(2))
+                }
+            }
+
+            assets.distinctBy { it.first }.forEach { (relativePath, expectedSize, expectedHash) ->
+                require(ASSET_PATH.matches(relativePath)) { "Invalid media asset path in database" }
+                val source = File(mediaRoot, relativePath)
+                check(source.canonicalFile.parentFile == mediaRoot.canonicalFile && source.isFile) {
+                    "A referenced media asset is missing"
+                }
+                check(source.length() == expectedSize && sha256(source) == expectedHash) {
+                    "A referenced media asset failed integrity validation"
+                }
+                val target = File(mediaDestination, relativePath)
+                source.copyTo(target, overwrite = true)
+                check(target.length() == expectedSize && sha256(target) == expectedHash) {
+                    "Media asset snapshot is incomplete"
+                }
+            }
+            sqlite.version
+        })
+    }
+
+    private fun sha256(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        FileInputStream(file).buffered().use { input ->
+            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                digest.update(buffer, 0, count)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    private fun journalMode(database: SupportSQLiteDatabase): String =
+        database.query("PRAGMA journal_mode").use { cursor ->
+            check(cursor.moveToFirst()) { "Unable to read database journal mode" }
+            cursor.getString(0).lowercase()
+        }
+
+    private companion object {
+        const val DATABASE_NAME = "negah_coach.db"
+        const val MEDIA_DIRECTORY = "media-assets"
+        val ASSET_PATH = Regex("^[0-9a-fA-F-]{36}\\.(jpg|png|webp)$")
+    }
+}
