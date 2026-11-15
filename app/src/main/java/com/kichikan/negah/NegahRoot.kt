@@ -67,6 +67,7 @@ fun NegahRoot(
     readingViewModel: ReadingViewModel,
     wheelViewModel: WheelViewModel,
     groupsViewModel: GroupsViewModel,
+    backgroundMusicViewModel: BackgroundMusicViewModel,
 ) {
     var selected by rememberSaveable { mutableStateOf(MainDestination.HOME.name) }
     var openRefinery by rememberSaveable { mutableStateOf(false) }
@@ -82,6 +83,7 @@ fun NegahRoot(
     var openReading by rememberSaveable { mutableStateOf(false) }
     var openCompetition by rememberSaveable { mutableStateOf(false) }
     var openWheel by rememberSaveable { mutableStateOf(false) }
+    var openBackgroundMusic by rememberSaveable { mutableStateOf(false) }
     var membersTab by rememberSaveable { mutableStateOf("MEMBERS") }
     val membersState by membersViewModel.state.collectAsStateWithLifecycle()
     val sessionsState by sessionsViewModel.uiState.collectAsStateWithLifecycle()
@@ -121,6 +123,7 @@ fun NegahRoot(
                             openReading = false
                             openCompetition = false
                             openWheel = false
+                            openBackgroundMusic = false
                         },
                         icon = { Text(destination.title.take(1)) },
                         label = { Text(destination.title) },
@@ -247,6 +250,11 @@ fun NegahRoot(
                 }
                 MainDestination.SETTINGS -> {
                     when {
+                        openBackgroundMusic -> BackgroundMusicScreen(
+                            viewModel = backgroundMusicViewModel,
+                            onBack = { openBackgroundMusic = false },
+                            modifier = Modifier.padding(padding),
+                        )
                         openRefinery -> RefineryScreen(refineryViewModel, Modifier.padding(padding))
                         openRingProfile -> RingProfileScreen(ringProfileViewModel, onBack = { openRingProfile = false }, modifier = Modifier.padding(padding))
                         openDailyQuotes -> DailyQuotesScreen(dailyQuotesViewModel, onBack = { openDailyQuotes = false }, modifier = Modifier.padding(padding))
@@ -277,6 +285,7 @@ fun NegahRoot(
                                 }
                                 Button(onClick = { openDailyQuotes = true }, modifier = Modifier.fillMaxWidth()) { Text("جمله‌های روز") }
                                 Button(onClick = { openClassDays = true }, modifier = Modifier.fillMaxWidth()) { Text("روزهای کلاس") }
+                                Button(onClick = { openBackgroundMusic = true }, modifier = Modifier.fillMaxWidth()) { Text("موزیک پس‌زمینه") }
                             }
                         }
                     }
