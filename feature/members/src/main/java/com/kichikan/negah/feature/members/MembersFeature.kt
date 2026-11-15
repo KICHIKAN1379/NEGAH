@@ -83,6 +83,7 @@ import com.kichikan.negah.domain.member.RegisterMember
 import com.kichikan.negah.domain.member.RegisterMemberResult
 import com.kichikan.negah.domain.growth.GrowthItem
 import com.kichikan.negah.domain.growth.GrowthMapRepository
+import com.kichikan.negah.domain.growth.GrowthProgressChange
 import com.kichikan.negah.domain.growth.GrowthTrack
 import com.kichikan.negah.domain.growth.MemberGrowthProgress
 import com.kichikan.negah.domain.growth.UpdateGrowthProgress
@@ -131,6 +132,7 @@ data class MembersUiState(
     val historyFilter: MemberHistoryFilter = MemberHistoryFilter.ALL,
     val growthItems: List<GrowthItem> = emptyList(),
     val growthProgress: List<MemberGrowthProgress> = emptyList(),
+    val growthHistory: List<GrowthProgressChange> = emptyList(),
     val growthSaveMessage: String? = null,
     val inventoryEntries: List<MemberInventoryEntry> = emptyList(),
     val availableCatalogItems: List<CatalogItem> = emptyList(),
@@ -200,6 +202,7 @@ class MembersViewModel @Inject constructor(
     private var economyHistoryJob: Job? = null
     private var growthItemsJob: Job? = null
     private var growthProgressJob: Job? = null
+    private var growthHistoryJob: Job? = null
     private var inventoryJob: Job? = null
     private var catalogJob: Job? = null
     private var avatarJob: Job? = null
@@ -365,10 +368,11 @@ class MembersViewModel @Inject constructor(
         economyHistoryJob?.cancel()
         growthItemsJob?.cancel()
         growthProgressJob?.cancel()
+        growthHistoryJob?.cancel()
         inventoryJob?.cancel()
         catalogJob?.cancel()
         avatarJob?.cancel()
-        mutableState.update { it.copy(selectedMemberId = memberId, economyTransactions = emptyList(), growthItems = emptyList(), growthProgress = emptyList(), growthSaveMessage = null, inventoryEntries = emptyList(), availableCatalogItems = emptyList(), activeInventoryItems = emptyList(), inventoryMessage = null, avatarBytes = null, avatarMessage = null, catalogImageBytes = emptyMap()) }
+        mutableState.update { it.copy(selectedMemberId = memberId, economyTransactions = emptyList(), growthItems = emptyList(), growthProgress = emptyList(), growthHistory = emptyList(), growthSaveMessage = null, inventoryEntries = emptyList(), availableCatalogItems = emptyList(), activeInventoryItems = emptyList(), inventoryMessage = null, avatarBytes = null, avatarMessage = null, catalogImageBytes = emptyMap()) }
         avatarJob = viewModelScope.launch {
             val bytes = runCatching { avatarRepository.loadAvatar(memberId) }.getOrNull()
             mutableState.update { current ->
@@ -396,6 +400,13 @@ class MembersViewModel @Inject constructor(
             growthMapRepository.observeProgress(memberId).collect { progress ->
                 mutableState.update { current ->
                     if (current.selectedMemberId == memberId) current.copy(growthProgress = progress) else current
+                }
+            }
+        }
+        growthHistoryJob = viewModelScope.launch {
+            growthMapRepository.observeHistory(memberId).collect { history ->
+                mutableState.update { current ->
+                    if (current.selectedMemberId == memberId) current.copy(growthHistory = history) else current
                 }
             }
         }
@@ -498,15 +509,17 @@ class MembersViewModel @Inject constructor(
         economyHistoryJob?.cancel()
         growthItemsJob?.cancel()
         growthProgressJob?.cancel()
+        growthHistoryJob?.cancel()
         inventoryJob?.cancel()
         catalogJob?.cancel()
         economyHistoryJob = null
         growthItemsJob = null
         growthProgressJob = null
+        growthHistoryJob = null
         inventoryJob = null
         catalogJob = null
         avatarJob = null
-        mutableState.update { it.copy(selectedMemberId = null, economyTransactions = emptyList(), growthItems = emptyList(), growthProgress = emptyList(), growthSaveMessage = null, inventoryEntries = emptyList(), availableCatalogItems = emptyList(), activeInventoryItems = emptyList(), inventoryMessage = null, avatarBytes = null, avatarMessage = null, catalogImageBytes = emptyMap()) }
+        mutableState.update { it.copy(selectedMemberId = null, economyTransactions = emptyList(), growthItems = emptyList(), growthProgress = emptyList(), growthHistory = emptyList(), growthSaveMessage = null, inventoryEntries = emptyList(), availableCatalogItems = emptyList(), activeInventoryItems = emptyList(), inventoryMessage = null, avatarBytes = null, avatarMessage = null, catalogImageBytes = emptyMap()) }
     }
 
     fun saveGrowthProgress(item: GrowthItem, progressPercent: Int, note: String?) {
@@ -618,7 +631,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val selectedMember = state.members.firstOrNull { it.id == state.selectedMemberId }
     if (selectedMember != null) {
-        MemberProfileScreen(selectedMember, state.economyTransactions, state.historyFilter, viewModel::onHistoryFilterChanged, state.growthItems, state.growthProgress, state.growthSaveMessage, state.inventoryEntries, state.availableCatalogItems, state.activeInventoryItems, state.inventoryMessage, state.profileMessage, state.avatarBytes, state.avatarMessage, state.catalogImageBytes, state.missions, state.missionAssignments, state.bookReadings, viewModel::updateSelectedMemberProfile, viewModel::activateBadge, viewModel::adjustEconomyBalance, viewModel::updateMemberAvatar, viewModel::removeMemberAvatar, viewModel::saveGrowthProgress, viewModel::activateInventoryItem, viewModel::grantCatalogItem, viewModel::onProfileClosed, modifier)
+        MemberProfileScreen(selectedMember, state.economyTransactions, state.historyFilter, viewModel::onHistoryFilterChanged, state.growthItems, state.growthProgress, state.growthHistory, state.growthSaveMessage, state.inventoryEntries, state.availableCatalogItems, state.activeInventoryItems, state.inventoryMessage, state.profileMessage, state.avatarBytes, state.avatarMessage, state.catalogImageBytes, state.missions, state.missionAssignments, state.bookReadings, viewModel::updateSelectedMemberProfile, viewModel::activateBadge, viewModel::adjustEconomyBalance, viewModel::updateMemberAvatar, viewModel::removeMemberAvatar, viewModel::saveGrowthProgress, viewModel::activateInventoryItem, viewModel::grantCatalogItem, viewModel::onProfileClosed, modifier)
         return
     }
 
@@ -776,7 +789,7 @@ fun MembersScreen(viewModel: MembersViewModel, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, historyFilter: MemberHistoryFilter, onHistoryFilterChanged: (MemberHistoryFilter) -> Unit, growthItems: List<GrowthItem>, growthProgress: List<MemberGrowthProgress>, growthSaveMessage: String?, inventoryEntries: List<MemberInventoryEntry>, availableCatalogItems: List<CatalogItem>, activeInventoryItems: List<ActiveInventoryItem>, inventoryMessage: String?, profileMessage: String?, avatarBytes: ByteArray?, avatarMessage: String?, catalogImageBytes: Map<String, ByteArray>, missions: List<Mission>, missionAssignments: List<MissionAssignment>, bookReadings: List<BookReading>, onUpdateProfile: (String, String, String) -> Unit, onActivateBadge: (Int) -> Unit, onAdjustEconomy: (EconomyCurrency, Long, String) -> Unit, onUpdateAvatar: (InputStream, String) -> Unit, onRemoveAvatar: () -> Unit, onSaveGrowthProgress: (GrowthItem, Int, String?) -> Unit, onActivateInventoryItem: (MemberInventoryEntry) -> Unit, onGrantCatalogItem: (CatalogItem) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
+private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransaction>, historyFilter: MemberHistoryFilter, onHistoryFilterChanged: (MemberHistoryFilter) -> Unit, growthItems: List<GrowthItem>, growthProgress: List<MemberGrowthProgress>, growthHistory: List<GrowthProgressChange>, growthSaveMessage: String?, inventoryEntries: List<MemberInventoryEntry>, availableCatalogItems: List<CatalogItem>, activeInventoryItems: List<ActiveInventoryItem>, inventoryMessage: String?, profileMessage: String?, avatarBytes: ByteArray?, avatarMessage: String?, catalogImageBytes: Map<String, ByteArray>, missions: List<Mission>, missionAssignments: List<MissionAssignment>, bookReadings: List<BookReading>, onUpdateProfile: (String, String, String) -> Unit, onActivateBadge: (Int) -> Unit, onAdjustEconomy: (EconomyCurrency, Long, String) -> Unit, onUpdateAvatar: (InputStream, String) -> Unit, onRemoveAvatar: () -> Unit, onSaveGrowthProgress: (GrowthItem, Int, String?) -> Unit, onActivateInventoryItem: (MemberInventoryEntry) -> Unit, onGrantCatalogItem: (CatalogItem) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
     var inventoryTab by rememberSaveable { mutableStateOf("آواتار") }
     var showAllReceivedHistory by rememberSaveable { mutableStateOf(false) }
     var showProfileEditDialog by rememberSaveable { mutableStateOf(false) }
@@ -933,6 +946,35 @@ private fun MemberProfileScreen(member: Member, transactions: List<EconomyTransa
             GrowthTrackSection("توانمندی", growthItems.filter { it.track == GrowthTrack.CAPABILITY }, growthProgress, onSaveGrowthProgress)
             GrowthTrackSection("خودسازی", growthItems.filter { it.track == GrowthTrack.SELF_IMPROVEMENT }, growthProgress, onSaveGrowthProgress)
             growthSaveMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary) }
+        }
+        ProfileSection("تاریخچه نقشه کمال", "سوابق تغییر درصد و یادداشت‌های مربی") {
+            if (growthHistory.isEmpty()) {
+                Text("هنوز تغییری در پیشرفت این عضو ثبت نشده است", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                growthHistory.forEach { change ->
+                    val itemTitle = growthItems.firstOrNull { it.id == change.growthItemId }?.title ?: "شاخص حذف‌شده"
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(itemTitle, style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                "${change.previousPercent?.let { "$it٪" } ?: "ثبت اولیه"}  ←  ${change.newPercent}٪",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Text(
+                                DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, Locale("fa"))
+                                    .format(Date(change.changedAtEpochMillis)),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            change.note?.takeIf { it.isNotBlank() }?.let {
+                                Text(it, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                }
+            }
         }
         ProfileSection("گنجینه", "موجودی و آیتم‌های عضو") {
             Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

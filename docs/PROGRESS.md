@@ -294,3 +294,12 @@ The available host has GitHub repository read/write integration but no local And
 - Backup implementation includes archive validation, staged restore, a rollback safety copy retained until next-launch SQLite integrity validation, and automatic backup scheduling with a maximum of two MRT copies. Automatic scheduling is tied to app lifecycle/background transition; Android cannot guarantee execution after force-stop, crash or shutdown.
 - CI success confirms compilation and configured tests only. No manual device test or restore-on-device test has been performed. Portable inclusion of all media binaries should be re-audited before claiming full portability.
 - These PRs were merged after the owner's explicit instruction to merge; no release was published.
+
+
+## Member Growth Map history UI — 2026-11-15
+- Connected the existing immutable Room-backed growth-progress history stream to the selected member profile.
+- The profile now shows the indicator title, previous and new percentages, change timestamp, and the coach's note; initial entries are identified separately.
+- History observation is scoped to the selected member and cleared when switching or closing profiles.
+- Added a ViewModel regression test for member isolation and cleanup.
+- PR #17: https://github.com/KICHIKAN1379/NEGAH/pull/17
+- CI and visual/device verification are pending; this is not merged to main.

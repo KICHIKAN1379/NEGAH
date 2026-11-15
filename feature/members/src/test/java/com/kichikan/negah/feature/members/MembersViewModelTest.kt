@@ -10,6 +10,7 @@ import com.kichikan.negah.domain.member.MemberAvatarRepository
 import com.kichikan.negah.domain.member.RegisterMember
 import com.kichikan.negah.domain.growth.GrowthItem
 import com.kichikan.negah.domain.growth.GrowthMapRepository
+import com.kichikan.negah.domain.growth.GrowthProgressChange
 import com.kichikan.negah.domain.growth.GrowthTrack
 import com.kichikan.negah.domain.growth.MemberGrowthProgress
 import com.kichikan.negah.domain.growth.UpdateGrowthProgress
@@ -78,6 +79,40 @@ class MembersViewModelTest {
     fun tearDown() {
         viewModel.onProfileClosed()
         Dispatchers.resetMain()
+    }
+
+    @Test
+    // Switching profiles must never expose another member's audit records.
+    fun selectedMemberObservesOnlyTheirGrowthHistoryAndClearsItOnSwitch() = runTest {
+        val first = GrowthProgressChange(
+            id = "change-1",
+            memberId = "member-1",
+            growthItemId = "item-1",
+            previousPercent = 10,
+            newPercent = 25,
+            note = "پیگیری هفتگی",
+            changedAtEpochMillis = 100L,
+        )
+        val second = GrowthProgressChange(
+            id = "change-2",
+            memberId = "member-2",
+            growthItemId = "item-2",
+            previousPercent = null,
+            newPercent = 40,
+            note = null,
+            changedAtEpochMillis = 200L,
+        )
+        growth.emitHistory("member-1", listOf(first))
+        growth.emitHistory("member-2", listOf(second))
+
+        viewModel.onMemberSelected("member-1")
+        assertEquals(listOf(first), viewModel.state.value.growthHistory)
+
+        viewModel.onMemberSelected("member-2")
+        assertEquals(listOf(second), viewModel.state.value.growthHistory)
+
+        viewModel.onProfileClosed()
+        assertEquals(emptyList<GrowthProgressChange>(), viewModel.state.value.growthHistory)
     }
 
     @Test
@@ -369,6 +404,14 @@ private class FakeEconomyRepository : EconomyRepository {
 
 
 private class FakeGrowthMapRepository : GrowthMapRepository {
+    private val histories = mutableMapOf<String, MutableStateFlow<List<GrowthProgressChange>>>()
+    fun emitHistory(memberId: String, value: List<GrowthProgressChange>) {
+        histories.getOrPut(memberId) { MutableStateFlow(emptyList()) }.value = value
+    }
+
+    override fun observeHistory(memberId: String): Flow<List<GrowthProgressChange>> =
+        histories.getOrPut(memberId) { MutableStateFlow(emptyList()) }.asStateFlow()
+
     override fun observeAllItems(track: GrowthTrack): Flow<List<GrowthItem>> = MutableStateFlow(emptyList<GrowthItem>()).asStateFlow()
 
     override fun observeItems(track: GrowthTrack): Flow<List<GrowthItem>> =
