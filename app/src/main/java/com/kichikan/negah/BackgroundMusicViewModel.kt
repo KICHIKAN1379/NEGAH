@@ -49,6 +49,10 @@ class BackgroundMusicViewModel @Inject constructor(
             mutableState.update { state -> state.copy(message = "دسترسی پایدار به فایل صوتی برقرار نشد.") }
             return
         }
+        // Selecting a new track must release the previous decoder before
+        // starting playback from the newly persisted URI.
+        releasePlayer()
+        mutableState.update { it.copy(playing = false) }
         val name = runCatching {
             context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)
                 ?.use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
