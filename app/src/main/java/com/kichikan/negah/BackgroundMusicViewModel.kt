@@ -127,6 +127,7 @@ class BackgroundMusicViewModel @Inject constructor(
     }
 
     private fun onAudioFocusChanged(change: Int) {
+        if (focusRequest == null) return
         val event = when (change) {
             AudioManager.AUDIOFOCUS_GAIN -> AudioFocusChange.GAIN
             AudioManager.AUDIOFOCUS_LOSS -> AudioFocusChange.PERMANENT_LOSS
