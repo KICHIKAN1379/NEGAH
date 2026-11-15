@@ -27,8 +27,9 @@ class MainActivity : ComponentActivity() {
     private val dailyQuotesViewModel: DailyQuotesViewModel by viewModels()
     private val readingViewModel: ReadingViewModel by viewModels()
     private val wheelViewModel: WheelViewModel by viewModels()
-    private val backupViewModel: BackupViewModel by viewModels()
     private val groupsViewModel: GroupsViewModel by viewModels()
+    private val backgroundMusicViewModel: BackgroundMusicViewModel by viewModels()
+    private val backupViewModel: BackupViewModel by viewModels()
 
     private val notificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -39,10 +40,12 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         AutomaticBackupWorker.cancel(applicationContext)
+        backgroundMusicViewModel.onAppForegrounded()
     }
 
     override fun onStop() {
         if (!isChangingConfigurations) AutomaticBackupWorker.schedule(applicationContext)
+        backgroundMusicViewModel.onAppBackgrounded()
         super.onStop()
     }
 
@@ -68,6 +71,7 @@ class MainActivity : ComponentActivity() {
                         readingViewModel,
                         wheelViewModel,
                         groupsViewModel,
+                        backgroundMusicViewModel,
                         backupViewModel,
                     )
                 }
