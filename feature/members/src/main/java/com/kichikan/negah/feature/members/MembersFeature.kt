@@ -519,7 +519,7 @@ class MembersViewModel @Inject constructor(
         inventoryJob = null
         catalogJob = null
         avatarJob = null
-        mutableState.update { it.copy(selectedMemberId = null, economyTransactions = emptyList(), growthItems = emptyList(), growthProgress = emptyList(), growthSaveMessage = null, inventoryEntries = emptyList(), availableCatalogItems = emptyList(), activeInventoryItems = emptyList(), inventoryMessage = null, avatarBytes = null, avatarMessage = null, catalogImageBytes = emptyMap()) }
+        mutableState.update { it.copy(selectedMemberId = null, economyTransactions = emptyList(), growthItems = emptyList(), growthProgress = emptyList(), growthHistory = emptyList(), growthSaveMessage = null, inventoryEntries = emptyList(), availableCatalogItems = emptyList(), activeInventoryItems = emptyList(), inventoryMessage = null, avatarBytes = null, avatarMessage = null, catalogImageBytes = emptyMap()) }
     }
 
     fun saveGrowthProgress(item: GrowthItem, progressPercent: Int, note: String?) {
