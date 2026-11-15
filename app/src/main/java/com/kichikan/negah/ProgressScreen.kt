@@ -26,6 +26,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kichikan.negah.domain.growth.GrowthItem
 import com.kichikan.negah.domain.growth.GrowthTrack
 import com.kichikan.negah.domain.economy.LevelProgression
+import com.kichikan.negah.domain.economy.RankBadgeProgression
 
 @Composable
 fun ProgressScreen(
@@ -156,6 +157,9 @@ private fun MemberProgressSummary(member: com.kichikan.negah.domain.member.Membe
                 Text("تجربه (XP): " + member.totalXp)
                 Text((nextLevelStart - member.totalXp).coerceAtLeast(0).toString() + " تا سطح بعد")
             }
+            val currentBadge = RankBadgeProgression.currentForLevel(level)
+            Text("نشان مسیر: ${currentBadge?.title ?: "هنوز نشانی کسب نشده"}", style = MaterialTheme.typography.titleSmall)
+            Text("این نشان فقط نماد پیشرفت در برنامه است و بیانگر رتبه یا جایگاه واقعی نیست.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             LinearProgressIndicator(
                 progress = { levelProgress },
                 modifier = Modifier.fillMaxWidth(),
