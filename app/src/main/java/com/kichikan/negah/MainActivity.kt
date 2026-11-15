@@ -28,12 +28,23 @@ class MainActivity : ComponentActivity() {
     private val readingViewModel: ReadingViewModel by viewModels()
     private val wheelViewModel: WheelViewModel by viewModels()
     private val groupsViewModel: GroupsViewModel by viewModels()
+    private val backgroundMusicViewModel: BackgroundMusicViewModel by viewModels()
 
     private val notificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             // Re-run the check right after the coach grants notifications.
             if (granted) BirthdayReminderWorker.schedule(applicationContext)
         }
+
+    override fun onStart() {
+        super.onStart()
+        backgroundMusicViewModel.onAppForegrounded()
+    }
+
+    override fun onStop() {
+        backgroundMusicViewModel.onAppBackgrounded()
+        super.onStop()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,6 +68,7 @@ class MainActivity : ComponentActivity() {
                         readingViewModel,
                         wheelViewModel,
                         groupsViewModel,
+                        backgroundMusicViewModel,
                     )
                 }
             }
