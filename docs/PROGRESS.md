@@ -284,3 +284,13 @@ The available host has GitHub repository read/write integration but no local And
 - Progress now opens a six-entry hub (identity, missions, reading, wheel, competition, sessions) with back handling; reading has ranking + entry form + recent list; competition ranks members by XP inside the ring (group ranking unavailable: no group model); wheel is an explicit not-implemented screen.
 - CI evidence: run 43343891178 succeeded on 4c1b0c2e0cfd13be803c26b7f1e3162c5bee0864. No device/UI test performed.
 - Next: wheel (Room model, refinery settings, cost in spendable points, spin ledger), mission tabs (hidden mission, six-piece group puzzle), identity page per UX, shop details.
+
+
+## Backup/restore and background music — 2026-11-15
+- PR #15 (background music) merged to main via squash commit `5fd24a22bc02c94af1df0ad5c71e765145214050`; CI run 43656565288 succeeded, including debug APK artifact upload.
+- Background music lets the coach select an audio file via Android's document picker, persist its URI permission and enable looping playback while the app is foregrounded. Playback pauses when the app moves to the background. The audio file itself is selected from the device and is not bundled in the repository.
+- PR #13 (backup/restore) merged to main via squash commit `468510e23df3bb3ce302ed1828ad19ff665cc181`.
+- The combined backup/music source commit `fd065799dded95fdc509df01ee4fdade012fd160` passed GitHub Actions run 43664890011, including Android SDK setup, Gradle setup, build/tests and debug APK artifact upload.
+- Backup implementation includes archive validation, staged restore, a rollback safety copy retained until next-launch SQLite integrity validation, and automatic backup scheduling with a maximum of two MRT copies. Automatic scheduling is tied to app lifecycle/background transition; Android cannot guarantee execution after force-stop, crash or shutdown.
+- CI success confirms compilation and configured tests only. No manual device test or restore-on-device test has been performed. Portable inclusion of all media binaries should be re-audited before claiming full portability.
+- These PRs were merged after the owner's explicit instruction to merge; no release was published.
