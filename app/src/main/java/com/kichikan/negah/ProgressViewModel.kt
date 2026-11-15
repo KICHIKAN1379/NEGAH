@@ -7,6 +7,8 @@ import com.kichikan.negah.domain.member.*
 import com.kichikan.negah.domain.mission.*
 import com.kichikan.negah.domain.economy.EconomyCurrency
 import com.kichikan.negah.domain.group.GroupRepository
+import com.kichikan.negah.domain.reading.BookReading
+import com.kichikan.negah.domain.reading.ReadingRepository
 import com.kichikan.negah.domain.group.GroupWithMembers
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.UUID
@@ -21,12 +23,13 @@ data class ProgressUiState(
  val memberProgress: List<MemberGrowthProgress> = emptyList(), val missions: List<Mission> = emptyList(),
  val assignments: List<MissionAssignment> = emptyList(),
  val groups: List<GroupWithMembers> = emptyList(), val pieces: List<PuzzlePiece> = emptyList(), val puzzleMessage: String? = null,
+ val readings: List<BookReading> = emptyList(),
 )
 @HiltViewModel
 class ProgressViewModel @Inject constructor(
  private val memberRepository: MemberRepository, private val growthMapRepository: GrowthMapRepository,
  private val missionRepository: MissionRepository, private val puzzleRepository: PuzzleRepository,
- private val groupRepository: GroupRepository,
+ private val groupRepository: GroupRepository, private val readingRepository: ReadingRepository,
 ) : ViewModel() {
  private val mutableState = MutableStateFlow(ProgressUiState())
  val state = mutableState.asStateFlow()
@@ -48,6 +51,7 @@ class ProgressViewModel @Inject constructor(
    combine(growthMapRepository.observeItems(GrowthTrack.CAPABILITY), growthMapRepository.observeItems(GrowthTrack.SELF_IMPROVEMENT)) { a,b -> a to b }
     .collect { (a,b) -> mutableState.update { it.copy(capabilityItems=a, selfImprovementItems=b) } }
   }
+  viewModelScope.launch { readingRepository.observeAll().collect { rows -> mutableState.update { it.copy(readings=rows) } } }
   viewModelScope.launch { groupRepository.observeGroups().collect { rows -> mutableState.update { it.copy(groups=rows.filter { g -> g.group.isActive }) } } }
   viewModelScope.launch { missionRepository.observeMissions().collect { rows -> mutableState.update { it.copy(missions=rows) } } }
  }
