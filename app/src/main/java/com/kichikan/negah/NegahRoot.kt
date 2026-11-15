@@ -70,6 +70,7 @@ fun NegahRoot(
     readingViewModel: ReadingViewModel,
     wheelViewModel: WheelViewModel,
     groupsViewModel: GroupsViewModel,
+    backgroundMusicViewModel: BackgroundMusicViewModel,
     backupViewModel: BackupViewModel,
 ) {
     var selected by rememberSaveable { mutableStateOf(MainDestination.HOME.name) }
