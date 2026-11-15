@@ -82,6 +82,7 @@ class MembersViewModelTest {
     }
 
     @Test
+    // Switching profiles must never expose another member's audit records.
     fun selectedMemberObservesOnlyTheirGrowthHistoryAndClearsItOnSwitch() = runTest {
         val first = GrowthProgressChange(
             id = "change-1",
