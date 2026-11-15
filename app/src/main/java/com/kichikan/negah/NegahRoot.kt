@@ -75,6 +75,7 @@ fun NegahRoot(
     var selected by rememberSaveable { mutableStateOf(MainDestination.HOME.name) }
     var openRefinery by rememberSaveable { mutableStateOf(false) }
     var openBackup by rememberSaveable { mutableStateOf(false) }
+    var openBackgroundMusic by rememberSaveable { mutableStateOf(false) }
     var openClassDays by rememberSaveable { mutableStateOf(false) }
     var openHomeShortcuts by rememberSaveable { mutableStateOf(false) }
     var openRingProfile by rememberSaveable { mutableStateOf(false) }
@@ -119,6 +120,7 @@ fun NegahRoot(
                             selected = destination.name
                             openRefinery = false
                             openBackup = false
+                            openBackgroundMusic = false
                             openClassDays = false
                             openHomeShortcuts = false
                             openRingProfile = false
@@ -259,6 +261,7 @@ fun NegahRoot(
                 }
                 MainDestination.SETTINGS -> {
                     when {
+                        openBackgroundMusic -> BackgroundMusicScreen(viewModel = backgroundMusicViewModel, onBack = { openBackgroundMusic = false }, modifier = Modifier.padding(padding))
                         openBackup -> BackupScreen(backupViewModel, onBack = { openBackup = false }, modifier = Modifier.padding(padding))
                         openRefinery -> RefineryScreen(refineryViewModel, Modifier.padding(padding))
                         openRingProfile -> RingProfileScreen(ringProfileViewModel, onBack = { openRingProfile = false }, modifier = Modifier.padding(padding))
@@ -291,6 +294,7 @@ fun NegahRoot(
                                 Button(onClick = { openDailyQuotes = true }, modifier = Modifier.fillMaxWidth()) { Text("جمله‌های روز") }
                                 Button(onClick = { openClassDays = true }, modifier = Modifier.fillMaxWidth()) { Text("روزهای کلاس") }
                                 Button(onClick = { openBackup = true }, modifier = Modifier.fillMaxWidth()) { Text("ورودی و خروجی اطلاعات") }
+                                Button(onClick = { openBackgroundMusic = true }, modifier = Modifier.fillMaxWidth()) { Text("موزیک پس‌زمینه") }
                             }
                         }
                     }
