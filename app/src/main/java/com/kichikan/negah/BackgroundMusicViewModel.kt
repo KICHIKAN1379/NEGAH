@@ -191,6 +191,7 @@ class BackgroundMusicViewModel @Inject constructor(
             mediaPlayer.setAudioAttributes(audioAttributes)
             mediaPlayer.isLooping = true
             mediaPlayer.setOnPreparedListener {
+                if (player !== it) return@setOnPreparedListener
                 prepared = true
                 if (isForeground && mutableState.value.enabled && hasAudioFocus) {
                     startPreparedPlayer()
@@ -198,7 +199,8 @@ class BackgroundMusicViewModel @Inject constructor(
             }
             mediaPlayer.setOnErrorListener { failedPlayer, _, _ ->
                 failedPlayer.release()
-                if (player === failedPlayer) player = null
+                if (player !== failedPlayer) return@setOnErrorListener true
+                player = null
                 prepared = false
                 abandonAudioFocus()
                 mutableState.update {
