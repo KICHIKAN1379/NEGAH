@@ -9,7 +9,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.graphics.BitmapFactory
 import androidx.core.app.NotificationCompat
+import androidx.core.graphics.drawable.IconCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.work.CoroutineWorker
@@ -80,7 +82,8 @@ class BirthdayReminderWorker(
             "تولد ${reminder.displayName} تا ${reminder.daysUntil} روز دیگر است"
         }
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(IconCompat.createWithBitmap(DayIcon.render(java.time.LocalDate.now())))
+            .setLargeIcon(BitmapFactory.decodeResource(context.resources, R.drawable.ic_notification_large))
             .setContentTitle("یادآوری تولد")
             .setContentText(text)
             .setContentIntent(pending)
